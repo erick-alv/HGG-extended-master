@@ -83,7 +83,7 @@ def make_video(path_to_folder, ext_end):
         size = (width, height)
         img_array.append(img)
 
-    out = cv2.VideoWriter(path_to_folder+'rollout_video.avi', cv2.VideoWriter_fourcc(*'DIVX'), 2, size)
+    out = cv2.VideoWriter(path_to_folder+'rollout_video.avi', cv2.VideoWriter_fourcc(*'DIVX'), 4, size)
     for i in range(len(img_array)):
         out.write(img_array[i])
     out.release()
@@ -119,10 +119,6 @@ def stack_images_column(images, indices_env_ims, others_first):
             images[i] = cv2.resize(images[i], dsize=(new_width, new_width), interpolation=cv2.INTER_CUBIC)
             images[i] = np.hstack((l, images[i]))
             images[i] = np.hstack((images[i], r))
-
-
-
-
     w = images[0].shape[1]
     spacer = np.zeros(shape=(10, w, 3))
     s = spacer.copy()

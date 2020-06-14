@@ -149,12 +149,12 @@ def play_with_trained(args):
 
 def create_vae_result_images(args):
     #recover_filename = args.recover_filename TODO pass as argument
-    recover_filename = 'trained_weights_400'
+    recover_filename = 'trained_last'
     #we do not use trainer any more, neihter the test loader
     vae_model, _, train_loader, _ = setup_vae(args, recover_filename=recover_filename)
     vae_model.eval()
     #loads model samples from latent space to create a plot from this one
-    samples_size = 30000
+    samples_size = 45000
     latent_samples = None
     with torch.no_grad():
         for batch_idx, data in enumerate(train_loader):
@@ -171,7 +171,7 @@ def create_vae_result_images(args):
 
     #creates the environment and starts loop for random agent
     env = make_env(args)
-    steps = 50
+    steps = 100
     columns_per_frame = [[] for _ in range(steps)]
 
     def np_image_to_torch(single_image_array):
@@ -328,8 +328,8 @@ def pass_images(args):
 
 if __name__=='__main__':
     args = get_args_and_initialize()
-    #create_vae_result_images(args)
-    make_video(args.dirpath+'images_for_video/', '.png')
+    create_vae_result_images(args)
+    #make_video(args.dirpath+'images_for_video/', '.png')
     #train(args)
     #play_with_trained(args)
     #create_result_images(args)

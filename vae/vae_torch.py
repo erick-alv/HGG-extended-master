@@ -178,7 +178,6 @@ def load_vae(args, filename, vae, trainer=None):
         trainer.optimizer.load_state_dict(save_dict['optimizer_state_dict'])
 
 def load_train_checkpoint(args, filename, vae, trainer, epoch):
-    assert isinstance(filename, str)
     if not filename.endswith(str(epoch)):
         filename = filename + '_' + str(epoch)
     load_vae(args, filename, vae, trainer)

@@ -2,12 +2,17 @@ import numpy as np
 import gym
 from envs.utils import goal_distance, goal_distance_obs
 from utils.os_utils import remove_color
+from vae_wrapper import VAEWrapper
 
 
 class CustomGoalEnv():
     def __init__(self, args):
         self.args = args
         self.env = gym.make(args.env)
+        if args.wrap_with_vae:
+            self._env = VAEWrapper(args, env=self.env, pixels_only=False,
+                                   render_kwargs={'image_state':args.vae_wrap_kwargs},
+                                   pixel_keys=('image_state', ))
         self.np_random = self.env.env.np_random
         self.distance_threshold = self.env.env.distance_threshold
         self.action_space = self.env.action_space
@@ -22,7 +27,10 @@ class CustomGoalEnv():
         if self.has_object: self.height_offset = self.env.env.height_offset
 
         self.render = self.env.render
-        self.get_obs = self.env.env._get_obs
+        if args.wrap_with_vae:
+            self.get_obs = self._env._get_obs
+        else:
+            self.get_obs = self.env.env._get_obs
         self.reset_sim = self.env.env._reset_sim
 
         self.reset_ep()

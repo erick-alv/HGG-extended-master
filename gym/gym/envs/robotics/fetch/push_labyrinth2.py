@@ -278,7 +278,8 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
 
             goal[1] += self.np_random.uniform(-self.target_range_y, self.target_range_y)
             goal[0] += self.np_random.uniform(-self.target_range_x, self.target_range_x)
-
+        self.goal = goal.copy()# todo verify this does not have any side effect
+        self.goal_image = self.sample_goal_state_as_image(84, 84) #TODO set as paremeter
         return goal.copy()
 
     #just call after a reset

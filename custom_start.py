@@ -19,8 +19,14 @@ def get_args_and_initialize():
                         default='/home/erick/log_extended/')
     parser.add_argument('--datapath', help='file path to dataset', type=str, default=
     '/home/erick/log_extended/01_06_2020_16_29_48_vae_dataset.pkl')
+    ##Arguments for VAE_Wrapper
+    parser.add_argument('--wrap_with_vae', help='use vae wrapper or not', type=bool, default=True)
+    parser.add_argument('--vae_wrap_kwargs', help='other arguments, as image size, latent_size', type=dict,
+                        default={'width':84, 'height':84})
+    parser.add_argument('--vae_wrap_filename', help='filename for loading weights', type=str, default='trained_last')
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()
+    print(torch.cuda.is_available())
 
     #decides if use cpu or gpu
     device = torch.device("cuda" if args.cuda else "cpu")
