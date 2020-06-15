@@ -4,6 +4,7 @@ from tdm_storage_structures import TDM_Trajectory, ReplayBuffer_TDM
 from envs import make_env
 from ou_noise import OUNoise
 from td3 import TD3
+import numpy as np
 
 #more than a model this learns a q function based on goal_conditioned
 class TDM:
@@ -15,31 +16,31 @@ class TDM:
         self.args = args
 
     def training_loop(self, start_epoch):
-        for epoch in range(start_epoch, args.epochs):# apparently 500
+        for epoch in range(start_epoch, 12):#args.tdm_training_epochs):
             self._epoch_start_time = time.time()
             obs = self.env.reset()
-            goal = self.env.get_goal()
+            goal = np.concatenate((obs['desired_goal'], obs['goal_latent']))
             self.ou_noiser.reset()
             episode_reward = 0
             trajectory = TDM_Trajectory()
-            for step in range(self.args.num_env_steps_per_epoch):
-                rem_steps = self.args.max_rem_steps - step
-                action = self.act_cr_model.get_action(obs, goal, rem_steps)
+            for step in range(self.args.tdm_env_steps):#todo the max number of steps and how many steps are take differs in leap, but actually does not make sense what they do and steps_left is for them the same because then they randomsample them
+                rem_steps = self.args.tdm_env_steps - step
+                state = np.concatenate((obs['observation'], obs['state_latent']))
+                action = self.act_cr_model.get_action(state, goal, rem_steps)
                 action = self.ou_noiser.get_action(action, step)
                 next_obs, reward, done, _ = self.env.step(action)
-                self._n_env_steps_total += 1 #todo this is important
+                next_state = np.concatenate((next_obs['observation'], next_obs['state_latent']))
                 episode_reward += reward
 
-                trajectory.store_step(obs, goal, rem_steps, action, next_obs, reward, done)
-                if done or step == args.num:
+                trajectory.store_step(state, goal, rem_steps, action, next_state, reward, done)
+                if done or step == self.args.tdm_env_steps - 1:
                     self.replay_buffer.store_trajectory(trajectory)
 
-                if self.replay_buffer.size() > args.min_replay_size_for_training:#30000:
+                if self.replay_buffer.steps_counter >= 200:#args.min_replay_size:
                     for training_step in range(args.training_steps):
-                        batch = self.replay_buffer.sample_batch(self.args.batch_size)
+                        batch = self.replay_buffer.sample_batch(self.args.batch_size, transform_to_tensor=True)
                         #todo transform batch into torch
                         self.act_cr_model.train(batch)
-                        self._n_training_steps_total += 1
                     #todo DO evaluation
                 if done:
                     break
@@ -49,31 +50,32 @@ class TDM:
                         ))
                         logger.log("Started Training: {0}".format(self._can_train()))
                         logger.pop_prefix()'''
+            if epoch % self.args.checkpoint_interval == 0:
+                self.act_cr_model.save_train_checkpoint('td3_tr', epoch)
+            print('Epoch reward: ', episode_reward)
+        self.act_cr_model.save('td3_tr_last')
 
 def setup_tdm(args, recover_filename=None):
     env = make_env(args)
-    replay_buffer =  ReplayBuffer_TDM(args, env)
+    sample_obs = env.reset()
+    latent_dim = sample_obs['state_latent'].shape[0]
+    obs_dim = sample_obs['observation'].shape[0]
+    desired_dim = sample_obs['desired_goal'].shape[0]
+    action_dim = env.action_space.shape[0]
+    td3_actor_critic = TD3(state_dim=obs_dim+latent_dim, action_dim=action_dim, goal_dim=desired_dim+latent_dim,
+                           rem_steps_dim=1, max_action=env.action_space.high, args=args)
+    if recover_filename is not None:
+        td3_actor_critic.load(filename=recover_filename)
+    replay_buffer = ReplayBuffer_TDM(args, env)
     ou_noiser = OUNoise(env.action_space)
-    latent_dim = 1  # TODO
-    action_dim = env.action_space.sample.flatten()
-    td3_actor_critic = TD3(latent_dim, action_dim, latent_dim, 1, env.action_space.max, args)
     tdm = TDM(td3_actor_critic,replay_buffer, env, ou_noiser, args)
+
+
     return tdm, td3_actor_critic, ou_noiser, replay_buffer, env
-
-from gym.wrappers.pixel_observation import PixelObservationWrapper
-def setup_tdm_with_vae(args, recover_filename=None):
-    env = make_env(args)
-    t = env.reset()
-    t2 = env.get_obs()
-    print(t)
-    print(t)
-
-
 
 
 
 if __name__ == "__main__":
     args = get_args_and_initialize()    #start_training(args)
-    '''tdm, _, _, _, _ = setup_tdm(args)
-    tdm.training_loop(0)'''
-    setup_tdm_with_vae(args)
+    tdm, _, _, _, _ = setup_tdm(args)
+    tdm.training_loop(0)

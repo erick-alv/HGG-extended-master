@@ -11,15 +11,16 @@ import torch.nn.functional as F
 
 
 class Actor(nn.Module):
-    def __init__(self, state_dim, action_dim, goal_dim, rem_steps_dim, max_action, networks_hidden):
+    def __init__(self, state_dim, action_dim, goal_dim, rem_steps_dim, max_action, device, networks_hidden):
         super(Actor, self).__init__()
         index = 0
-        self.l_in = nn.Linear(state_dim + goal_dim + rem_steps_dim, networks_hidden[index])
+        self.l_in = nn.Linear(state_dim + goal_dim + rem_steps_dim, networks_hidden[index]).to(device)
         self.hidden_layers = []
         for _ in range(len(networks_hidden)-1):
-            self.hidden_layers.append(nn.Linear(networks_hidden[index], networks_hidden[index + 1]))
-        self.l_out = nn.Linear(networks_hidden[index], action_dim)
-        self.max_action = max_action
+            self.hidden_layers.append(nn.Linear(networks_hidden[index], networks_hidden[index + 1]).to(device))
+            index += 1
+        self.l3 = nn.Linear(networks_hidden[index], action_dim).to(device)
+        self.max_action = torch.tensor(max_action, dtype=float).to(device)
 
     def forward(self, state, goal, rem_steps):
         a = torch.cat([state, goal, rem_steps], 1)
@@ -30,35 +31,37 @@ class Actor(nn.Module):
 
 
 class Critic(nn.Module):
-    def __init__(self, state_dim, action_dim, goal_dim, rem_steps_dim, networks_hidden):
+    def __init__(self, state_dim, action_dim, goal_dim, rem_steps_dim, device,networks_hidden):
         super(Critic, self).__init__()
 
         # Q1 architecture
         index = 0
-        self.l1 = nn.Linear(state_dim + action_dim + goal_dim + rem_steps_dim, networks_hidden[index])
+        self.l1 = nn.Linear(state_dim + action_dim + goal_dim + rem_steps_dim, networks_hidden[index]).to(device)
         self.hidden_layers1 = []
         for _ in range(len(networks_hidden)-1):
-            self.hidden_layers1.append(nn.Linear(networks_hidden[index], networks_hidden[index + 1]))
-        self.l3 = nn.Linear(networks_hidden[index], 1)
+            self.hidden_layers1.append(nn.Linear(networks_hidden[index], networks_hidden[index + 1]).to(device))
+            index += 1
+        self.l3 = nn.Linear(networks_hidden[index], 1).to(device)
 
         # Q2 architecture
         index = 0
-        self.l4 = nn.Linear(state_dim + action_dim + goal_dim + rem_steps_dim,  networks_hidden[index])
+        self.l4 = nn.Linear(state_dim + action_dim + goal_dim + rem_steps_dim,  networks_hidden[index]).to(device)
         self.hidden_layers2 = []
         for _ in range(len(networks_hidden)-1):
-            self.hidden_layers2.append(nn.Linear(networks_hidden[index], networks_hidden[index + 1]))
-        self.l6 = nn.Linear(networks_hidden[index], 1)
+            self.hidden_layers2.append(nn.Linear(networks_hidden[index], networks_hidden[index + 1]).to(device))
+            index += 1
+        self.l6 = nn.Linear(networks_hidden[index], 1).to(device)
 
     def forward(self, state, action, goal, rem_steps):
         sa = torch.cat([state, action, goal, rem_steps], 1)
 
         q1 = F.relu(self.l1(sa))
-        for layer in self.hidden_layers:
+        for layer in self.hidden_layers1:
             q1 = F.relu(layer(q1))
         q1 = self.l3(q1)
 
         q2 = F.relu(self.l4(sa))
-        for layer in self.hidden_layers:
+        for layer in self.hidden_layers2:
             q2 = F.relu(layer(q2))
         q2 = self.l6(q2)
         return q1, q2
@@ -67,7 +70,7 @@ class Critic(nn.Module):
         sa = torch.cat([state, action, goal, rem_steps], 1)
 
         q1 = F.relu(self.l1(sa))
-        for layer in self.hidden_layers:
+        for layer in self.hidden_layers1:
             q1 = F.relu(layer(q1))
         q1 = self.l3(q1)
         return q1
@@ -83,20 +86,26 @@ class TD3(object):
             max_action,
             args,
             networks_hidden = [400, 300],
-            discount=0.99,#TODO see how much
+            discount=1.0,
             tau=0.005,
             policy_noise=0.2,#todo this better in wrapper and pass as arguiemnt
             noise_clip=0.5,
             policy_freq=2,
-            lr = 0.001,
-            ou_process =(0.3, 0.3)#todo this better in wrapper
+            lr = 0.001,#todo this better in wrapper
     ):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.goal_dim = goal_dim
+        self.rem_steps_dim = rem_steps_dim
+        self.max_action = max_action
 
-        self.actor = Actor(state_dim, action_dim, goal_dim, rem_steps_dim, max_action, networks_hidden).to(args.device)
+        self.actor = Actor(state_dim, action_dim, goal_dim, rem_steps_dim, max_action, args.device,
+                           networks_hidden).to(args.device)
         self.actor_target = copy.deepcopy(self.actor)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr)
 
-        self.critic = Critic(state_dim, action_dim, goal_dim, rem_steps_dim, networks_hidden).to(args.device)
+        self.critic = Critic(state_dim, action_dim, goal_dim, rem_steps_dim, args.device,
+                             networks_hidden).to(args.device)
         self.critic_target = copy.deepcopy(self.critic)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=lr)
 
@@ -111,9 +120,21 @@ class TD3(object):
         self.args = args
 
     def get_action(self, state, goal, rem_steps):
-        state, goal, rem_steps = [torch.FloatTensor(d.reshape(1, -1)).to(self.args.device)
-                                  for d in [state, goal, rem_steps]]
+        state = torch.tensor(state.reshape(1, -1), dtype=torch.float).to(self.args.device)
+        goal = torch.tensor(goal.reshape(1, -1), dtype=torch.float).to(self.args.device)
+        if self.rem_steps_dim == 1:
+            rem_steps = torch.tensor([[rem_steps]], dtype=torch.float).to(self.args.device)
+        else:
+            rem_steps = torch.tensor(rem_steps.reshape(1, -1), dtype=torch.float).to(self.args.device)
         return self.actor(state, goal, rem_steps).cpu().data.numpy().flatten()
+
+    def clip_actions(self, actions):
+        #from https://stackoverflow.com/questions/54738045/column-dependent-bounds-in-torch-clamp
+        l = torch.tensor([-self.max_action], dtype=torch.float).to(self.args.device)
+        u = torch.tensor([self.max_action], dtype=torch.float).to(self.args.device)
+        a = torch.max(actions.float(), l)
+        return torch.min(a, u)
+
 
     def train(self, batch):
         self.actor.train()
@@ -133,20 +154,20 @@ class TD3(object):
                     torch.randn_like(action) * self.policy_noise
             ).clamp(-self.noise_clip, self.noise_clip)
 
-            next_action = (
-                    self.actor_target(next_state, goal, rem_steps-1) + noise#todo is -1??;what to do if then ==-1
-            ).clamp(-self.max_action, self.max_action)
+            next_action = self.clip_actions(
+                    self.actor_target(next_state, goal, rem_steps-1.) + noise
+            )
 
             # Compute the target Q value
-            target_Q1, target_Q2 = self.critic_target(next_state, next_action, goal, rem_steps-1)#todo is -1??;what to do if then ==-1
+            target_Q1, target_Q2 = self.critic_target(next_state, next_action, goal, rem_steps-1.)
             target_Q = torch.min(target_Q1, target_Q2)
-            target_Q = reward + (1 - done) * self.discount * target_Q
+            target_Q = reward + (1. - done) * self.discount * target_Q
 
         # Get current Q estimates
         current_Q1, current_Q2 = self.critic(state, action, goal, rem_steps)
 
         # Compute critic loss
-        critic_loss = F.mse_loss(current_Q1, target_Q) + F.mse_loss(current_Q2, target_Q)
+        critic_loss = F.mse_loss(current_Q1, target_Q) + F.mse_loss(current_Q2, target_Q)#todo LEAP paper optimizes them separately
 
         # Optimize the critic
         self.critic_optimizer.zero_grad()
@@ -156,8 +177,9 @@ class TD3(object):
         # Delayed policy updates
         if self.total_it % self.policy_freq == 0:
 
-            # Compute actor losse
-            actor_loss = -self.critic.Q1(state, self.actor(state, goal, rem_steps), goal, rem_steps).mean()#todo shpu;d not be here rem_steps-1
+            # Compute actor losses
+            #todo leap paper additionally uses policy_saturation_cost = F.relu(torch.abs(pre_tanh_value) - 20.0) but not used
+            actor_loss = -self.critic.Q1(state, self.actor(state, goal, rem_steps).float(), goal, rem_steps).mean()#todo shpu;d not be here rem_steps-1
 
             # Optimize the actor
             self.actor_optimizer.zero_grad()

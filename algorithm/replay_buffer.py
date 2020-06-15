@@ -102,7 +102,11 @@ class ReplayBuffer_Episodic:
 		self.sample_methods = {
 			'ddpg': self.sample_batch_ddpg
 		}
-		self.sample_batch = self.sample_methods[args.alg]
+		if hasattr(args, 'alg'):
+			self.sample_batch = self.sample_methods[args.alg]
+		else:
+			self.sample_batch = self.sample_methods['ddpg']
+
 
 	def store_trajectory(self, trajectory):
 		episode = trajectory.ep

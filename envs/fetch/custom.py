@@ -9,10 +9,10 @@ class CustomGoalEnv():
     def __init__(self, args):
         self.args = args
         self.env = gym.make(args.env)
-        if args.wrap_with_vae:
+        if hasattr(args, 'wrap_with_vae') and args.wrap_with_vae:
             self._env = VAEWrapper(args, env=self.env, pixels_only=False,
-                                   render_kwargs={'image_state':args.vae_wrap_kwargs},
-                                   pixel_keys=('image_state', ))
+                                   render_kwargs={'state_image':args.vae_wrap_kwargs},
+                                   pixel_keys=('state_image', ))
         self.np_random = self.env.env.np_random
         self.distance_threshold = self.env.env.distance_threshold
         self.action_space = self.env.action_space
@@ -27,7 +27,7 @@ class CustomGoalEnv():
         if self.has_object: self.height_offset = self.env.env.height_offset
 
         self.render = self.env.render
-        if args.wrap_with_vae:
+        if hasattr(args, 'wrap_with_vae') and args.wrap_with_vae:
             self.get_obs = self._env._get_obs
         else:
             self.get_obs = self.env.env._get_obs
@@ -74,6 +74,7 @@ class CustomGoalEnv():
         info = self.process_info(obs, reward, info)
         reward = self.compute_reward((obs['achieved_goal'], self.last_obs['achieved_goal']),
                                      obs['desired_goal'])  # TODO: why the heck second argument if it is then ignored??
+        obs = self.get_obs()
         self.last_obs = obs.copy()
         return obs, reward, False, info
 

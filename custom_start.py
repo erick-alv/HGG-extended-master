@@ -19,14 +19,23 @@ def get_args_and_initialize():
                         default='/home/erick/log_extended/')
     parser.add_argument('--datapath', help='file path to dataset', type=str, default=
     '/home/erick/log_extended/01_06_2020_16_29_48_vae_dataset.pkl')
-    ##Arguments for VAE_Wrapper
+    # Arguments for VAE Architecture
+    parser.add_argument('--latent_dim', help='The size from the latent dimension', type=int, default=20)
+    parser.add_argument('--img_dim', help='other arguments, as image size, latent_size', type=int, default=84)
+    # Arguments for VAE Wrapper
     parser.add_argument('--wrap_with_vae', help='use vae wrapper or not', type=bool, default=True)
     parser.add_argument('--vae_wrap_kwargs', help='other arguments, as image size, latent_size', type=dict,
                         default={'width':84, 'height':84})
     parser.add_argument('--vae_wrap_filename', help='filename for loading weights', type=str, default='trained_last')
+    #arguments for TDM training:
+    parser.add_argument('--tdm_training_epochs', help='number of training epochs for TDM', type=int, default=500)
+    parser.add_argument('--tdm_env_steps', help='number stops in one epoch', type=int, default=100)#TODO see how to verify it always works
+    parser.add_argument('--buffer_size', help='number of samples', type=int, default=50000)#todo leap paper use 1000000 transition, but our buffer stores trajectories
+    parser.add_argument('--min_replay_size', help='replay buffer size before training', type=int, default=3000)
+    parser.add_argument('--training_steps', help='how many times tdm agent train in a step', type=int, default=1)
+
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()
-    print(torch.cuda.is_available())
 
     #decides if use cpu or gpu
     device = torch.device("cuda" if args.cuda else "cpu")
