@@ -120,13 +120,30 @@ class TD3(object):
         self.args = args
 
     def get_action(self, state, goal, rem_steps):
-        state = torch.tensor(state.reshape(1, -1), dtype=torch.float).to(self.args.device)
-        goal = torch.tensor(goal.reshape(1, -1), dtype=torch.float).to(self.args.device)
-        if self.rem_steps_dim == 1:
-            rem_steps = torch.tensor([[rem_steps]], dtype=torch.float).to(self.args.device)
-        else:
-            rem_steps = torch.tensor(rem_steps.reshape(1, -1), dtype=torch.float).to(self.args.device)
-        return self.actor(state, goal, rem_steps).cpu().data.numpy().flatten()
+        if not torch.is_tensor(state):
+            state = torch.tensor(state.reshape(1, -1), dtype=torch.float).to(self.args.device)
+        if not torch.is_tensor(goal):
+            goal = torch.tensor(goal.reshape(1, -1), dtype=torch.float).to(self.args.device)
+        if not torch.is_tensor(rem_steps):
+            if self.rem_steps_dim == 1:
+                rem_steps = torch.tensor([[rem_steps]], dtype=torch.float).to(self.args.device)
+            else:
+                rem_steps = torch.tensor(rem_steps.reshape(1, -1), dtype=torch.float).to(self.args.device)
+        return self.actor(state, goal, rem_steps).cpu().data.numpy()
+
+    def get_Q_val(self, state, action, goal, rem_steps):
+        if not torch.is_tensor(state):
+            state = torch.tensor(state.reshape(1, -1), dtype=torch.float).to(self.args.device)
+        if not torch.is_tensor(action):
+            action = torch.tensor(action.reshape(1, -1), dtype=torch.float).to(self.args.device)
+        if not torch.is_tensor(goal):
+            goal = torch.tensor(goal.reshape(1, -1), dtype=torch.float).to(self.args.device)
+        if not torch.is_tensor(rem_steps):
+            if self.rem_steps_dim == 1:
+                rem_steps = torch.tensor([[rem_steps]], dtype=torch.float).to(self.args.device)
+            else:
+                rem_steps = torch.tensor(rem_steps.reshape(1, -1), dtype=torch.float).to(self.args.device)
+        return self.critic.Q1(state, action, goal, rem_steps).cpu().data.numpy()
 
     def clip_actions(self, actions):
         #from https://stackoverflow.com/questions/54738045/column-dependent-bounds-in-torch-clamp
@@ -147,7 +164,6 @@ class TD3(object):
         state, goal, rem_steps, action, next_state, reward, done = (batch[k] for k in ['obs', 'goal', 'rem_steps',
                                                                                        'action', 'next_obs', 'reward',
                                                                                        'done'])
-
         with torch.no_grad():
             # Select action according to policy and add clipped noise
             noise = (
@@ -179,7 +195,7 @@ class TD3(object):
 
             # Compute actor losses
             #todo leap paper additionally uses policy_saturation_cost = F.relu(torch.abs(pre_tanh_value) - 20.0) but not used
-            actor_loss = -self.critic.Q1(state, self.actor(state, goal, rem_steps).float(), goal, rem_steps).mean()#todo shpu;d not be here rem_steps-1
+            actor_loss = -self.critic.Q1(state, self.actor(state, goal, rem_steps).float(), goal, rem_steps).mean()
 
             # Optimize the actor
             self.actor_optimizer.zero_grad()
@@ -192,6 +208,47 @@ class TD3(object):
 
             for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
                 target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+
+            return float(critic_loss), float(actor_loss)
+
+        else:
+            return float(critic_loss), None
+
+    def evaluate(self, batch):
+        self.actor.eval()
+        self.actor_target.eval()
+        self.critic.eval()
+        self.critic_target.eval()
+        # Sample replay buffer
+        state, goal, rem_steps, action, next_state, reward, done = (batch[k] for k in ['obs', 'goal', 'rem_steps',
+                                                                                       'action', 'next_obs', 'reward',
+                                                                                       'done'])
+
+        with torch.no_grad():
+            # Select action according to policy and add clipped noise
+            noise = (
+                    torch.randn_like(action) * self.policy_noise
+            ).clamp(-self.noise_clip, self.noise_clip)
+
+            next_action = self.clip_actions(
+                self.actor_target(next_state, goal, rem_steps - 1.) + noise
+            )
+
+            # Compute the target Q value
+            target_Q1, target_Q2 = self.critic_target(next_state, next_action, goal, rem_steps - 1.)
+            target_Q = torch.min(target_Q1, target_Q2)
+            target_Q = reward + (1. - done) * self.discount * target_Q
+            # Get current Q estimates
+            current_Q1, current_Q2 = self.critic(state, action, goal, rem_steps)
+
+            # Compute critic loss
+            # todo LEAP paper optimizes them separately
+            critic_loss = F.mse_loss(current_Q1, target_Q) + F.mse_loss(current_Q2,target_Q)
+            # Compute actor losses
+            # todo leap paper additionally uses policy_saturation_cost = F.relu(torch.abs(pre_tanh_value) - 20.0) but not used
+            actor_loss = -self.critic.Q1(state, self.actor(state, goal, rem_steps).float(), goal, rem_steps).mean()
+
+            return float(critic_loss), float(actor_loss)
 
     def save(self, filename):
         save_dict = {

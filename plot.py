@@ -8,6 +8,8 @@ import seaborn as sns; sns.set()
 import glob2
 import argparse
 import re
+import pandas as pd
+import math
 
 
 def smooth_reward_curve(x, y):
@@ -54,8 +56,7 @@ def pad(xs, value=np.nan):
     return np.array(padded_xs)
 
 
-
-if __name__ == "__main__":
+'''if __name__ == "__main__":
     # call plot.py to plot success stored in progress.csv files
 
     # get arguments
@@ -200,4 +201,4 @@ if __name__ == "__main__":
     plt.legend(loc=location)
     plt.savefig(os.path.join(args.dir, 'fig_{}.pdf'.format(env_id)), format='pdf')
     if args.save_path:
-        plt.savefig(args.save_path)
+        plt.savefig(args.save_path)'''

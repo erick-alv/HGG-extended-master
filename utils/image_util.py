@@ -1,4 +1,4 @@
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import argparse
 import os
@@ -7,19 +7,19 @@ import cv2
 import numpy as np
 import glob
 import matplotlib.pyplot as plt
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--image_path', type=str)
-    parser.add_argument('--npy_save_path', type=str)
-    parser.add_argument('--npy_path', type=str)
-    parser.add_argument('--image_save_path', type=str)
-    return parser.parse_args()
 def image_to_npy(image_path,npy_save_path, show=False):
     image = Image.open(image_path)
     image_array = np.array(image)
     np.save(npy_save_path, image_array)
     if show:
         print(image_array)
+
+def make_text_im(width, height, text):
+    img = Image.new('RGB', (width, height), color=(0, 0, 0))
+    font = ImageFont.truetype('FreeSans.ttf',size=10)
+    d = ImageDraw.Draw(img)
+    d.text((10, 10), text, font=font, fill=(255, 255, 0))
+    return np.asarray(img)
 
 def save_and_show_npy_to_image(npy_path, image_save_path, display=False):
     def process_image(single_image_array, image_path):
@@ -43,19 +43,15 @@ def save_and_show_npy_to_image(npy_path, image_save_path, display=False):
         process_image(npy_as_array, image_save_path)
 
 
-def store_image_array_at(single_image_array, path_to_folder, img_name, force_remap_to_255=False ):
-    '''
-    :param dict:
-    :param dict_key: key for the dict, where the images should be
-    :return:
-    '''
-    '''files = [f for f in os.listdir(path_to_folder) if fnmatch.fnmatch(f, '*_id****.png')]
-    print(files)'''
+def store_image_array_at(single_image_array, path_to_folder, img_name, force_remap_to_255=False, text_append=None):
     if single_image_array.max() <= 1.0 or force_remap_to_255:
         #assume is normalized in [0,1]
         single_image_array *= 255.0
-
+    if text_append is not None:
+        text_im = make_text_im(single_image_array.shape[0], 40, text_append)
+        single_image_array = stack_images_column_2([single_image_array, text_im])
     image = Image.fromarray(single_image_array.astype(np.uint8), 'RGB')
+
     image.save(path_to_folder+img_name+'.png')
 
 def make_random_imarray():
@@ -76,9 +72,11 @@ def denormalize(single_image_array):
     return single_image_array * 255.0
 
 def make_video(path_to_folder, ext_end):
+    image_files = [f for f in os.listdir(path_to_folder) if f.endswith(ext_end)]
+    image_files.sort(key=lambda x:int(x.replace('frame_', '').replace(ext_end,'')))
     img_array = []
-    for filename in glob.glob(path_to_folder+'*'+ext_end):
-        img = cv2.imread(filename)
+    for filename in image_files:
+        img = cv2.imread(path_to_folder+filename)
         height, width, layers = img.shape
         size = (width, height)
         img_array.append(img)
@@ -95,6 +93,15 @@ def stack_images_row(images):
     for im in images:
         s = np.hstack((s, im))
         s = np.hstack((s, spacer))
+    return s
+
+def stack_images_column_2(images):
+    w = images[0].shape[1]
+    spacer = np.zeros(shape=(10, w, 3))
+    s = spacer.copy()
+    for im in images:
+        s = np.vstack((s, im))
+        s = np.vstack((s, spacer))
     return s
 
 def stack_images_column(images, indices_env_ims, others_first):

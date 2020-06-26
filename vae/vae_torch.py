@@ -7,6 +7,7 @@ from torchvision.utils import save_image
 import os
 from skimage import io
 from custom_start import get_args_and_initialize
+import numpy as np
 
 class CustomImagesDataset(torch.utils.data.Dataset):
     def __init__(self, directory, transform=None, train=False):
@@ -70,6 +71,8 @@ class VAE(nn.Module):
         return mu + eps*std
 
     def decode(self, z):
+        if isinstance(z, np.ndarray):
+            z = torch.from_numpy(z)
         h3 = F.relu(self.fc3(z))
         return torch.sigmoid(self.fc4(h3))
 

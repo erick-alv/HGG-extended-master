@@ -200,6 +200,9 @@ class ReplayBuffer_Episodic:
 				act = self.buffer['acts'][idx][step]
 				rew = self.args.compute_reward((achieved, achieved_old), goal)
 				done = self.buffer['done'][idx][step]
+				#TODO DEL
+				if done:
+					print('the done is True, from idx ', idx, 'and step ', step)
 
 				batch['obs'].append(copy.deepcopy(obs))
 				batch['obs_next'].append(copy.deepcopy(obs_next))

@@ -1,8 +1,7 @@
 import numpy as np
 import gym
-from envs.utils import goal_distance, goal_distance_obs
 from utils.os_utils import remove_color
-from vae_wrapper import VAEWrapper
+from vae.vae_wrapper import VAEWrapper
 
 
 class CustomGoalEnv():
