@@ -8,26 +8,42 @@ def get_args_and_initialize():
     # parser.add_argument('--graph', help='g-hgg yes or no', type=bool, default=False)
     parser.add_argument('--goal', help='method of goal generation', type=str, default='custom',
                         choices=['vanilla', 'fixobj', 'interval', 'custom'])
-    parser.add_argument('--batch-size', type=int, default=128, help='input batch size for training (default: 128)')
-    parser.add_argument('--epochs', type=int, default=800, help='number of epochs to train (default: 10)')
     parser.add_argument('--no-cuda', action='store_true', default=False, help='enables CUDA training')
     parser.add_argument('--seed', type=int, default=1, help='random seed (default: 1)')
-    parser.add_argument('--log-interval', type=int, default=100, metavar='N',
-                        help='how many batches to wait before logging training status')
-    parser.add_argument('--checkpoint_interval', type=int, default=50, metavar='N',
-                        help='how many epochs a checkpoint is done')
     parser.add_argument('--dirpath', help='path to to directory save/load the model', type=str,
                         default='/home/erick/RL/HGG-extended/HGG-Extended-master/logsdir/')
-    parser.add_argument('--datapath', help='file path to dataset', type=str, default=
-    '/home/erick/log_extended/01_06_2020_16_29_48_vae_dataset.pkl')
+    #argumetns image sampling
+    parser.add_argument('--total_samples', help='total number of samples', type=int, default=60000)
+    # parser.add_argument('--total_samples', help='total number of samples', type=int, default=)
+    parser.add_argument('--interaction_steps', help='total number of samples', type=int, default=20)
+    # Arguments for vae training
+    parser.add_argument('--vae_batch_size', type=int, default=128, help='input batch size for training (default: 128)')
+    parser.add_argument('--vae_epochs', type=int, default=1000, help='number of epochs to train (default: 10)')
+    parser.add_argument('--vae_log_interval', type=int, default=200, metavar='N',
+                        help='how many batches to wait before logging training status')
+    parser.add_argument('--vae_tr_test_interval', type=int, default=100, metavar='N',
+                        help='how many batches to wait before logging training status')
+    parser.add_argument('--vae_checkpoint_interval', type=int, default=50, metavar='N',
+                        help='how many epochs a checkpoint is done')
+    parser.add_argument('--vae_training_images_folder',
+                        help='training images folder', type=str)
+    parser.add_argument('--training_images_prefix',help='prefix of the training images',
+                        type=str, default='image')
+    parser.add_argument('--vae_results_folder', help='subfolder where to store results', type=str,
+                        default='vae_results/')
+
+    parser.add_argument('--datapath', help='file path to dataset', type=str, default='')
+    parser.add_argument('--data_has_goal_ims', help='file path to dataset', type=bool, default=True)
     # Arguments for VAE Architecture
-    parser.add_argument('--latent_dim', help='The size from the latent dimension', type=int, default=20)
-    parser.add_argument('--img_dim', help='other arguments, as image size, latent_size', type=int, default=84)
+    parser.add_argument('--latent_dim', help='The size from the latent dimension', type=int, default=6)
+    parser.add_argument('--img_dim', help='other arguments, as image size, latent_size', type=int, default=64)
+    parser.add_argument('--img_channels', help='channels of image', type=int, default=3)
+    parser.add_argument('--vae_kl_beta', help='beta argument for kl loss', type=float, default=2.5)
     # Arguments for VAE Wrapper
-    parser.add_argument('--wrap_with_vae', help='use vae wrapper or not', type=bool, default=True)
+    parser.add_argument('--wrap_with_vae', help='use vae wrapper or not', type=bool, nargs='?', const=False)
     parser.add_argument('--vae_wrap_kwargs', help='other arguments, as image size, latent_size', type=dict,
-                        default={'width':84, 'height':84})
-    parser.add_argument('--vae_wrap_filename', help='filename for loading weights', type=str, default='trained_last')
+                        default={'width':64, 'height':64})
+    parser.add_argument('--vae_wrap_filename', help='filename for loading weights', type=str, nargs='?')
     #arguments for TDM training:
     parser.add_argument('--tdm_training_epochs', help='number of training epochs for TDM', type=int, default=300)#500
     parser.add_argument('--tdm_training_episodes', help='number of training episode per epoch', type=int, default=30)

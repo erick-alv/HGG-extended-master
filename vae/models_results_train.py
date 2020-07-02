@@ -28,8 +28,8 @@ from vae.latent_visualization import get_pca_reduction, visualize_reduced_state
         train_data[k] = dataset[k][:n, :]
         test_data[k] = dataset[k][n:, :]
 
-    #conv_vae = CVAE(lr=0.001, input_channels=3, representation_size=16, imsize=84)
-    conv_vae = CVAE_Keras(lr=0.00001, input_channels=3, representation_size=16, imsize=84)
+    #conv_vae = CVAE(lr=0.001, input_channels=3, representation_size=16, imsize=64)
+    conv_vae = CVAE_Keras(lr=0.00001, input_channels=3, representation_size=16, imsize=64)
     train_rec_loss = []
     train_kl_loss = []
     train_loss = []
@@ -127,7 +127,7 @@ def play_with_trained(args):
     with open(args.datapath, 'rb') as f:
         dataset = pickle.load(f)
     N = dataset['next_obs'].shape[0]
-    # shaping as image 84x84x3
+    # shaping as image 64x64x3
     dataset['obs'] = dataset['obs'].astype(np.float32)
     dataset['next_obs'] = dataset['obs'].astype(np.float32)
     # Normalizing the images to the range of [0., 1.]
@@ -135,8 +135,8 @@ def play_with_trained(args):
     dataset['next_obs'] /= 255.
 
     restore_path = args.dirpath + "weights_dir_complete/cvae_weights_0"
-    #conv_vae = CVAE(lr=0.001, input_channels=3, representation_size=16, imsize=84, restore_path=restore_path)
-    conv_vae = CVAE_Keras(lr=0.001, input_channels=3, representation_size=16, imsize=84, restore_path=restore_path)
+    #conv_vae = CVAE(lr=0.001, input_channels=3, representation_size=16, imsize=64, restore_path=restore_path)
+    conv_vae = CVAE_Keras(lr=0.001, input_channels=3, representation_size=16, imsize=64, restore_path=restore_path)
     img_orig = dataset['next_obs'][3000]
     z, mu, log_sigma = conv_vae.encode(img_orig)
     print('this is z:', z)
@@ -147,9 +147,7 @@ def play_with_trained(args):
     store_image_array_at(img_restored, args.dirpath, 'image_restored', force_remap_to_255=True)
     store_image_array_at(img_random, args.dirpath, 'image_random')
 
-def create_vae_result_images(args):
-    #recover_filename = args.recover_filename TODO pass as argument
-    recover_filename = 'trained_last'
+def create_vae_result_images(args, recover_filename):
     #we do not use trainer any more, neihter the test loader
     vae_model, _, train_loader, _ = setup_vae(args, recover_filename=recover_filename)
     vae_model.eval()
@@ -193,7 +191,7 @@ def create_vae_result_images(args):
     with torch.no_grad():
         for _ in range(3):
             env.reset()
-            image_goal = env.env.env.sample_goal_state_as_image(84, 84)
+            image_goal = env.env.env.sample_goal_state_as_image(64, 64)
             image_goal = np_image_to_torch(image_goal)#pytorch uses NCHW
             mu, logvar = vae_model.encode(image_goal)
             latent_goal = vae_model.reparameterize(mu, logvar).cpu()
@@ -201,7 +199,7 @@ def create_vae_result_images(args):
             image_goal = torch_to_np_image(image_goal, denormalize=True)
             for i in range(steps):
                 env.step(env.action_space.sample())
-                image_state = env.render(mode='rgb_array', width=84, height=84)
+                image_state = env.render(mode='rgb_array', width=64, height=64)
                 image_state = np_image_to_torch(image_state)
                 mu, logvar = vae_model.encode(image_state)
                 latent_state = vae_model.reparameterize(mu, logvar)
@@ -315,23 +313,25 @@ def calculate_latent_histogram(dist_mu, dist_std, images_dataset, cvae):
                 histogram = np.array([[0.0]])
             latent_histogram_z[i].append(histogram)
 
-    return latent_histogram_mu, latent_histogram_z
+    return latent_histogram_mu, latent_histogram_z'''
 
-    
 
-def pass_images(args):
+def pass_dataset_to_images(args):
     with open(args.datapath, 'rb') as f:
         dataset = pickle.load(f)
-    N = dataset['next_obs'].shape[0]
+    N = dataset['next_state_image'].shape[0]
     for i in range(N):
-        store_image_array_at(dataset['next_obs'][i], args.dirpath+'images/next_obs/', "tr_im_"+str(i))'''
+        store_image_array_at(dataset['next_state_image'][i], args.dirpath+args.vae_training_images_folder,
+                             args.training_images_prefix+str(i))
+    if args.data_has_goal_ims:
+        step = args.interaction_steps
+        for t in range(0, N, step):
+            i += 1
+            store_image_array_at(dataset['goal_image'][t], args.dirpath + args.vae_training_images_folder,
+                                 args.training_images_prefix + str(i))
 
 if __name__=='__main__':
     args = get_args_and_initialize()
-    create_vae_result_images(args)
-    #make_video(args.dirpath+'images_for_video/', '.png')
-    #train(args)
-    #play_with_trained(args)
-    #create_result_images(args)
-    #generate_video(args)
-    #pass_images(args)
+    #pass_dataset_to_images(args)
+    create_vae_result_images(args, 'vae_weights_950')
+    make_video(args.dirpath+'images_for_video/', '.png')

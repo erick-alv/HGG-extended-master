@@ -6,8 +6,8 @@ import numpy as np
 class VAEWrapper(PixelObservationWrapper):
     def __init__(self, args, *oargs, **kwargs):
         super(VAEWrapper, self).__init__(*oargs, **kwargs)
-        self.vae_model = VAE(args.img_dim, 3, args.latent_dim).to('cpu')#'we want to charge the VAE to CPU so other networks can'
-        #device
+        self.vae_model = VAE(args.img_dim, args.img_channels, args.latent_dim).to('cpu')#'we want to
+        # charge the VAE to CPU so other networks can use device
         path = args.dirpath + 'weights_dir/' + args.vae_wrap_filename
         save_dict = torch.load(path, map_location=torch.device('cpu'))
         self.vae_model.load_state_dict(save_dict['model_state_dict'])

@@ -51,7 +51,7 @@
             <joint armature="1" damping="50" frictionloss="0" stiffness="0"></joint>
             
             <default class="robot0:fetchGripper">
-                <geom condim="4" margin="0.001" type="box" user="0" rgba="0.356 0.361 0.376 1"></geom>
+                <geom condim="4" margin="0.001" type="box" user="0" rgba="0 1 0 1"></geom>
                 <joint armature="100" damping="1000" limited="true" solimplimit="0.99 0.999 0.01" solreflimit="0.01 1" type="slide"></joint>
             </default>
 
@@ -59,7 +59,7 @@
                 <geom rgba="0.356 0.361 0.376 1.0"></geom>
             </default>
             <default class="robot0:blue">
-                <geom rgba="0.086 0.506 0.767 0.1"></geom>
+                <geom rgba="1 1 1 0.1"></geom>
             </default>
         </default>
     </default>

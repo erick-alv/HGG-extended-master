@@ -10,7 +10,7 @@ from custom_start import get_args_and_initialize
 import numpy as np
 
 class CustomImagesDataset(torch.utils.data.Dataset):
-    def __init__(self, directory, transform=None, train=False):
+    def __init__(self, directory, file_name_prefix, file_name_suffix, transform=None, train=False):
         """
         Args:
             csv_file (string): Path to the csv file with annotations.
@@ -18,13 +18,18 @@ class CustomImagesDataset(torch.utils.data.Dataset):
             transform (callable, optional): Optional transform to be applied
                 on a sample.
         """
-        images_names = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
-        images_names.sort(key=lambda x: int(x[6:-4]))
-        t = int(0.9*len(images_names))
+        images_names = [f for f in os.listdir(directory)
+                        if os.path.isfile(os.path.join(directory, f)) and
+                        f.endswith(file_name_suffix) and f.startswith(file_name_prefix)]
+        images_names.sort(key=lambda x: int(x.replace(file_name_prefix, '').replace(file_name_suffix, '')))
+        q = int(0.9*len(images_names))
+        r = len(images_names) - q
+        t1 = q // 2
+        t2 = t1 + r
         if train:
-            self.images_names = images_names[:t]
+            self.images_names = images_names[:t1] + images_names[t2:]
         else:
-            self.images_names = images_names[t:]
+            self.images_names = images_names[t1:t2]
         self.directory = directory
         self.transform = transform
 
@@ -100,7 +105,7 @@ class VAE_Trainer:
         # https://arxiv.org/abs/1312.6114
         # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
         KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-        return BCE + KLD
+        return BCE + self.args.vae_kl_beta * KLD
 
     def train(self, epoch):
         self.model.train()
@@ -113,7 +118,7 @@ class VAE_Trainer:
             loss.backward()
             train_loss += float(loss.item())
             self.optimizer.step()
-            if batch_idx % self.args.log_interval == 0:
+            if batch_idx % self.args.vae_log_interval == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     epoch, batch_idx * len(data), len(self.train_loader.dataset),
                     100. * batch_idx / len(self.train_loader),
@@ -121,8 +126,8 @@ class VAE_Trainer:
 
         print('====> Epoch: {} Average loss: {:.4f}'.format(
               epoch, train_loss / len(self.train_loader.dataset)))
-        if epoch % self.args.checkpoint_interval == 0:
-            save_train_checkpoint(args, 'trained_weights', vae=self.model, trainer=self, epoch=epoch)
+        if epoch % self.args.vae_checkpoint_interval == 0:
+            save_train_checkpoint(args, 'vae_weights', vae=self.model, trainer=self, epoch=epoch)
 
     def test(self, epoch):
         self.model.eval()
@@ -134,24 +139,27 @@ class VAE_Trainer:
                 test_loss += float(self.loss_function(recon_batch, data, mu, logvar).item())
                 if i == 0 and epoch % 100 == 0:
                     n = min(data.size(0), 8)
-                    comparison = torch.cat([data[:n], recon_batch.view(self.args.batch_size, self.model.channels_dim,
+                    comparison = torch.cat([data[:n], recon_batch.view(self.args.vae_batch_size,
+                                                                       self.model.channels_dim,
                                                                        self.model.x_y_dim, self.model.x_y_dim)[:n]])
-                    save_image(comparison.cpu(),
-                               self.args.dirpath + 'results/reconstruction_' + str(epoch) + '.png', nrow=n)
+                    save_image(comparison.cpu(), self.args.dirpath + self.args.vae_results_folder
+                               +'reconstruction_' + str(epoch) + '.png', nrow=n)
 
         test_loss /= len(self.test_loader.dataset)
         print('====> Test set loss: {:.4f}'.format(test_loss))
 
 def setup_vae(args, recover_filename=None):
     train_loader = torch.utils.data.DataLoader(
-        CustomImagesDataset(directory=args.dirpath + 'images/next_obs/', train=True,
-                            transform=transforms.ToTensor()),
-        batch_size=args.batch_size, shuffle=True, **args.if_cuda_kwargs)
+        CustomImagesDataset(directory=args.dirpath + args.vae_training_images_folder,
+                            file_name_prefix=args.training_images_prefix, file_name_suffix='.png', train=True,
+                            transform=transforms.ToTensor()), batch_size=args.vae_batch_size, shuffle=True,
+        **args.if_cuda_kwargs)
     test_loader = torch.utils.data.DataLoader(
-        CustomImagesDataset(directory=args.dirpath + 'images/next_obs/', train=True,
-                            transform=transforms.ToTensor()),
-        batch_size=args.batch_size, shuffle=True, **args.if_cuda_kwargs)
-    model = VAE(84, 3, 20).to(args.device)
+        CustomImagesDataset(directory=args.dirpath + args.vae_training_images_folder,
+                            file_name_prefix=args.training_images_prefix, file_name_suffix='.png', train=False,
+                            transform=transforms.ToTensor()), batch_size=args.vae_batch_size, shuffle=True,
+        **args.if_cuda_kwargs)
+    model = VAE(args.img_dim, args.img_channels, args.latent_dim).to(args.device)
     trainer = VAE_Trainer(model, train_loader, test_loader, args)
     if recover_filename is not None:
         load_vae(args, recover_filename, model, trainer)
@@ -187,34 +195,26 @@ def load_train_checkpoint(args, filename, vae, trainer, epoch):
 
 def start_training(args):
     model, trainer, _, _ = setup_vae(args)
-    training_loop(args, 1, model, trainer)
+    training_loop(args, 0, model, trainer)
 
-def resume_training(args, epoch):
-    recover_filename = 'trained_weights_'+str(epoch)
+def resume_training(args, recover_filename, epoch):
     model, trainer, _, _ = setup_vae(args, recover_filename=recover_filename)
     training_loop(args, epoch, model, trainer)
 
 def training_loop(args, start_epoch, model, trainer):
-    for epoch in range(start_epoch, args.epochs + 1):
+    for epoch in range(start_epoch, args.vae_epochs):
         trainer.train(epoch)
-        trainer.test(epoch)
-        if epoch % 100 == 0 or epoch == args.epochs:
+        if epoch % args.vae_tr_test_interval == 0 or epoch == args.vae_epochs:
+            trainer.test(epoch)
+        if epoch % 100 == 0 or epoch == args.vae_epochs-1:
             with torch.no_grad():
                 sample = torch.randn(64, model.latent_dim).to(args.device)
                 sample = model.decode(sample).cpu()
                 save_image(sample.view(64, model.channels_dim, model.x_y_dim, model.x_y_dim),
-                           args.dirpath + 'results/sample_' + str(epoch) + '.png')
-    save_vae(args, 'trained_last', vae=model, trainer=trainer)
+                           args.dirpath + args.vae_results_folder +'sample_' + str(epoch) + '.png')
+    save_vae(args, 'vae_weights_last', vae=model, trainer=trainer)
 
 if __name__ == "__main__":
     args = get_args_and_initialize()
-    #start_training(args)
-    resume_training(args, 600)
-
-    '''args = get_args_and_initialize()
-    model, trainer = setup_vae(args, recover_filename='trained_last')
-    with torch.no_grad():
-        sample = torch.randn(64, model.latent_dim).to(args.device)
-        sample = model.decode(sample).cpu()
-        save_image(sample.view(64, model.channels_dim, model.x_y_dim, model.x_y_dim),
-                   args.dirpath + 'results/sample_after_recover' + '.png')'''
+    start_training(args)
+    #resume_training(args, 600)

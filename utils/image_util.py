@@ -46,6 +46,8 @@ def save_and_show_npy_to_image(npy_path, image_save_path, display=False):
 def store_image_array_at(single_image_array, path_to_folder, img_name, force_remap_to_255=False, text_append=None):
     if single_image_array.max() <= 1.0 or force_remap_to_255:
         #assume is normalized in [0,1]
+        if single_image_array.dtype == np.uint8:
+            single_image_array = single_image_array.astype(np.float64)
         single_image_array *= 255.0
     if text_append is not None:
         text_im = make_text_im(single_image_array.shape[0], 40, text_append)

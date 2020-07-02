@@ -4,10 +4,11 @@ from gym.envs.robotics import fetch_env
 import numpy as np
 from gym.envs.robotics import rotations, robot_env, utils
 from PIL import Image
+import copy
 
 # Ensure we get the path separator correct on windows
 #MODEL_XML_PATH = os.path.join('fetch', 'push_labyrinth.xml')
-MODEL_XML_PATH = os.path.join('/home/erick/RL/HGG-extended/HGG-Extended-master/gym/gym/envs/robotics/assets/fetch', 'push_labyrinth.xml')
+MODEL_XML_PATH = os.path.join('/home/erick/RL/HGG-extended/HGG-Extended-master/gym/gym/envs/robotics/assets/fetch', 'push_labyrinth2.xml')
 
 def goal_distance(goal_a, goal_b):
     assert goal_a.shape == goal_b.shape
@@ -32,17 +33,11 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
             initial_qpos (dict): a dictionary of joint names and values that define the initial configuration
             reward_type ('sparse' or 'dense'): the reward type, i.e. sparse or dense
         """
-        '''initial_qpos = {
-            'robot0:slide0': 0.405,
-            'robot0:slide1': 0.48,
-            'robot0:slide2': 0.0,
-            'object0:joint': [1.25, 0.53, 0.4, 1., 0., 0., 0.],
-        }'''
         initial_qpos = {
             'robot0:slide0': 0.405,#position relative x (or y) from main body
             'robot0:slide1': 0.48,#position relative y (or x) from main body
             'robot0:slide2': 0.0,#position relative to axis z from main body
-            'object0:joint': [1.25, 0.53, 0.4, 1., 0., 0., 0.],#x,y,z,_,rot_?,rot_?,rot_?
+            'object0:joint': [1.25, 0.53, 0.4, 1., 0., 0., 0.],#x,y,z,_,rotation_as_quaternion(perhaps)
         }
         model_path = MODEL_XML_PATH
         n_substeps = 20
@@ -64,21 +59,38 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
         self.adapt_dict["obstacles"] = [[1.3 - 0.1, 0.75, 0.5, 0.11, 0.02, 0.1],
                                         [1.3 - 0.23, 0.75, 0.5, 0.02, 0.35, 0.1],
                                         [1.3 + 0.03, 0.75, 0.5, 0.02, 0.2, 0.1]]
-        self.obstacles_ranges_target = [[[1.00, 1.1], [0.425, 1.075]],
-                                        [[1.29, 1.37], [0.53, 0.97]],
-                                        [[1.07, 1.37], [0.71,0.79]]
-                                        ]
-        self.obstacles_ranges_gripper = [[[1.07-0.05, 1.1+0.05], [0.425-0.125, 1.075+0.125]],
-                                        [[1.29-0.05, 1.37+0.05], [0.53-0.125, 0.97+0.125]],
-                                        [[1.07-0.05, 1.37+0.05], [0.71-0.125, 0.79+0.125]]
-                                        ]
-        self.obstacles_ranges_object = [[[1.07 - 0.02, 1.1 + 0.02], [0.425 - 0.02, 1.075 + 0.02]],
-                                         [[1.29 - 0.02, 1.37 + 0.02], [0.53 - 0.02, 0.97 + 0.02]],
-                                         [[1.07 - 0.02, 1.37 + 0.02], [0.71 - 0.02, 0.79 + 0.02]]
-                                         ]
-        self.limit_y = [0.425, 1.075]
-        self.limit_x = [1.1, 1.525]
 
+        # center 1.3, 0.75, 0.2 geom size 0.25, 0.35, 0.2
+        self.table_lims = [[1.3 - 0.25, 1.3 + 0.25], [0.75 - 0.35, 0.75 + 0.35]]
+        self.table_lims_target = [[self.table_lims[0][0] + 0.025, self.table_lims[0][1] - 0.025],
+                                  [self.table_lims[1][0] + 0.025, self.table_lims[1][1] - 0.025]]
+        self.table_lims_object = [[self.table_lims[0][0] + 0.025, self.table_lims[0][1] - 0.025],
+                                  [self.table_lims[1][0]+0.025, self.table_lims[1][1]-0.025]]
+        self.obstacles_lims = [[[1.3 - 0.1 - 0.11, 1.3 - 0.1 + 0.11], [0.75 - 0.02, 0.75 + 0.02]],
+                               # [[[x_min, x_max],[y_min,y_max] for obstacle 1
+                               [[1.3 - 0.23 - 0.02, 1.3 - 0.23 + 0.02], [0.75 - 0.35, 0.75 + 0.35]],
+                               [[1.3 + 0.03 - 0.02, 1.3 + 0.03 + 0.02], [0.75 - 0.2, 0.75 + 0.2]], ]
+        self.target_obst = []
+        self.object_obst = []
+        self.gripper_obst = []
+        for obstacle in self.obstacles_lims:
+            l_x, l_y = obstacle
+            t_x = [l_x[0]-0.02, l_x[1]+0.02]
+            o_x = [l_x[0]-0.025, l_x[1]+0.025]
+            g_x = [l_x[0] - 0.045, l_x[1] + 0.045]
+            t_y = [l_y[0]-0.02, l_y[1]+0.02]
+            o_y = [l_y[0]-0.025, l_y[1]+0.025]
+            g_y = [l_y[0] - 0.065, l_y[1] + 0.065]
+            tn = [t_x, t_y]
+            on = [o_x, o_y]
+            gn = [g_x, g_y]
+            self.target_obst.append(tn)
+            self.object_obst.append(on)
+            self.gripper_obst.append(gn)
+
+        self.object_width = 0.025*2.0
+        self.gripper_finger_width = 0.0385*2.0
+        self.img_size = 16
         super(FetchPushLabyrinthEnv2, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
             initial_qpos=initial_qpos)
@@ -174,9 +186,9 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
             self.viewer.cam.lookat[idx] = value
         #self.viewer.cam.lookat[0] += 0.2
         self.viewer.cam.lookat[0] -= 0.05
-        self.viewer.cam.distance = 1.25
+        self.viewer.cam.distance = 1.15
         self.viewer.cam.azimuth = 180
-        self.viewer.cam.elevation = 275#-14.
+        self.viewer.cam.elevation = 285
 
     def _render_callback(self):
         # Visualize target.
@@ -187,54 +199,23 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
         self.sim.forward()
 
     def _reset_sim(self, inter_sampling=False):
+        self.sim.set_state(self.initial_state)
         if inter_sampling:
-            self.sim.set_state(self.initial_state)
-            #first move upside
-            object_pos = self.initial_gripper_xpos[:3]
-            up_pos = object_pos + [0., 0., 1.]
-            self.sim.data.set_mocap_pos('robot0:mocap', up_pos)
-            for _ in range(10):
-                self.sim.step()
-            self.sim.forward()
-            #move to wanted x, y position
-            point = self.pos_inside_valid(self.obstacles_ranges_gripper)
-            gripper_target = [point[0],point[1], up_pos[2]]
-            self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
-            for _ in range(10):
-                self.sim.step()
-            self.sim.forward()
-            #move again to table height
-            self.sim.data.set_mocap_pos('robot0:mocap', point)
-            for _ in range(10):
-                self.sim.step()
-            self.sim.forward()
-
+            point = self.random_pos_outside_obstacle(self.gripper_obst, self.table_lims)
+            self.move_gripper_to(point[0],point[1])
             if self.has_object:
-                # 3 cases: expected begin, near gripper, random position on table
-                case = self.np_random.randint(low=0, high=3)
+                # 3 cases: near gripper (this more frequent), expected begin, random position on table
+                case = self.np_random.randint(low=0, high=4)
                 if case % 3 == 0:
+                    object_xpos = self.object_pos_next_to_gripper()
+                elif case % 3 == 1:
                     object_xpos = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.obj_range,
                                                                                          self.obj_range,
                                                                                          size=2)
-                    object_qpos = self.sim.data.get_joint_qpos('object0:joint')
-                    assert object_qpos.shape == (7,)
-                    object_qpos[:2] = object_xpos
-                    self.sim.data.set_joint_qpos('object0:joint', object_qpos)
-                elif case % 3 == 1:
-                    object_xpos = point[:2]
-                    object_qpos = self.sim.data.get_joint_qpos('object0:joint')
-                    assert object_qpos.shape == (7,)
-                    object_qpos[:2] = object_xpos
-                    self.sim.data.set_joint_qpos('object0:joint', object_qpos)
                 else:
-                    point_pos = self.pos_inside_valid(self.obstacles_ranges_object)
-                    object_qpos = self.sim.data.get_joint_qpos('object0:joint')
-                    assert object_qpos.shape == (7,)
-                    object_qpos[:2] = point_pos[:2]
-                    self.sim.data.set_joint_qpos('object0:joint', object_qpos)
-
+                    object_xpos = self.random_pos_outside_obstacle(self.object_obst, self.table_lims_object)
+                self.move_object_to(object_xpos[0], object_xpos[1])
         else:
-            self.sim.set_state(self.initial_state)
             # Randomize start position of object.
             if self.has_object:
                 object_xpos = self.initial_gripper_xpos[:2]
@@ -248,97 +229,23 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
 
                 # apparently get/set_joint_qpos sets or reads positions; this qpos in an array of all info
                 # about object(black square and the last two are coordinates
-
-
         self.sim.forward()
         return True
 
-    def is_inside_obstacle(self, point, obstacles_ranges):
-        for obst_ranges in obstacles_ranges:
-            range_x = obst_ranges[0]
-            range_y = obst_ranges[1]
-            if range_x[0] <= point[0] <= range_x[1] and range_y[0] <= point[1] <= range_y[1]:
-                return True
-        return False
-
-    def pos_inside_valid(self, obstacles_ranges):
-        while True:
-            x = self.np_random.uniform(self.limit_x[0], self.limit_x[1])
-            y = self.np_random.uniform(self.limit_y[0], self.limit_y[1])
-            # radius goal = 0.02
-            point = np.array([x, y, 0.4])
-            if not self.is_inside_obstacle(point, obstacles_ranges):
-                return point
-
     def _sample_goal(self, inter_sampling=False):
         if inter_sampling:
-            goal = self.pos_inside_valid(self.obstacles_ranges_target)
+            goal = self.random_pos_outside_obstacle(self.target_obst, self.table_lims_target)
         else:
             goal = self.target_center.copy()
 
             goal[1] += self.np_random.uniform(-self.target_range_y, self.target_range_y)
             goal[0] += self.np_random.uniform(-self.target_range_x, self.target_range_x)
         self.goal = goal.copy()# todo verify this does not have any side effect
-        self.goal_image = self.sample_goal_state_as_image(84, 84) #TODO set as paremeter
+        self.goal_image = self.sample_goal_state_as_image(self.img_size, self.img_size) #TODO set as paremeter
         return goal.copy()
 
-    #just call after a reset
-    def sample_goal_state_as_image(self, height, width):
-        #store positions
-        grip_pos = self.sim.data.get_mocap_pos('robot0:mocap').copy()
-        object_qpos = self.sim.data.get_joint_qpos('object0:joint').copy()
-        #robot_qpos, robot_qvel = utils.robot_get_obs(self.sim).copy()
-        goal_pos = self.goal.copy()
-
-        # temporarilly moves to goal position so it is possible to store goal state
-        # first move upside
-        up_pos = grip_pos + [0., 0., 1.]
-        self.sim.data.set_mocap_pos('robot0:mocap', up_pos)
-        for _ in range(10):
-            self.sim.step()
-        self.sim.forward()
-        # move to wanted x, y position
-        gripper_target = [goal_pos[0], goal_pos[1], up_pos[2]]
-        self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
-        for _ in range(10):
-            self.sim.step()
-        self.sim.forward()
-        # move again to table height
-        goal_target = [goal_pos[0], goal_pos[1], goal_pos[2]+0.3]
-        self.sim.data.set_mocap_pos('robot0:mocap', goal_target)
-        # move the object to goal
-        object_new_pos = object_qpos.copy()
-        object_new_pos[:2] = goal_pos[:2]
-        self.sim.data.set_joint_qpos('object0:joint', object_new_pos)
-        for _ in range(10):
-            self.sim.step()
-        self.sim.forward()
-
-
-        image_goal = self.render(mode="rgb_array", width=width, height=height)
-
-        #move everything to back to pos
-        # first move upside
-        up_pos = goal_pos + [0., 0., 1.]
-        self.sim.data.set_mocap_pos('robot0:mocap', up_pos)
-        for _ in range(10):
-            self.sim.step()
-        self.sim.forward()
-        # move to wanted x, y position
-        gripper_target = [grip_pos[0], grip_pos[1], up_pos[2]]
-        self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
-        for _ in range(10):
-            self.sim.step()
-        self.sim.forward()
-        # move again to table height
-        self.sim.data.set_mocap_pos('robot0:mocap', grip_pos)
-        # move the object back
-        self.sim.data.set_joint_qpos('object0:joint', object_qpos)
-        for _ in range(10):
-            self.sim.step()
-        self.sim.forward()
-
-        return image_goal
+    def set_goal_img_size(self, size):
+        self.img_size = size
 
     def _is_success(self, achieved_goal, desired_goal):
         d = goal_distance(achieved_goal, desired_goal)
@@ -406,13 +313,149 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
             if random < acc:
                 return i
         print(acc)
-'''from gym.wrappers.pixel_observation import PixelObservationWrapper
-import copy
-if __name__ == '__main__':
-    e = FetchPushLabyrinthEnv2()
-    ob = e.reset()
-    for i in range(500):
+
+    def _inside_an_obstacle(self, x, y, obstacles_lims):
+        def inside(x, y, obstacle):
+            if x > obstacle[0][0] and x <  obstacle[0][1] and y > obstacle[1][0] and y <  obstacle[1][1]:
+                return True
+            return False
+
+        return any([inside(x,y,o) for o in obstacles_lims])
+
+    def random_pos_outside_obstacle(self, obstacles_lims, table_lims):
+        while True:
+            x = self.np_random.uniform(table_lims[0][0], table_lims[0][1])
+            y = self.np_random.uniform(table_lims[1][0], table_lims[1][1])
+            if not self._inside_an_obstacle(x, y, obstacles_lims):
+                return np.array([x, y, 0.4])
+
+    def gripper_pos_next_object(self):
+        r = np.sqrt(2.0 * np.power(self.object_width / 2.0, 2)) + np.sqrt(
+            2.0 * np.power(self.gripper_finger_width / 2.0, 2))
+        object_pos = self.get_object_current_state()
+        x_min = max(object_pos[0] - r, self.table_lims[0][0])
+        x_max = min(object_pos[0] + r, self.table_lims[0][1])
+        y_min = max(object_pos[1] - r, self.table_lims[1][0])
+        y_max = min(object_pos[1] + r, self.table_lims[1][1])
+        while True:
+            x = self.np_random.uniform(x_min, x_max)
+            y = self.np_random.uniform(y_min, y_max)
+            if not self._inside_an_obstacle(x, y, self.object_obst):
+                z = self.np_random.uniform(0.4, 0.5)
+                return np.array([x, y, z])
+
+    def object_pos_next_to_gripper(self):
+        r = np.sqrt(2.0*np.power(self.object_width/2.0, 2)) + np.sqrt(2.0*np.power(self.gripper_finger_width/2.0, 2))
+        grip_pos = self.get_gripper_pos()
+        x_min = max(grip_pos[0] - r, self.table_lims_object[0][0])
+        x_max = min(grip_pos[0] + r, self.table_lims_object[0][1])
+        y_min = max(grip_pos[1] - r, self.table_lims_object[1][0])
+        y_max = min(grip_pos[1] + r, self.table_lims_object[1][1])
+        while True:
+            x = self.np_random.uniform(x_min, x_max)
+            y = self.np_random.uniform(y_min, y_max)
+            if not self._inside_an_obstacle(x, y, self.object_obst):
+                return np.array([x, y, 0.4])
+
+    def object_pos_at_goal(self):
+        goal = self.goal.copy()
+        x_min = max(goal[0] - self.distance_threshold, self.table_lims_object[0][0])
+        x_max = min(goal[0] + self.distance_threshold, self.table_lims_object[0][1])
+        y_min = max(goal[1] - self.distance_threshold, self.table_lims_object[1][0])
+        y_max = min(goal[1] + self.distance_threshold, self.table_lims_object[1][1])
+        while True:
+            x = self.np_random.uniform(x_min, x_max)
+            y = self.np_random.uniform(y_min, y_max)
+            if not self._inside_an_obstacle(x, y, self.object_obst):
+                return np.array([x, y, 0.4])
+
+    def move_goal_to(self, x, y, z=None):
+        current = self.goal.copy()
+        if z is not None:
+            self.goal = np.array([x, y, z])
+        else:
+            self.goal = np.array([x, y, current[2]].copy())
+
+    def move_gripper_to(self, x, y):
+        # first move upside
+        object_pos = self.get_gripper_pos()
+        up_pos = np.array([object_pos[0], object_pos[1], 1.2])
+        self.sim.data.set_mocap_pos('robot0:mocap', up_pos)
         for _ in range(10):
-            e.render()
-        e.reset()
+            self.sim.step()
+        self.sim.forward()
+        # move to wanted x, y position
+        gripper_target = [x, y, up_pos[2]]
+        self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
+        for _ in range(10):
+            self.sim.step()
+        self.sim.forward()
+        # move again to table height
+        self.sim.data.set_mocap_pos('robot0:mocap', [x,y, object_pos[2]])
+        for _ in range(10):
+            self.sim.step()
+        self.sim.forward()
+
+    def move_object_to(self, x, y):
+        object_qpos = self.sim.data.get_joint_qpos('object0:joint')
+        assert object_qpos.shape == (7,)
+        object_qpos[0] = x
+        object_qpos[1] = y
+        self.sim.data.set_joint_qpos('object0:joint', object_qpos)
+
+    def get_object_current_state(self):
+        return self.sim.data.get_joint_qpos('object0:joint').copy()
+
+    def reset_object_to_state(self, state):
+        self.sim.data.set_joint_qpos('object0:joint', state)
+
+    def get_gripper_pos(self):
+        return self.sim.data.get_site_xpos('robot0:grip').copy()
+
+    #just call after a reset
+    def sample_goal_state_as_image(self, height, width):
+        #store state to reset
+        original_state = copy.deepcopy(self.sim.get_state())
+        # temporally moves to goal position so it is possible to store goal image
+        object_goal_pos = self.object_pos_at_goal()
+        self.move_object_to(object_goal_pos[0], object_goal_pos[1])
+        gripper_goal_pos = self.gripper_pos_next_object()
+        self.move_gripper_to(gripper_goal_pos[0], gripper_goal_pos[1])
+        # close gripper
+        if self.block_gripper:
+            self.sim.data.set_joint_qpos('robot0:l_gripper_finger_joint', 0.)
+            self.sim.data.set_joint_qpos('robot0:r_gripper_finger_joint', 0.)
+            for _ in range(100):
+                self.sim.step()
+            self.sim.forward()
+        image_goal = self.render(mode="rgb_array", width=width, height=height)
+        #move everything back to original state
+        self.sim.set_state(original_state)
+        return image_goal
+
+
+'''import copy
+if __name__ == '__main__':
+    import time
+    from utils.image_util import rgb_array_to_image
+
+    e = FetchPushLabyrinthEnv2()
+    for i in range(10):
+        ob = e.reset()
+        goal_image = rgb_array_to_image(e.goal_image)
+        goal_image.show()
+        start = time.time()
+        while time.time() - start < 0.5:
+            pass
+        goal_image.close()
+        for _ in range(5):
+            array = e.render(mode='rgb_array')
+            image = rgb_array_to_image(array)
+            image.show()
+            start = time.time()
+            while time.time() - start < 0.5:
+                pass
+            image.close()
+            a = e.step(e.action_space.sample())
+
     e.close()'''

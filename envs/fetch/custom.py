@@ -8,6 +8,8 @@ class CustomGoalEnv():
     def __init__(self, args):
         self.args = args
         self.env = gym.make(args.env)
+        if hasattr(args, 'img_dim'):
+            self.env.env.set_goal_img_size(args.img_dim)
         if hasattr(args, 'wrap_with_vae') and args.wrap_with_vae:
             self._env = VAEWrapper(args, env=self.env, pixels_only=False,
                                    render_kwargs={'state_image':args.vae_wrap_kwargs},

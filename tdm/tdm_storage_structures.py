@@ -9,13 +9,13 @@ class TDM_Trajectory(Trajectory):
     def __init__(self):
         self.ep = {
             'obs': [],
-            '_obs': [],
+            '_obs': [],#this is the achieved state, how the environment normally represents it
             'goal': [],
-            '_goal':[],
+            '_goal':[],#how the environment normally represents it
             'rem_steps': [],
             'action': [],
             'next_obs': [],
-            '_next_obs': [],
+            '_next_obs': [],#this is the next achieved state, how the environment normally represents it
             'reward': [],
             'done': []
         }

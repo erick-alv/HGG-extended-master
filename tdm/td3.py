@@ -29,7 +29,6 @@ class Actor(nn.Module):
             a = F.relu(layer(a))
         return self.max_action * torch.tanh(self.l3(a))
 
-
 class Critic(nn.Module):
     def __init__(self, state_dim, action_dim, goal_dim, rem_steps_dim, device,networks_hidden):
         super(Critic, self).__init__()
