@@ -21,7 +21,7 @@ class NormalLearner:
 
 			if buffer.steps_counter>=args.warmup:
 				for _ in range(args.train_batches):
-					info = agent.train(buffer.sample_batch())
+					info = agent.train_with_batch(buffer.sample_batch())
 					args.logger.add_dict(info)
 				agent.target_update()
 		# TODO: deleted this duplicate test section

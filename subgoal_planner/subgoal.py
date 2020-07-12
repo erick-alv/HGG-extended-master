@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import math
-from tdm.td3 import TD3
+from agents.actor_critic import TD3TDM
 from copy import copy
 from gym.envs.robotics.fetch.push_labyrinth2 import goal_distance
 from envs import make_env
@@ -215,7 +215,7 @@ class SubgoalPlanner(nn.Module):
 
 def episode_loop_with_subgoal_planner(epoch, episode, planner, env, act_cr_model, args):
     assert isinstance(planner, SubgoalPlanner)
-    assert isinstance(act_cr_model, TD3)
+    assert isinstance(act_cr_model, TD3TDM)
     obs = env.reset()
     first_obs = copy(obs)
     goal = obs['goal_latent']
@@ -265,8 +265,8 @@ def setup_subgoal(args, td3_recover_filename):
     sample_obs = env.reset()
     latent_dim = sample_obs['state_latent'].shape[0]
     action_dim = env.action_space.shape[0]
-    td3_actor_critic = TD3(state_dim=latent_dim, action_dim=action_dim, goal_dim=latent_dim,
-                           rem_steps_dim=1, max_action=env.action_space.high, args=args)
+    td3_actor_critic = TD3TDM(state_dim=latent_dim, action_dim=action_dim, goal_dim=latent_dim,
+                              rem_steps_dim=1, max_action=env.action_space.high, args=args)
     td3_actor_critic.load(filename=td3_recover_filename)
     td3_actor_critic.actor.eval()
     td3_actor_critic.critic.eval()

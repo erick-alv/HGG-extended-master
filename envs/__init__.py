@@ -17,6 +17,7 @@ Robotics_envs_id = [
 	'FetchPickNoObstacle-v1',
 	'FetchPushLabyrinth-v1',
     'FetchPushLabyrinth-v2',
+	'FetchPushLabyrinth-v3',
 	'FetchPickAndThrow-v1',
 	'FetchPickAndSort-v1',
 	'HandManipulateBlock-v0',

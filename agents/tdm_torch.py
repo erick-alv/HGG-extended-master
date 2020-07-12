@@ -1,9 +1,9 @@
 from custom_start import get_args_and_initialize
 import time
-from tdm.tdm_storage_structures import TDM_Trajectory, ReplayBuffer_TDM
+from agents.tdm_storage_structures import TDM_Trajectory, ReplayBuffer_TDM
 from envs import make_env
-from tdm.ou_noise import OUNoise
-from tdm.td3 import TD3
+from agents.ou_noise import OUNoise
+from agents.tdm_actor_critic import TD3TDM
 from temp_func import conc_latent
 from gym.envs.robotics.fetch.push_labyrinth2 import goal_distance
 from copy import copy
@@ -38,7 +38,7 @@ class TDM:
                         state = obs['state_latent']
                     else:
                         state = conc_latent(obs['observation'], obs['state_latent'])
-                    action = self.act_cr_model.get_action(state, goal, rem_steps)
+                    action = self.act_cr_model.get_action(state, goal, rem_steps)[0]
                     action = self.ou_noiser.get_action(action, step)
                     next_obs, reward, done, _ = self.env.step(action)
                     if self.args.just_latent:
@@ -57,7 +57,7 @@ class TDM:
                     if self.replay_buffer.steps_counter >= args.min_replay_size:
                         for training_step in range(args.training_steps):
                             batch = self.replay_buffer.sample_batch(self.args.batch_size, transform_to_tensor=True)
-                            critic_loss, actor_loss = self.act_cr_model.train(batch)
+                            critic_loss, actor_loss = self.act_cr_model.train_with_batch(batch)
                             if critic_loss is not None:
                                 cr_tr_loss = cr_tr_loss + critic_loss if cr_tr_loss is not None else critic_loss
                             if actor_loss is not None:
@@ -111,8 +111,8 @@ def setup_tdm(args, recover_filename=None):
     action_dim = env.action_space.shape[0]
     '''td3_actor_critic = TD3(state_dim=obs_dim+latent_dim, action_dim=action_dim, goal_dim=desired_dim+latent_dim,
                            rem_steps_dim=1, max_action=env.action_space.high, args=args)'''
-    td3_actor_critic = TD3(state_dim=latent_dim, action_dim=action_dim, goal_dim=latent_dim,
-                           rem_steps_dim=1, max_action=env.action_space.high, args=args)
+    td3_actor_critic = TD3TDM(state_dim=latent_dim, action_dim=action_dim, goal_dim=latent_dim,
+                              rem_steps_dim=1, max_action=env.action_space.high, value_dim=args.value_dim, args=args)
     if recover_filename is not None:
         td3_actor_critic.load(filename=recover_filename)
     replay_buffer = ReplayBuffer_TDM(args, env)

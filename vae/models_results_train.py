@@ -5,103 +5,11 @@ from envs import make_env
 import pickle
 from custom_start import get_args_and_initialize
 import torch
-from vae.vae_torch import setup_vae
+from vae.vae_torch import setup_vae_just_images
 from vae.latent_visualization import get_pca_reduction, visualize_reduced_state
-
-'''def train(args):
-    # LOADING THE DATA
-    with open(args.datapath, 'rb') as f:
-        dataset = pickle.load(f)
-    N = dataset['next_obs'].shape[0]
-    n = int(N * 0.9)
-
-    dataset['obs'] = dataset['obs'].astype(np.float32)
-    dataset['next_obs'] = dataset['next_obs'].astype(np.float32)
-    # Normalizing the images to the range of [0., 1.]
-    dataset['obs'] /= 255.
-    dataset['next_obs'] /= 255.
-
-    # create data_sets
-    train_data = {}
-    test_data = {}
-    for k in dataset.keys():
-        train_data[k] = dataset[k][:n, :]
-        test_data[k] = dataset[k][n:, :]
-
-    #conv_vae = CVAE(lr=0.001, input_channels=3, representation_size=16, imsize=64)
-    conv_vae = CVAE_Keras(lr=0.00001, input_channels=3, representation_size=16, imsize=64)
-    train_rec_loss = []
-    train_kl_loss = []
-    train_loss = []
-    ev_rec_loss = []
-    ev_kl_loss = []
-    ev_loss = []
-    best_train = None
-    best_evaluate = None
-    for epoch in range(num_epochs):
-        #train
-        epoch_train_rec_losses = []
-        epoch_train_kl_losses = []
-        epoch_train_losses = []
-        batches = make_batches(train_data['next_obs'], batch_size=batch_size)
-        for batch_index, im_batch in enumerate(batches):
-            rec_loss, kl_loss, loss = conv_vae.train(im_batch.copy())
-            epoch_train_rec_losses.append(rec_loss)
-            epoch_train_kl_losses.append(kl_loss)
-            epoch_train_losses.append(loss)
-        mean_train_epoch_loss = np.array(epoch_train_losses).mean()
-        train_rec_loss.append(np.array(epoch_train_rec_losses).mean())
-        train_kl_loss.append(np.array(epoch_train_kl_losses).mean())
-        train_loss.append(mean_train_epoch_loss)
-        if best_train is None or mean_train_epoch_loss < best_train:
-            save_model_file = args.dirpath + "weights_dir/cvae_weights_best_train_" + str(epoch%10)
-            conv_vae.save_weights(save_model_file)
-            best_train = mean_train_epoch_loss.copy()
-        #evaluate
-        if epoch % 100 == 0:
-            epoch_ev_rec_loss = []
-            epoch_ev_kl_loss = []
-            epoch_ev_loss = []
-            batches = make_batches(test_data['next_obs'], batch_size=batch_size)
-            for batch_index, im_batch in enumerate(batches):
-                rec_loss, kl_loss, loss = conv_vae.evaluate(im_batch.copy())
-                epoch_ev_rec_loss.append(rec_loss)
-                epoch_ev_kl_loss.append(kl_loss)
-                epoch_ev_loss.append(loss)
-            ev_loss.append(np.array(epoch_ev_loss).mean())
-            ev_rec_loss.append(np.array(epoch_ev_rec_loss).mean())
-            ev_kl_loss.append(np.array(epoch_ev_kl_loss).mean())
-            print('Epoch ', epoch, ':')
-            print('epoch train_rec_loss: ', np.array(epoch_train_rec_losses).mean())
-            print('epoch train_kl_loss: ', np.array(epoch_train_kl_losses).mean())
-            print('epoch train_loss: ', np.array(epoch_train_losses).mean())
-            print('epoch  evaluation_rec_loss: ', np.array(epoch_ev_rec_loss).mean())
-            print('epoch  evaluation_kl_loss: ', np.array(epoch_ev_kl_loss).mean())
-            mean_ev_loss = np.array(epoch_ev_loss).mean()
-            print('epoch  evaluation_loss: ', mean_ev_loss)
-            print('_______________________________________________')
-            #save_model_file = args.dirpath + "weights_dir/cvae"
-            #conv_vae.saver.save(conv_vae.sess, save_model_file, global_step=epoch)
-            save_model_file = args.dirpath + "weights_dir/cvae_weights_" + str(epoch)#just to avoid too many at be
-            conv_vae.save_weights(save_model_file)
-            if best_evaluate is None or mean_ev_loss < best_evaluate:
-                save_model_file = args.dirpath + "weights_dir/cvae_weights_best_evaluate_" + str(epoch)
-                conv_vae.save_weights(save_model_file)
-                best_evaluate = mean_ev_loss.copy()
-    #saves last model
-    #save_model_file = args.dirpath + "weights_dir/cvae_last"
-    #conv_vae.saver.save(conv_vae.sess, save_model_file)
-    save_model_file = args.dirpath + "weights_dir/cvae_weights_last"
-    conv_vae.save_weights(save_model_file)
-    #last log
-    print('overall train_loss: ', np.array(train_loss).mean())
-    print('overall evaluation_loss: ', np.array(ev_loss).mean())
-    """Test"""
-    img_orig = dataset['next_obs'][10]
-    z, mu, log_sigma = conv_vae.encode(img_orig.copy())
-    img_restored = conv_vae.decode(z)
-    store_image_array_at(img_orig, args.dirpath, 'image_original_after_training', force_remap_to_255=True)
-    store_image_array_at(img_restored, args.dirpath, 'image_restored_after_training', force_remap_to_255=True)'''
+import pandas as pd
+import csv
+import os
 
 def make_batches(data, batch_size):
     """Returns a list of batch indices (tuples of indices).
@@ -149,7 +57,7 @@ def play_with_trained(args):
 
 def create_vae_result_images(args, recover_filename):
     #we do not use trainer any more, neihter the test loader
-    vae_model, _, train_loader, _ = setup_vae(args, recover_filename=recover_filename)
+    vae_model, _, train_loader, _ = setup_vae_just_images(args, recover_filename=recover_filename)
     vae_model.eval()
     #loads model samples from latent space to create a plot from this one
     samples_size = 45000
@@ -191,7 +99,7 @@ def create_vae_result_images(args, recover_filename):
     with torch.no_grad():
         for _ in range(3):
             env.reset()
-            image_goal = env.env.env.sample_goal_state_as_image(64, 64)
+            image_goal = env.env.env.sample_goal_info(64, 64)
             image_goal = np_image_to_torch(image_goal)#pytorch uses NCHW
             mu, logvar = vae_model.encode(image_goal)
             latent_goal = vae_model.reparameterize(mu, logvar).cpu()
@@ -315,23 +223,53 @@ def calculate_latent_histogram(dist_mu, dist_std, images_dataset, cvae):
 
     return latent_histogram_mu, latent_histogram_z'''
 
-
+from gym.envs.robotics.fetch.push_labyrinth2 import extract_gripper_pos_from_observation
+import io
 def pass_dataset_to_images(args):
     with open(args.datapath, 'rb') as f:
         dataset = pickle.load(f)
     N = dataset['next_state_image'].shape[0]
-    for i in range(N):
-        store_image_array_at(dataset['next_state_image'][i], args.dirpath+args.vae_training_images_folder,
-                             args.training_images_prefix+str(i))
-    if args.data_has_goal_ims:
-        step = args.interaction_steps
-        for t in range(0, N, step):
-            i += 1
-            store_image_array_at(dataset['goal_image'][t], args.dirpath + args.vae_training_images_folder,
-                                 args.training_images_prefix + str(i))
+
+    #Create csv file
+    csv_file_path = args.dirpath + args.vae_training_images_folder + args.training_csv_file
+    fieldnames = ['image','gripper_pos', 'object_pos']
+    if os.path.isfile(csv_file_path):
+        raise Exception('This csv file already exists')
+
+    with open(csv_file_path, 'w') as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        writer.writeheader()
+        for i in range(N):
+            store_image_array_at(dataset['next_state_image'][i], args.dirpath+args.vae_training_images_folder,
+                                 args.training_images_prefix+str(i))
+            gripper_pos = extract_gripper_pos_from_observation(dataset['next_state'][i])
+            out = io.StringIO()
+            np.savetxt(out, gripper_pos)
+            object_pos = dataset['next_achieved_goal'][i]
+            outobj = io.StringIO()
+            np.savetxt(outobj, object_pos)
+            row = {'image': args.training_images_prefix+str(i), 'gripper_pos': out.getvalue(),
+                   'object_pos': outobj.getvalue()}
+            writer.writerow(row)
+
+        if args.data_has_goal_ims:
+            step = args.interaction_steps
+            for t in range(0, N, step):
+                i += 1
+                store_image_array_at(dataset['goal_image'][t], args.dirpath + args.vae_training_images_folder,
+                                     args.training_images_prefix + str(i))
+                gripper_pos = extract_gripper_pos_from_observation(dataset['goal_state'][t])
+                out = io.StringIO()
+                np.savetxt(out, gripper_pos)
+                object_pos = dataset['goal_pos'][t]
+                outobj = io.StringIO()
+                np.savetxt(outobj, object_pos)
+                row = {'image': args.training_images_prefix + str(i), 'gripper_pos': out.getvalue(),
+                       'object_pos': outobj.getvalue()}
+                writer.writerow(row)
 
 if __name__=='__main__':
     args = get_args_and_initialize()
-    #pass_dataset_to_images(args)
-    create_vae_result_images(args, 'vae_weights_950')
-    make_video(args.dirpath+'images_for_video/', '.png')
+    pass_dataset_to_images(args)
+    #create_vae_result_images(args, 'vae_weights_950')
+    #make_video(args.dirpath+'images_for_video/', '.png')

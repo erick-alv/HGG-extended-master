@@ -2,6 +2,7 @@ import numpy as np
 import gym
 from utils.os_utils import remove_color
 from vae.vae_wrapper import VAEWrapper
+from vae.goal_pixel_wrapper import PixelAndGoalWrapper
 
 
 class CustomGoalEnv():
@@ -14,6 +15,12 @@ class CustomGoalEnv():
             self._env = VAEWrapper(args, env=self.env, pixels_only=False,
                                    render_kwargs={'state_image':args.vae_wrap_kwargs},
                                    pixel_keys=('state_image', ))
+        elif hasattr(args, 'wrap_with_pixel') and args.wrap_with_pixel:
+            self._env = PixelAndGoalWrapper(args, env=self.env, pixels_only=False,
+                                            render_kwargs={'state_image':args.pixel_wrap_kwargs},
+                                            pixel_keys=('state_image', ))
+            self.env.env.set_goal_img_size(args.img_dim)
+
         self.np_random = self.env.env.np_random
         self.distance_threshold = self.env.env.distance_threshold
         self.action_space = self.env.action_space
@@ -28,7 +35,8 @@ class CustomGoalEnv():
         if self.has_object: self.height_offset = self.env.env.height_offset
 
         self.render = self.env.render
-        if hasattr(args, 'wrap_with_vae') and args.wrap_with_vae:
+        if (hasattr(args, 'wrap_with_vae') and args.wrap_with_vae) \
+                or (hasattr(args, 'wrap_with_pixel') and args.wrap_with_pixel):
             self.get_obs = self._env._get_obs
         else:
             self.get_obs = self.env.env._get_obs

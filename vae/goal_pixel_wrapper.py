@@ -1,17 +1,9 @@
 from gym.wrappers.pixel_observation import PixelObservationWrapper
-from vae.vae_torch import MultiVAE
 import torch
-import numpy as np
-
-class VAEWrapper(PixelObservationWrapper):
+class PixelAndGoalWrapper(PixelObservationWrapper):
     def __init__(self, args, *oargs, **kwargs):
-        super(VAEWrapper, self).__init__(*oargs, **kwargs)
-        self.vae_model = MultiVAE(args.img_dim, args.img_channels, args.latent_dim).to('cpu')#'we want to
+        super(PixelAndGoalWrapper, self).__init__(*oargs, **kwargs)
         # charge the VAE to CPU so other networks can use device
-        path = args.dirpath + 'weights_dir/' + args.vae_wrap_filename
-        save_dict = torch.load(path, map_location=torch.device('cpu'))
-        self.vae_model.load_state_dict(save_dict['model_state_dict'])
-        self.vae_model.eval()
 
     def np_image_to_torch(self, single_image_array):
         single_image_tensor = torch.from_numpy(single_image_array.copy())
@@ -33,20 +25,11 @@ class VAEWrapper(PixelObservationWrapper):
     def _get_obs(self):
         obs = self.env.env._get_obs()
         obs = super().observation(obs)
-        goal = self.env.env.goal_image
-        with torch.no_grad():
-            g_mu, g_logvar = self.vae_model.encode(self.np_image_to_torch(goal))
-            #g_std = g_logvar.mul(0.5).exp_()
-            #if noisy:
-            #    eps = ptu.Variable(std.data.new(std.size()).normal_())
-            #    goal_latent =eps.mul(std).add_(mu)
-            goal_latent = g_mu[0].numpy()
-            s_mu, s_logvar = self.vae_model.encode(self.np_image_to_torch(obs['state_image']))
-            state_latent = s_mu[0].numpy()
+        goal_image = self.env.env.goal_image
+        goal_state = self.env.env.goal_state
         extra_obs = {
-            'goal_image': goal,
-            'goal_latent': goal_latent,
-            'state_latent': state_latent
+            'goal_image': goal_image,
+            'goal_state': goal_state
         }
         obs.update(extra_obs)
         return obs

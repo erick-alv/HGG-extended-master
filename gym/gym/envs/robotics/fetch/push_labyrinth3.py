@@ -5,10 +5,11 @@ import numpy as np
 from gym.envs.robotics import rotations, robot_env, utils
 from PIL import Image
 import copy
+from utils.image_util import store_image_array_at
 
 # Ensure we get the path separator correct on windows
 #MODEL_XML_PATH = os.path.join('fetch', 'push_labyrinth.xml')
-MODEL_XML_PATH = os.path.join('/home/erick/RL/HGG-extended/HGG-Extended-master/gym/gym/envs/robotics/assets/fetch', 'push_labyrinth2.xml')
+MODEL_XML_PATH = os.path.join('/home/erick/RL/HGG-extended/HGG-Extended-master/gym/gym/envs/robotics/assets/fetch', 'push_labyrinth3.xml')
 
 def goal_distance(goal_a, goal_b):
     assert goal_a.shape == goal_b.shape
@@ -17,7 +18,7 @@ def goal_distance(goal_a, goal_b):
 def extract_gripper_pos_from_observation(observation):
     return observation[:3]#three first arguments are the position
 
-class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
+class FetchPushLabyrinthEnv3(robot_env.RobotEnv, gym.utils.EzPickle):
     def __init__(self, reward_type='sparse'):
 
         """Initializes a new Fetch environment.
@@ -59,7 +60,7 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
         # TODO: configure adaption parameters
         self.adapt_dict=dict()
         self.adapt_dict["field"] = [1.3, 0.75, 0.5, 0.25, 0.35, 0.1]
-        self.adapt_dict["obstacles"] = [[1.3 - 0.1, 0.75, 0.5, 0.11, 0.02, 0.1],
+        self.adapt_dict["obstacles"] = [[1.3, 0.75, 0.5, 0.12, 0.02, 0.1],
                                         [1.3 - 0.23, 0.75, 0.5, 0.02, 0.35, 0.1],
                                         [1.3 + 0.03, 0.75, 0.5, 0.02, 0.2, 0.1]]
 
@@ -68,11 +69,10 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
         self.table_lims_target = [[self.table_lims[0][0] + 0.025, self.table_lims[0][1] - 0.025],
                                   [self.table_lims[1][0] + 0.025, self.table_lims[1][1] - 0.025]]
         self.table_lims_object = [[self.table_lims[0][0] + 0.025, self.table_lims[0][1] - 0.025],
-                                  [self.table_lims[1][0]+0.025, self.table_lims[1][1]-0.025]]
-        self.obstacles_lims = [[[1.3 - 0.1 - 0.11, 1.3 - 0.1 + 0.11], [0.75 - 0.02, 0.75 + 0.02]],
-                               # [[[x_min, x_max],[y_min,y_max] for obstacle 1
-                               [[1.3 - 0.23 - 0.02, 1.3 - 0.23 + 0.02], [0.75 - 0.35, 0.75 + 0.35]],
-                               [[1.3 + 0.03 - 0.02, 1.3 + 0.03 + 0.02], [0.75 - 0.2, 0.75 + 0.2]], ]
+                                  [self.table_lims[1][0]+0.025, self.table_lims[1][1] - 0.025]]
+        self.visible_gripper =[[0.85, 1.65], [0.38, 1.12]]
+        self.obstacles_lims = [[[1.3 - 0.12, 1.3 + 0.12], [0.75 - 0.02, 0.75 + 0.02]]]
+        #self.obstacles_lims = []
         self.target_obst = []
         self.object_obst = []
         self.gripper_obst = []
@@ -94,7 +94,7 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
         self.object_width = 0.025*2.0
         self.gripper_finger_width = 0.0385*2.0
         self.img_size = 16
-        super(FetchPushLabyrinthEnv2, self).__init__(
+        super(FetchPushLabyrinthEnv3, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
             initial_qpos=initial_qpos)
 
@@ -173,10 +173,22 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
             object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
         ])
 
+        gripper_visible = True
+        x = grip_pos[0]
+        y = grip_pos[1]
+        if x < self.visible_gripper[0][0] or x > self.visible_gripper[0][1] or \
+                y < self.visible_gripper[1][0] or y > self.visible_gripper[1][1]:
+            gripper_visible = False
+
+        object_below_table = object_pos[2] < 0.35
+
+
         return {
             'observation': obs.copy(),
             'achieved_goal': achieved_goal.copy(),
             'desired_goal': self.goal.copy(),
+            'gripper_visible':gripper_visible,
+            'object_below_table':object_below_table,
         }
 
     def _viewer_setup(self):
@@ -195,13 +207,12 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
 
     def _render_callback(self):
         # Visualize target.
-        #todo see how to modify to put in wanted position
         sites_offset = (self.sim.data.site_xpos - self.sim.model.site_pos).copy()
         site_id = self.sim.model.site_name2id('target0')
         self.sim.model.site_pos[site_id] = self.goal - sites_offset[0]
         self.sim.forward()
 
-    def _reset_sim(self, inter_sampling=True):
+    def _reset_sim(self, inter_sampling=False):
         self.sim.set_state(self.initial_state)
         if inter_sampling:
             point = self.random_pos_outside_obstacle(self.gripper_obst, self.table_lims)
@@ -229,13 +240,10 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
                 assert object_qpos.shape == (7,)
                 object_qpos[:2] = object_xpos
                 self.sim.data.set_joint_qpos('object0:joint', object_qpos)
-
-                # apparently get/set_joint_qpos sets or reads positions; this qpos in an array of all info
-                # about object(black square and the last two are coordinates
         self.sim.forward()
         return True
 
-    def _sample_goal(self, inter_sampling=True):
+    def _sample_goal(self, inter_sampling=False):
         if inter_sampling:
             goal = self.random_pos_outside_obstacle(self.target_obst, self.table_lims_target)
         else:
@@ -307,7 +315,7 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
             self.height_offset = self.sim.data.get_site_xpos('object0')[2]
 
     def render(self, mode='human', width=500, height=500):
-        return super(FetchPushLabyrinthEnv2, self).render(mode, width, height)
+        return super(FetchPushLabyrinthEnv3, self).render(mode, width, height)
 
     def chose_region(self, probs):
         random = self.np_random.uniform(0,1)
@@ -380,31 +388,36 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
         else:
             self.goal = np.array([x, y, current[2]].copy())
 
-    def move_gripper_to(self, x, y):
+    def move_gripper_to(self, x, y, z=None):
         # first move upside
         object_pos = self.get_gripper_pos()
         up_pos = np.array([object_pos[0], object_pos[1], 1.2])
         self.sim.data.set_mocap_pos('robot0:mocap', up_pos)
-        for _ in range(10):
+        for _ in range(20):
             self.sim.step()
         self.sim.forward()
         # move to wanted x, y position
         gripper_target = [x, y, up_pos[2]]
         self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
-        for _ in range(10):
+        for _ in range(20):
             self.sim.step()
         self.sim.forward()
-        # move again to table height
-        self.sim.data.set_mocap_pos('robot0:mocap', [x,y, object_pos[2]])
-        for _ in range(10):
+        # move again to table height or desired height
+        if z is not None:
+            self.sim.data.set_mocap_pos('robot0:mocap', [x,y,z])
+        else:
+            self.sim.data.set_mocap_pos('robot0:mocap', [x,y, object_pos[2]])
+        for _ in range(20):
             self.sim.step()
         self.sim.forward()
 
-    def move_object_to(self, x, y):
+    def move_object_to(self, x, y, z=None):
         object_qpos = self.sim.data.get_joint_qpos('object0:joint')
         assert object_qpos.shape == (7,)
         object_qpos[0] = x
         object_qpos[1] = y
+        if z is not None:
+            object_qpos[2] = z
         self.sim.data.set_joint_qpos('object0:joint', object_qpos)
 
     def get_object_current_state(self):
@@ -433,6 +446,8 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
                 self.sim.step()
             self.sim.forward()
         image_goal = self.render(mode="rgb_array", width=width, height=height)
+        #store_image_array_at(image_goal,
+        #                     '/home/erick/RL/HGG-extended/HGG-Extended-master/logsdir/temp/', 'the_goal')
         obs = self._get_obs()
         goal_state = obs['observation'].copy()
         goal_pos = obs['achieved_goal'].copy()
@@ -441,29 +456,33 @@ class FetchPushLabyrinthEnv2(robot_env.RobotEnv, gym.utils.EzPickle):
         self.sim.set_state(original_state)
         return image_goal, goal_state, goal_pos
 
-
-
 '''if __name__ == '__main__':
     import time
     from utils.image_util import rgb_array_to_image
 
-    e = FetchPushLabyrinthEnv2()
-    for i in range(10):
+    e = FetchPushLabyrinthEnv3()
+    im_size = 500
+    e.set_goal_img_size(im_size)
+    for episode in range(10):
         ob = e.reset()
-        goal_image = rgb_array_to_image(e.goal_image)
-        goal_image.show()
-        start = time.time()
-        while time.time() - start < 0.5:
-            pass
-        goal_image.close()
-        for _ in range(5):
+        e.move_object_to(1.56, 0.75)
+        #goal_image = rgb_array_to_image(e.goal_image)
+        #goal_image.show()
+        #start = time.time()
+        #while time.time() - start < 0.5:
+        #    pass
+        #goal_image.close()
+        #y < 3.79984796e-01 or y > 1.12
+        for step in range(20):
             array = e.render(mode='rgb_array')
             image = rgb_array_to_image(array)
             image.show()
             start = time.time()
-            while time.time() - start < 0.5:
+            while time.time() - start < 2:
                 pass
             image.close()
-            a = e.step(e.action_space.sample())
-
+            #obs, r, d, _  = e.step(e.action_space.sample())
+            e.step([0.0,0.0,0.0,0.0])
+            obs = e._get_obs()
+            print(obs)
     e.close()'''

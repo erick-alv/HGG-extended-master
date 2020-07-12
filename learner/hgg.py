@@ -254,7 +254,7 @@ class HGGLearner:
 			if buffer.steps_counter>=args.warmup:
 				for _ in range(args.train_batches):
 					# train with Hindsight Goals (HER step)
-					info = agent.train(buffer.sample_batch())
+					info = agent.train_with_batch(buffer.sample_batch())
 					args.logger.add_dict(info)
 				# update target network
 				agent.target_update()

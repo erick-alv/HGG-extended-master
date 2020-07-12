@@ -30,53 +30,69 @@ def generate_vae_dataset(args, save_file_name):
     #Prepare dict
     #just to know the types and shapes
     env = make_env(args)
-    state = env.reset()['observation']#todo use_inter_sampling = True
+    obs = env.reset()
+    state = obs['observation']#todo use_inter_sampling = True
+    achieved_goal = obs['achieved_goal']
     action = np.array(env.action_space.sample())
     rgb_array = np.array(env.render(mode='rgb_array', width=args.img_dim, height=args.img_dim))
 
     dataset = {
-        'state_image': np.zeros(tuple([N]) + rgb_array.shape, dtype=rgb_array.dtype),
-        'actions': np.zeros(tuple([N])+ action.shape, dtype=action.dtype),
-        'next_state_image': np.zeros(tuple([N])+ rgb_array.shape, dtype=rgb_array.dtype),
         'state': np.zeros(tuple([N]) + state.shape, dtype=state.dtype),
+        'state_image': np.zeros(tuple([N]) + rgb_array.shape, dtype=rgb_array.dtype),
+        'achieved_goal': np.zeros(tuple([N]) + tuple([3]), dtype= achieved_goal.dtype),
+        'actions': np.zeros(tuple([N])+ action.shape, dtype=action.dtype),
         'next_state': np.zeros(tuple([N]) + state.shape, dtype=state.dtype),
+        'next_state_image': np.zeros(tuple([N])+ rgb_array.shape, dtype=rgb_array.dtype),
+        'next_achieved_goal': np.zeros(tuple([N]) + tuple([3]), dtype= achieved_goal.dtype),
+        'goal_state': np.zeros(tuple([N]) + state.shape, dtype=state.dtype),
         'goal_image': np.zeros(tuple([N]) + rgb_array.shape, dtype=rgb_array.dtype),
+        'goal_pos': np.zeros(tuple([N]) + tuple([3]), dtype=achieved_goal.dtype)
     }
 
     now = time.time()
     for i, ep_steps in enumerate(episode_steps_list):
         env.reset()
         if just_begin_and_end:
-            state = env.get_obs()['observation']
-            dataset['state'][i, :] = state
+
+            dataset['state'][i, :] = obs['observation']
+            dataset['achieved_goal'][i, :] = obs['achieved_goal']
             dataset['state_image'][i, :] = env.render(mode='rgb_array', width=args.img_dim, height=args.img_dim)
             for _ in range(ep_steps):
                 if agent:
                     action = agent.step()
                 else:
-                    action = env.action_space.sample()
+                    action = env.action_space.sample(np.zeros(tuple([N])+ rgb_array.shape, dtype=rgb_array.dtype),)
                 env.step(action)
-            state = env.get_obs()['observation']
-            dataset['next_state'][i, :] = state
+
+            dataset['next_state'][i, :] = obs['observation']
             dataset['next_state_image'][i, :] = env.render(mode='rgb_array', width=args.img_dim, height=args.img_dim)
+            dataset['next_achieved_goal'][i, :] = obs['achieved_goal']
             dataset['goal_image'][i, :] = env.env.env.goal_image
+            dataset['goal_pos'][i, :] = env.env.env.goal_pos
+            dataset['goal_state'][i, :] = env.env.env.goal_state
         else:
             for j in range(ep_steps):
                 t = i*T+j
-                state = env.get_obs()['observation']
-                dataset['state'][t, :] = state
-                dataset['state_image'][t, :] = env.render(mode='rgb_array', width=args.img_dim, height=args.img_dim)
+                obs = env.get_obs()
+                dataset['state'][t, :] = obs['observation']
+                dataset['achieved_goal'][t, :] = obs['achieved_goal']
+                dataset['state_image'][t, :] = env.render(mode='rgb_array',
+                                                          width=args.img_dim, height=args.img_dim)
                 if agent:
                     action = agent.step()
                 else:
                     action = env.action_space.sample()
                 env.step(action)
                 dataset['actions'][t, :] = action
-                state = env.get_obs()['observation']
-                dataset['next_state'][t, :] = state
+                obs = env.get_obs()
+                dataset['next_state'][t, :] = obs['observation']
+                dataset['next_achieved_goal'][t, :] = obs['achieved_goal']
                 dataset['next_state_image'][t, :] = env.render(mode='rgb_array',
                                                                width=args.img_dim, height=args.img_dim)
-                dataset['goal_image'][i, :] = env.env.env.goal_image
+
+                dataset['goal_image'][t, :] = env.env.env.goal_image
+                dataset['goal_pos'][t, :] = env.env.env.goal_pos
+                dataset['goal_state'][t, :] = env.env.env.goal_state
     print("keys and shapes:")
     for k in dataset.keys():
         print(k, dataset[k].shape)
@@ -98,10 +114,10 @@ def generate_vae_dataset(args, save_file_name):
 
 if __name__=='__main__':
     parser = get_arg_parser()
-    parser.add_argument('--env', help='gym env id', type=str, default='FetchPushLabyrinth-v2')
+    parser.add_argument('--env', help='gym env id', type=str, default='FetchPushLabyrinth-v3')
     parser.add_argument('--goal', help='method of goal generation', type=str, default='custom',
                         choices=['vanilla', 'fixobj', 'interval', 'custom'])
-    parser.add_argument('--total_samples', help='total number of samples', type=int, default=60000)
+    parser.add_argument('--total_samples', help='total number of samples', type=int, default=50000)
     #parser.add_argument('--total_samples', help='total number of samples', type=int, default=)
     parser.add_argument('--interaction_steps', help='total number of samples', type=int, default=20)
     parser.add_argument('--img_dim', help='other arguments, as image size, latent_size', type=int, default=64)

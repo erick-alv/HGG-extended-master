@@ -461,6 +461,13 @@ for reward_type in ['sparse', 'dense']:
         max_episode_steps=100,
     )
 
+    register(
+        id='FetchPushLabyrinth{}-v3'.format(suffix),
+        entry_point='gym.envs.robotics:FetchPushLabyrinthEnv3',
+        kwargs=kwargs,
+        max_episode_steps=100,
+    )
+
 
 
     register(

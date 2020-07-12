@@ -36,7 +36,7 @@ class Trajectory:
 			clip_energy = 0.5
 			height = obj[:, :, 2]
 			height_0 = np.repeat(height[:,0].reshape(-1,1), height[:,1::].shape[1], axis=1)
-			height = height[:,1::] - height_0
+			height = height[:,1::] - height_0#this could be prblematic if object falls, even not necessay if always ata table
 			g, m, delta_t = 9.81, 1, 0.04
 			potential_energy = g*m*height
 			diff = np.diff(obj, axis=1)
@@ -157,10 +157,35 @@ class ReplayBuffer_Episodic:
 		else:
 			return self.energy_search(t, mid+1, r)
 
-	def sample_batch_ddpg(self, batch_size=-1, normalizer=False, plain=False):
+	def sample_batch_ddpg(self, batch_size=-1, normalizer=False, plain=False,
+						  using_goal_as_field=False):
 		assert int(normalizer) + int(plain) <= 1
 		if batch_size==-1: batch_size = self.args.batch_size
-		batch = dict(obs=[], obs_next=[], acts=[], rews=[], done=[])
+		if using_goal_as_field:
+			batch = dict(obs=[], obs_next=[], goals=[], acts=[], rews=[], done=[])
+		else:
+			batch = dict(obs=[], obs_next=[], acts=[], rews=[], done=[])
+		if self.args.goal_type == 'latent':
+			goal_key = 'goal_latent'
+			goal_her_key = 'state_latent'
+		elif self.args.goal_type == 'goal_space':
+			goal_key = 'desired_goal'
+			goal_her_key = 'achieved_goal'
+		elif self.args.goal_type == 'state':
+			goal_key = 'goal_state'
+			goal_her_key = 'observation'
+		elif self.args.goal_type == 'concat':
+			raise Exception('not implemented yet')
+		else:
+			raise Exception('goal obs type not valid')
+		if self.args.observation_type == 'latent':
+			state_key = 'state_latent'
+		elif self.args.observation_type == 'real':
+			state_key = 'observation'
+		elif self.args.observation_type == 'concat':
+			raise Exception('not implemented yet')
+		else:
+			raise Exception('observation type not valid')
 
 		for i in range(batch_size):
 			if self.energy:
@@ -172,10 +197,12 @@ class ReplayBuffer_Episodic:
 			if self.args.goal_based:
 				if plain:
 					# no additional tricks
-					goal = self.buffer['obs'][idx][step]['desired_goal']
+					goal = self.buffer['obs'][idx][step][goal_key]
+					goal_gspace = self.buffer['obs'][idx][step]['desired_goal']
 				elif normalizer:
 					# uniform sampling for normalizer update
-					goal = self.buffer['obs'][idx][step]['achieved_goal']
+					goal = self.buffer['obs'][idx][step][goal_her_key]#her key is actually achieved state key
+					goal_gspace = self.buffer['obs'][idx][step]['achieved_goal']
 				else:
 					# upsampling by HER trick
 					if (self.args.her!='none') and (np.random.uniform()<=self.args.her_ratio):
@@ -183,29 +210,43 @@ class ReplayBuffer_Episodic:
 							goal = self.args.goal_sampler.sample()
 							goal_pool = np.array([obs['achieved_goal'] for obs in self.buffer['obs'][idx][step+1:]])
 							step_her = (step+1) + np.argmin(np.sum(np.square(goal_pool-goal),axis=1))
-							goal = self.buffer['obs'][idx][step_her]['achieved_goal']
+							goal = self.buffer['obs'][idx][step_her][goal_her_key]
+							goal_gspace = self.buffer['obs'][idx][step_her]['desired_goal']
 						else:
 							step_her = {
 								'final': self.steps[idx],
 								'future': np.random.randint(step+1, self.steps[idx]+1)
 							}[self.args.her]
-							goal = self.buffer['obs'][idx][step_her]['achieved_goal']
+							goal = self.buffer['obs'][idx][step_her][goal_her_key]
+							goal_gspace = self.buffer['obs'][idx][step_her]['achieved_goal']
+							# todo delete this condition, just for one case
+							if not (goal_gspace[0] > self.buffer['obs'][idx][step_her]['init_pos'] + 0.25 or
+									goal_gspace[0] < self.buffer['obs'][idx][step_her]['init_pos'] - 0.25 ):
+								goal = self.buffer['obs'][idx][step][goal_key]
+								goal_gspace = self.buffer['obs'][idx][step]['desired_goal']
 					else:
-						goal = self.buffer['obs'][idx][step]['desired_goal']
+						goal = self.buffer['obs'][idx][step][goal_key]
+						goal_gspace = self.buffer['obs'][idx][step]['desired_goal']
+
+
 
 				achieved = self.buffer['obs'][idx][step+1]['achieved_goal']
 				achieved_old = self.buffer['obs'][idx][step]['achieved_goal']
-				obs = goal_concat(self.buffer['obs'][idx][step]['observation'], goal)
-				obs_next = goal_concat(self.buffer['obs'][idx][step+1]['observation'], goal)
+				if using_goal_as_field:
+					obs = self.buffer['obs'][idx][step][state_key]
+					obs_next = self.buffer['obs'][idx][step + 1][state_key]
+					batch['obs'].append(copy.deepcopy(obs))
+					batch['obs_next'].append(copy.deepcopy(obs_next))
+					batch['goals'].append(copy.deepcopy(goal))
+				else:
+					obs = goal_concat(self.buffer['obs'][idx][step][state_key], goal)
+					obs_next = goal_concat(self.buffer['obs'][idx][step+1][state_key], goal)
+					batch['obs'].append(copy.deepcopy(obs))
+					batch['obs_next'].append(copy.deepcopy(obs_next))
 				act = self.buffer['acts'][idx][step]
-				rew = self.args.compute_reward((achieved, achieved_old), goal)
-				done = self.buffer['done'][idx][step]
-				#TODO DEL
-				if done:
-					print('the done is True, from idx ', idx, 'and step ', step)
-
-				batch['obs'].append(copy.deepcopy(obs))
-				batch['obs_next'].append(copy.deepcopy(obs_next))
+				rew = self.args.compute_reward((achieved, achieved_old), goal_gspace)
+				#done = self.buffer['done'][idx][step]
+				done = [not (rew == -1.0)]#todo see if affect hgg, probably not
 				batch['acts'].append(copy.deepcopy(act))
 				batch['rews'].append(copy.deepcopy([rew]))
 				batch['done'].append(copy.deepcopy(done))
@@ -216,5 +257,53 @@ class ReplayBuffer_Episodic:
 						batch['obs_next'].append(copy.deepcopy(self.buffer[key][idx][step+1]))
 					else:
 						batch[key].append(copy.deepcopy(self.buffer[key][idx][step]))
+
+		return batch
+
+	def sample_for_distance(self, last_eps, goal_key, goal_her_key, state_key, batch_size=-1):
+		if batch_size==-1: batch_size = self.args.batch_size
+		batch = dict(obs=[], obs_next=[], goals=[], acts=[], dis=[], done=[])
+		possible_idx = [(self.counter-1-i) % self.args.buffer_size for i in range(last_eps)]
+
+		for i in range(batch_size):
+			idx = np.random.randint(len(possible_idx))
+			idx = possible_idx[idx]
+			step = np.random.randint(self.steps[idx])
+			# upsampling by HER trick
+			if (self.args.her!='none') and (np.random.uniform()<=self.args.her_ratio):
+				step_her = {
+					'final': self.steps[idx],
+					'future': np.random.randint(step+1, self.steps[idx]+1)
+				}[self.args.her]
+				goal = self.buffer['obs'][idx][step_her][goal_her_key].copy()
+				goal_gspace = self.buffer['obs'][idx][step_her]['achieved_goal'].copy()
+				# todo delete this condition, just for one case
+				goal[1] = 0.0
+				if not (goal_gspace[0] > self.buffer['obs'][idx][step_her]['init_pos'] + 0.3 or
+						goal_gspace[0] < self.buffer['obs'][idx][step_her]['init_pos'] - 0.3):
+					goal = self.buffer['obs'][idx][step][goal_key]
+					goal_gspace = self.buffer['obs'][idx][step]['desired_goal']
+			else:
+				goal = self.buffer['obs'][idx][step][goal_key]
+				goal_gspace = self.buffer['obs'][idx][step]['desired_goal']
+
+			achieved = self.buffer['obs'][idx][step+1]['achieved_goal']
+			achieved_old = self.buffer['obs'][idx][step]['achieved_goal']
+
+
+			obs = self.buffer['obs'][idx][step][state_key]
+			obs_next = self.buffer['obs'][idx][step + 1][state_key]
+			batch['obs'].append(copy.deepcopy(obs))
+			batch['obs_next'].append(copy.deepcopy(obs_next))
+			batch['goals'].append(copy.deepcopy(goal))
+			act = self.buffer['acts'][idx][step]
+			rew = self.args.compute_reward((achieved, achieved_old), goal_gspace)
+			#done = self.buffer['done'][idx][step]
+			done = [not (rew == -1.0)]
+			dis = 1.0 if not done[0] else 0.0
+
+			batch['acts'].append(copy.deepcopy(act))
+			batch['dis'].append(copy.deepcopy([dis]))
+			batch['done'].append(copy.deepcopy(done))
 
 		return batch

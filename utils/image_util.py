@@ -1,11 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont
-import numpy as np
-import argparse
 import os
-import fnmatch
 import cv2
 import numpy as np
-import glob
 import matplotlib.pyplot as plt
 def image_to_npy(image_path,npy_save_path, show=False):
     image = Image.open(image_path)
@@ -14,11 +10,21 @@ def image_to_npy(image_path,npy_save_path, show=False):
     if show:
         print(image_array)
 
-def make_text_im(width, height, text):
+def make_text_im(width, height_per_line, text, fontsize=15):
+    lines = text.count('\n') + 1
+    height = height_per_line * lines
+    im_line = Image.new('RGB', (width, height_per_line), color=(0, 0, 0))
+    '''fontsize = 1
+    fraction = 0.75
+    font = ImageFont.truetype('FreeSans.ttf',size=fontsize)
+    font.ge
+    while font.getsize("EXEMPLAR")[1] < fraction*im_line.size[1]:
+        fontsize +=1
+    '''
+
     img = Image.new('RGB', (width, height), color=(0, 0, 0))
-    font = ImageFont.truetype('FreeSans.ttf',size=10)
     d = ImageDraw.Draw(img)
-    d.text((10, 10), text, font=font, fill=(255, 255, 0))
+    d.text((0, 0), text)
     return np.asarray(img)
 
 def save_and_show_npy_to_image(npy_path, image_save_path, display=False):
@@ -41,6 +47,32 @@ def save_and_show_npy_to_image(npy_path, image_save_path, display=False):
             process_image(npy_as_array[i], name+'_'+str(i)+'.png')
     else:
         process_image(npy_as_array, image_save_path)
+
+def fill_width(im1, im2):
+    w1 = im1.shape[1]
+    w2 = im2.shape[1]
+    if w1 == w2:
+        return im1, im2
+    elif w1 < w2:
+        to_fit = im1
+        h = im1.shape[0]
+        m = im2
+    else:
+        to_fit = im2
+        m = im1
+        h = im2.shape[0]
+    dif = float(abs(w1-w2))
+    dif_left = int(np.floor(dif / 2.0))
+    dif_right = int(np.ceil(dif / 2.0))
+    l = np.zeros(shape=(h, dif_left, 3))
+    r = np.zeros(shape=(h, dif_right, 3))
+    to_fit = np.hstack((l, to_fit))
+    to_fit = np.hstack((to_fit, r))
+    if w1 < w2:
+        return to_fit, m
+    else:
+        return m, to_fit
+
 
 
 def store_image_array_at(single_image_array, path_to_folder, img_name, force_remap_to_255=False, text_append=None):
@@ -73,7 +105,7 @@ def rgb_array_to_image(single_image_array):
 def denormalize(single_image_array):
     return single_image_array * 255.0
 
-def make_video(path_to_folder, ext_end):
+def make_video(path_to_folder, ext_end, path_to_save=None, filename_save=None):
     image_files = [f for f in os.listdir(path_to_folder) if f.endswith(ext_end)]
     image_files.sort(key=lambda x:int(x.replace('frame_', '').replace(ext_end,'')))
     img_array = []
@@ -82,11 +114,17 @@ def make_video(path_to_folder, ext_end):
         height, width, layers = img.shape
         size = (width, height)
         img_array.append(img)
-
-    out = cv2.VideoWriter(path_to_folder+'rollout_video.avi', cv2.VideoWriter_fourcc(*'DIVX'), 4, size)
+    if path_to_save is not None and filename_save is not None:
+        fname = path_to_save + filename_save + '.avi'
+    else:
+        fname = path_to_folder+'rollout_video.avi'
+    out = cv2.VideoWriter(fname, cv2.VideoWriter_fourcc(*'DIVX'), 4, size)
     for i in range(len(img_array)):
         out.write(img_array[i])
     out.release()
+
+def create_black_im_of_dims(width, height):
+    return np.zeros(shape=(height, width, 3))
 
 def stack_images_row(images):
     w = images[0].shape[0]
@@ -138,7 +176,7 @@ def stack_images_column(images, indices_env_ims, others_first):
 
 def get_image_latent_plt(dist_std, dist_mu, vals, imsize, vmin, vmax, latent_state=None, latent_goal=None,
                          extent=[-2.5, 2.5, -2.5, 2.5], cmap='Greys',
-                         top_dim_axis=None,draw_subgoals=False, use_true_prior=False):
+                         top_dim_axis=None, draw_subgoals=False, use_true_prior=False):
     fig, ax = plt.subplots()
     ax.set_ylim(extent[2:4])
     ax.set_xlim(extent[0:2])

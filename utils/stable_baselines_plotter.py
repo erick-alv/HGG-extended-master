@@ -139,31 +139,32 @@ def plot_curves(xy_list, xlabel, ylabel, window=1, labels=None,title=None, filen
 
 
 if __name__ == "__main__":
-    df = pd.read_csv('logsdir/csv_logs/2020_06_18_00_59_01tdm_training_log')
+    df = pd.read_csv('../logsdir/csv_logs/2020_07_02_12_18_26tdm_training_log.csv')
     indexes = df.columns.values
-    df.dropna(subset=[i for i in indexes if i != 'epoch'],
-              inplace=True, how='all')#this is just because logger creates empty row after before each epoch
+    '''df.dropna(subset=[i for i in indexes if i != 'epoch'],
+              inplace=True, how='all')#this is just because logger creates empty row after before each epoch'''
 
     epoch_time = df[['epoch','time']].groupby(by=['epoch'])
     epoch_time = epoch_time.last()
     y = epoch_time[['time']].values[:, 0]
     x = np.arange(0, len(y))
     plot_curves([(x, y)], 'epoch', 'time needed',title='(mixed)',
-                filename='logsdir/csv_logs/time_mixed.png')
+                filename='../logsdir/csv_logs/time.png')
 
-    epAndEpoch_losses = df[['epoch','episode','actor_tr_loss',
-                           'critic_tr_loss', 'actor_eval_loss','critic_eval_loss']].fillna(0.0)
+    epAndEpoch_losses = df[
+        ['epoch','episode','actor_tr_loss', 'critic_tr_loss', 'actor_eval_loss','critic_eval_loss']
+    ].dropna(subset=['episode']).fillna(0.)
     x = np.arange(0, len(epAndEpoch_losses))
     losses_labels = ['actor_tr_loss', 'critic_tr_loss', 'actor_eval_loss','critic_eval_loss']
     xs_ys = [(x, epAndEpoch_losses[[k]].values[:, 0])
              for k in losses_labels]
     plot_curves(xs_ys, 'episode (each 100 timesteps)', 'loss', window=20, title='accumulated loss (mixed)',
-                labels=losses_labels, filename='logsdir/csv_logs/losses_mixed.png')
+                labels=losses_labels, filename='../logsdir/csv_logs/log_losses.png')
 
-    epAndEpoch_reward = df[['epoch','episode','episode_reward']]
-    epAndEpoch_distance = df[['epoch', 'episode', 'distance_to_goal']]
+    epAndEpoch_reward = df[['epoch','episode','episode_reward']].dropna(subset=['episode'])
+    epAndEpoch_distance = df[['epoch', 'episode', 'distance_to_goal']].dropna(subset=['episode'])
 
     y = epAndEpoch_distance[['distance_to_goal']].values[:,0]
     x = np.arange(0, len(y))
     plot_curves([(x,y)],'episode', 'distance to goal (euclidean distance)', title='distance after episode (mixed)',
-                window=20, filename='logsdir/csv_logs/distance_mixed.png')
+                window=20, filename='../logsdir/csv_logs/distance.png')

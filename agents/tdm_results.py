@@ -1,11 +1,11 @@
-from tdm.tdm_torch import setup_tdm
+from agents.tdm_torch import setup_tdm
 from custom_start import get_args_and_initialize
 from copy import copy
 from utils.image_util import store_image_array_at, make_video
 if __name__=='__main__':
     args = get_args_and_initialize()
     _, td3_actor_critic, _, _, env = setup_tdm(args, recover_filename='td3_tr_last')
-    td3_actor_critic.critic.eval()
+    td3_actor_critic.criticQ1.eval()
     td3_actor_critic.actor.eval()
 
     obs = env.reset()
