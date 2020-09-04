@@ -11,7 +11,7 @@ env:
   - PY_VER=3.6.8
   - PY_VER=3.7.3
 
-install: "" # so travis doesn't do pip install requirements.txt
+install: "" # so travis doesn't do pip install old_requirements.txt
 script:
   - docker build -f py.Dockerfile --build-arg MUJOCO_KEY=$MUJOCO_KEY --build-arg PYTHON_VER=$PY_VER -t gym-test .
   - docker run gym-test 
