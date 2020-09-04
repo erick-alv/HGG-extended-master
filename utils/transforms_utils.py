@@ -1,5 +1,9 @@
 from torchvision import transforms
 import torch
+from collections import namedtuple
+import numpy as np
+
+BA = namedtuple('BA', 'buffer_type buffer_size')
 
 image_to_tensor_funtion = transforms.ToTensor()
 
@@ -9,7 +13,7 @@ def transform_np_image_to_tensor(image, args):
 def np_to_tensor(np_vector, args):
     return torch.from_numpy(np_vector.copy()).float().to(args.device)
 
-def extend_obs(ae, obs, args):
+def extend_obs(obs, args, ae=None):
     '''
     :param ae: An Autoencoder or Varational autoencoder
     :param obs: the disctionary received by the environment
@@ -17,7 +21,7 @@ def extend_obs(ae, obs, args):
     :return:
     '''
     #TODO concat per default
-    if args.observation_type == 'latent' or args.observation_type == 'concat':
+    if ae is not None and (args.observation_type == 'latent' or args.observation_type == 'concat'):
         f = transforms.ToTensor()
         with torch.no_grad():
             img_s = f(obs['state_image'].copy()).to(args.device)
@@ -32,6 +36,7 @@ def extend_obs(ae, obs, args):
         save_image(torch.reshape(st_rec, (args.img_channels, args.img_dim, args.img_dim)).cpu(), args.dirpath + 'temp/' + 'rec_state.png')
         save_image(img_g.cpu(), args.dirpath + 'temp/' + 'real_goal.png')
         save_image(torch.reshape(g_rec, (args.img_channels, args.img_dim, args.img_dim)).cpu(), args.dirpath + 'temp/' + 'rec_goal.png')'''
-        return obs
-    else:
-        return obs
+    #if hasattr(args, 'type_experiment') and args.type_experiment == 'dyn_stack':
+    #    obs['observation'] = np.concatenate([obs['observation'], obs['stack']])
+
+    return obs

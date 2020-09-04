@@ -245,7 +245,7 @@ class DistanceGraph:
                 path.append(self.gridpoint2coords(self.vertex2gridpoint(current_node)))
             return self.dist_matrix[vertex_a, vertex_b], path
 
-    def plot_goals(self, goals=None, colors=None, azim=-12, elev=15, show=False, save_path='test'):
+    def plot_goals(self, goals=None, colors=None, azim=-12, elev=15, show=False, save_path='test', extra=None):
         # Plot goals with different options
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
@@ -296,12 +296,16 @@ class DistanceGraph:
         ax.set_ylabel('y')
         ax.set_zlabel('z')
         ax.set_zlim(0.4, 0.8)
+        if extra == 1:
+            ax.set_yticks([0.5, 0.7, 0.9, 1.1])
+            ax.set_zticks([0.4, 0.5, 0.6, 0.7, 0.8])
+
         ax.view_init(elev=elev, azim=azim)
         if show:
             plt.show()
         plt.savefig(save_path + ".pdf")
 
-    def plot_graph(self, path=None, graph=False, obstacle_vertices=False, goals=None, save_path='test', show=False, azim=-12, elev=15):
+    def plot_graph(self, path=None, graph=False, obstacle_vertices=False, goals=None, save_path='test', show=False, azim=-12, elev=15, extra=None):
         # Plot graph with different options
         if self.args:
             self.args.logger.info("Plotting ...")
@@ -375,6 +379,10 @@ class DistanceGraph:
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_zlabel('z')
+        if extra == 1:
+            ax.set_xticks([1.1, 1.3, 1.5])
+            ax.set_zticks([0.4, 0.5, 0.6, 0.7, 0.8])
+
         ax.view_init(elev=elev, azim=azim)
         if show:
             plt.show()

@@ -59,7 +59,7 @@ class Continuous_MountainCarEnv(gym.Env):
 
         position = self.state[0]
         velocity = self.state[1]
-        force = min(max(action[0], self.min_action), self.max_action)
+        force = min(max(action[0], -1.0), 1.0)
 
         velocity += force*self.power -0.0025 * math.cos(3*position)
         if (velocity > self.max_speed): velocity = self.max_speed
@@ -70,55 +70,23 @@ class Continuous_MountainCarEnv(gym.Env):
         if (position==self.min_position and velocity<0): velocity = 0
 
         done = bool(position >= self.goal_position and velocity >= self.goal_velocity)
-        #print("Position: {}".format(position))
-        reward = -1.0
+        print("Position: {}".format(position))
+        reward = 0
         if done:
-            reward = 0.0
-            print("success!")
+            reward = 1.0
+            print("success!") #TODO: remove!
+            raise Exception
         #reward-= math.pow(action[0],2)*0.1 # TODO: Change back!
 
         self.state = np.array([position, velocity])
-        goal_state = np.array([self.goal_position, self.goal_velocity])
-        d = {'observation': self.state,
-             'goal_state': goal_state,
-             'achieved_goal': self.state,
-             'desired_goal': goal_state,
-             'init_pos': self.init_pos
-             }
-        return d, reward, done, {}
+        return self.state, reward, done, {}
 
     def reset(self):
-        goal_state = np.array([self.goal_position, self.goal_velocity])
         self.state = np.array([self.np_random.uniform(low=-0.6, high=-0.4), 0])
-        self.init_pos = self.state[0]
-        d = {'observation':self.state,
-             'goal_state':goal_state,
-             'achieved_goal': self.state,
-             'desired_goal': goal_state,
-             'init_pos': self.init_pos
-             }
-        return d
-
-    def goal_distance(self, goal1, goal2):
-        pos1 = goal1[0]
-        pos2 = goal2[0]
-        return np.abs(pos1-pos2)
+        return np.array(self.state)
 
 #    def get_state(self):
 #        return self.state
-    def compute_reward(self, a, g):
-        achieved = a[0]
-        achieved_position = achieved[0]
-        achieved_velocity = achieved[1]
-        goal_position = g[0]
-        goal_velocity = g[1]
-        p = (goal_position - 0.0001 <= achieved_position) and (goal_position + 0.0001 >= achieved_position)
-        v = (self.goal_velocity - 0.0002 <= achieved_velocity) and (self.goal_velocity + 0.0002 >= achieved_velocity)
-        done = p and v
-        reward = -1.0
-        if done:
-            return 0.0
-        return reward
 
     def _height(self, xs):
         return np.sin(3 * xs)*.45+.55

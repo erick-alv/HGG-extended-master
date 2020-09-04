@@ -55,7 +55,7 @@ Representations
 Euler
     There are many euler angle frames -- here we will strive to use the default
         in MuJoCo, which is eulerseq='xyz'.
-    This frame is a relative rotating frame, about x, y, and z axes in order.
+    This frames is a relative rotating frames, about x, y, and z axes in order.
         Relative rotating means that after we rotate about x, then we use the
         new (rotated) y, and the same for z.
 

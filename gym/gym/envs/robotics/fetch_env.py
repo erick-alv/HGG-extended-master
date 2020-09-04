@@ -1,7 +1,7 @@
 import numpy as np
-
 from gym.envs.robotics import rotations, robot_env, utils
-
+from torchvision.utils import save_image
+from numpy import random
 
 def goal_distance(goal_a, goal_b):
     assert goal_a.shape == goal_b.shape
@@ -42,10 +42,15 @@ class FetchEnv(robot_env.RobotEnv):
         self.target_range = target_range
         self.distance_threshold = distance_threshold
         self.reward_type = reward_type
+        self.goal_counter = 0
+
+        self.img_size = 84
+        self.robot_arm_ids = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 21]
 
         super(FetchEnv, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
             initial_qpos=initial_qpos)
+        self.initial_colors = self.sim.model.geom_rgba.copy()
 
     # GoalEnv methods
     # ----------------------------
@@ -84,6 +89,7 @@ class FetchEnv(robot_env.RobotEnv):
         utils.ctrl_set_action(self.sim, action)
         utils.mocap_set_action(self.sim, action)
 
+    #
     def _get_obs(self):
         # positions
         grip_pos = self.sim.data.get_site_xpos('robot0:grip')
@@ -109,10 +115,16 @@ class FetchEnv(robot_env.RobotEnv):
             achieved_goal = grip_pos.copy()
         else:
             achieved_goal = np.squeeze(object_pos.copy())
+            #self._set_arm_visible(False)
+            #achieved_goal = self._get_image('ach.png')#TODO..
+            #self._set_arm_visible()
+
         obs = np.concatenate([
             grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel(),
             object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
         ])
+
+        #self._get_image('obs.png')
 
         return {
             'observation': obs.copy(),
@@ -121,13 +133,22 @@ class FetchEnv(robot_env.RobotEnv):
         }
 
     def _viewer_setup(self):
-        body_id = self.sim.model.body_name2id('robot0:gripper_link')
-        lookat = self.sim.data.body_xpos[body_id]
-        for idx, value in enumerate(lookat):
-            self.viewer.cam.lookat[idx] = value
-        self.viewer.cam.distance = 2.5
-        self.viewer.cam.azimuth = 132.
-        self.viewer.cam.elevation = -14.
+        from gym.envs.robotics.fetch.push_obstacle_fetch import FetchPushObstacleFetchEnv
+        if isinstance(self, FetchPushObstacleFetchEnv):
+            lookat = np.array([1.3, 0.75, 0.4])
+            for idx, value in enumerate(lookat):
+                self.viewer.cam.lookat[idx] = value
+            self.viewer.cam.distance = 0.8
+            self.viewer.cam.azimuth = 180.
+            self.viewer.cam.elevation = 270
+        else:
+            body_id = self.sim.model.body_name2id('robot0:gripper_link')
+            lookat = self.sim.data.body_xpos[body_id]
+            for idx, value in enumerate(lookat):
+                self.viewer.cam.lookat[idx] = value
+            self.viewer.cam.distance = 1.0
+            self.viewer.cam.azimuth = 180.
+            self.viewer.cam.elevation = 90.
 
     def _render_callback(self):
         # Visualize target.
@@ -152,6 +173,8 @@ class FetchEnv(robot_env.RobotEnv):
         self.sim.forward()
         return True
 
+    #
+    ##def _sample_goal_old(self):
     def _sample_goal(self):
         if self.has_object:
             goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-self.target_range, self.target_range, size=3)
@@ -162,6 +185,20 @@ class FetchEnv(robot_env.RobotEnv):
         else:
             goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-0.15, 0.15, size=3)
         return goal.copy()
+
+    #
+    '''def _sample_goal(self):
+        return self._sample_goal_old()
+        goal = goal_set[np.random.randint(20)]
+        goal = self.goal_vae.format(goal)
+        # path = 'videos/goal/goal_' + str(self.goal_counter) + '.png'
+        #save_image(goal.cpu().view(-1, 3, self.img_size, self.img_size), 'videos/goal/goal.png')
+        self.goal_counter += 1
+        x, y = self.goal_vae.encode(goal)
+        goal = self.goal_vae.reparameterize(x, y)
+        goal = goal.detach().cpu().numpy()
+        goal = np.squeeze(goal)
+        return goal.copy()#TODO..'''
 
     def _is_success(self, achieved_goal, desired_goal):
         d = goal_distance(achieved_goal, desired_goal)
@@ -188,3 +225,100 @@ class FetchEnv(robot_env.RobotEnv):
 
     def render(self, mode='human', width=500, height=500):
         return super(FetchEnv, self).render(mode, width, height)
+
+    # Extra methods for the environment
+    # ----------------------------
+
+    '''def _get_image(self, img_name='default'):
+        local_vae = self.obs_vae if img_name == 'obs.png' else self.goal_vae
+        np.array(self.render(mode='rgb_array',
+                             width=84, height=84))
+        rgb_array = np.array(self.render(mode='rgb_array',
+                                         width=84, height=84))
+        tensor = local_vae.format(rgb_array)
+        x, y = local_vae.encode(tensor)
+        obs = local_vae.reparameterize(x, y)
+        obs = obs.detach().cpu().numpy()
+        obs = np.squeeze(obs)
+        return obs'''
+
+    def _set_gripper(self, pos):
+        self.sim.data.mocap_pos[:] = pos
+        self.sim.data.mocap_quat[:] = [1., 0., 1., 0.]
+
+    '''def _generate_state(self):
+        threshold = 0.2  # originally 0.2
+        self._set_gripper([random.uniform(1.08 - threshold, 1.52 + threshold),
+                          random.uniform(1.3 - threshold, 1.3 + threshold) - 0.55, 0.43])
+        self.sim.forward()
+        #for _ in range(1):
+        #    self.sim.step()
+
+        offset = 0.03
+        goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-self.target_range-offset, self.target_range+offset, size=3)
+        object_qpos = self.sim.data.get_joint_qpos('object0:joint')
+        object_qpos[:2] = goal[:2]
+        object_qpos[2] = 0.43
+        object_qpos[3:] = [1, 0, 0, 0]
+        self.sim.data.set_joint_qpos('object0:joint', object_qpos)
+        for _ in range(1):
+            self.sim.step()
+        self._step_callback()'''
+
+    def _set_arm_visible(self, visible=True):
+        cylinder_id = np.where(self.sim.model.geom_bodyid
+                               == self.sim.model.body_name2id('object0'))[0]
+
+        if not visible:
+            for i in range(len(self.sim.model.geom_rgba)):
+                if not i == cylinder_id and self.sim.model.geom_rgba[i][3]:
+                    self.sim.model.geom_rgba[i][3] = 0.0
+                    # self.robot_arm_ids.append(i) check for the ids
+        else:
+            for i in self.robot_arm_ids:
+                self.sim.model.geom_rgba[i][3] = 1.0
+
+    def _set_visibility(self, names_list, alpha_val):
+        for name in names_list:
+            id = np.where(self.sim.model.geom_bodyid == self.sim.model.body_name2id(name))
+            id = id[0].item()
+            self.sim.model.geom_rgba[id][3] = alpha_val
+
+    def _set_visibility_with_id(self, id, alpha_val):
+        self.sim.model.geom_rgba[id][3] = alpha_val
+
+
+    def _reset_alpha(self):
+        for i in range(len(self.sim.model.geom_rgba)):
+            val = self.initial_colors[i][3].copy()
+            self.sim.model.geom_rgba[i][3] = val
+
+    def _set_size(self, names_list, size):
+        if not isinstance(size, np.ndarray):
+            size = np.array(size)
+        for name in names_list:
+            id = np.where(self.sim.model.geom_bodyid == self.sim.model.body_name2id(name))
+            id = id[0].item()
+            self.sim.model.geom_size[id] = size
+
+    # !!!WARNING!!!: do not use this during episode since it continues the simulation of everything
+    def _set_position(self, names_list, position):
+        if not isinstance(position, np.ndarray):
+            position = np.array(position)
+
+        for name in names_list:
+            id = self.sim.model.body_name2id(name)
+            self.sim.model.body_pos[id] = position
+        self.sim.forward()
+
+    def _move_object(self, position):
+        if not isinstance(position, np.ndarray):
+            position = np.array(position)
+        object_qpos = self.sim.data.get_joint_qpos('object0:joint')
+        object_qpos[:3] = position[:3]
+        object_qpos[3:] = [1, 0, 0, 0]
+        self.sim.data.set_joint_qpos('object0:joint', object_qpos)
+        for _ in range(1):
+            self.sim.step()
+        self._step_callback()
+

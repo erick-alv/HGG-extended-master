@@ -96,7 +96,7 @@ class Env(object):
 
             def render(self, mode='human'):
                 if mode == 'rgb_array':
-                    return np.array(...) # return RGB frame suitable for video
+                    return np.array(...) # return RGB frames suitable for video
                 elif mode == 'human':
                     ... # pop up a window and render
                 else:

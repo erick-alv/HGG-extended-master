@@ -144,7 +144,7 @@ class TD3(object):
         criticQ2_loss = F.mse_loss(current_Q2, target_Q)
 
         # Optimize the critic
-        self.criticQ2_optimizer.zero_grad()
+        self.criticQ1_optimizer.zero_grad()
         criticQ1_loss.backward()
         self.criticQ1_optimizer.step()
         self.criticQ2_optimizer.zero_grad()
@@ -154,8 +154,8 @@ class TD3(object):
         # Delayed policy updates
         if self.total_it % self.policy_freq == 0:
 
-            # Compute actor losse
-            actor_loss = -self.criticQ1(state, goal, self.actor(state, goal)).mean()
+            # Compute actor losses
+            actor_loss = -self.criticQ1(state, goal, self.actor(state, goal)).mean()#todo see if must left out the minus
 
             # Optimize the actor 
             self.actor_optimizer.zero_grad()
@@ -174,6 +174,40 @@ class TD3(object):
             return float(criticQ1_loss), float(criticQ2_loss), float(actor_loss)
 
         return float(criticQ1_loss), float(criticQ2_loss), None
+
+    def evaluate_losses(self, batch):
+        # Sample replay buffer
+        state = self.transform_single_batch_to_tensor(batch['obs'])
+        next_state = self.transform_single_batch_to_tensor(batch['obs_next'])
+        goal = self.transform_single_batch_to_tensor(batch['goals'])
+        action = self.transform_single_batch_to_tensor(batch['acts'])
+        reward = self.transform_single_batch_to_tensor(batch['rews'])
+        done = self.transform_single_batch_to_tensor(batch['done'])
+
+        with torch.no_grad():
+            # Select action according to policy and add clipped noise
+            noise = (
+                    torch.randn_like(action) * self.policy_noise
+            ).clamp(-self.noise_clip, self.noise_clip)
+
+            next_action = self.clip_to(self.actor_target(next_state, goal) + noise, self.max_action.unsqueeze(0))
+
+            # Compute the target Q value
+            target_Q1 = self.criticQ1_target(next_state, goal, next_action)
+            target_Q2 = self.criticQ2_target(next_state, goal, next_action)
+            target_Q = torch.min(target_Q1, target_Q2)
+            target_Q = reward + (1. - done) * self.discount * target_Q
+
+            # Get current Q estimates
+            current_Q1 = self.criticQ1(state, goal, action)
+            current_Q2 = self.criticQ2(state, goal, action)
+
+            # Compute critic loss
+            criticQ1_loss = F.mse_loss(current_Q1, target_Q)
+            criticQ2_loss = F.mse_loss(current_Q2, target_Q)
+            # Compute actor losses
+            actor_loss = -self.criticQ1(state, goal, self.actor(state, goal)).mean()
+        return float(criticQ1_loss), float(criticQ2_loss), float(actor_loss)
 
     def save(self, filename):
         save_dict = {

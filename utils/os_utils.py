@@ -66,6 +66,7 @@ class Logger:
 		self.logger.setLevel(logging.DEBUG)
 
 		make_dir(self.my_log_dir, clear=True)
+		make_dir("{}temp/".format(self.my_log_dir), clear=True)
 		self.csv_file_path = "{}progress.csv".format(self.my_log_dir)
 
 
@@ -220,12 +221,71 @@ class Logger:
 				self.writer.writerow(self.values)
 		return self.values
 
+class LoggerExtra:
+	def __init__(self, logger_log_dir, csv_filename):
+
+		self.logger_log_dir = logger_log_dir
+		self.csv_file_path = "{}{}.csv".format(self.logger_log_dir, csv_filename)
+		self.keys = []
+		self.colors = []
+		self.values = {}
+		self.counts = {}
+		self.summary = []
+
+	def check_color(self, key):
+		for i in range(len(key)):
+			if key[i]=='@':
+				return key[:i], key[i+1:]
+		return key, None
+
+	def add_item(self, key):
+		assert not(key in self.keys)
+		key, color = self.check_color(key)
+		self.counts[key] = 0
+		self.keys.append(key)
+		self.colors.append(color)
+
+	def add_record(self, key, value, count=1):
+		key, _ = self.check_color(key)
+		if type(value)==np.ndarray:
+			count *= np.prod(value.shape)
+			value = np.mean(value) # convert to scalar
+		if self.counts[key]>0:
+			self.values[key] += value*count
+			self.counts[key] += count
+		else:
+			self.values[key] = value*count
+			self.counts[key] = count
+
+	def add_dict(self, info, prefix='', count=1):
+		for key, value in info.items():
+			self.add_record(prefix+key, value, count)
+
+
+	def save_csv(self):
+		if (not os.path.isfile(self.csv_file_path)) or os.stat(self.csv_file_path).st_size == 0:
+			with open(self.csv_file_path, 'w') as csv_file:
+				self.writer = csv.DictWriter(csv_file, fieldnames=self.keys)
+				self.writer.writeheader()
+				self.writer.writerow(self.values)
+		else:
+			with open(self.csv_file_path, 'a') as csv_file:
+				self.writer = csv.DictWriter(csv_file, fieldnames=self.keys)
+				self.writer.writerow(self.values)
+		return self.values
+
 class CSV_Logger:
-	def __init__(self, fieldnames, args, iteration_fieldnames=['epoch', 'episode', 'step'], recover_filename=None):
+	def __init__(self, fieldnames, args, iteration_fieldnames=['epoch', 'episode', 'step'], recover_filename=None,
+				 test_filename=None):
 		if recover_filename is not None:
 			self.csv_filename = recover_filename
 		else:
-			self.csv_file_path = args.dirpath +'csv_logs/'+time.strftime('%Y_%m_%d_%H_%M_%S') + args.csv_filename + '.csv'
+			if test_filename is not None:
+				self.csv_file_path = args.dirpath +'csv_logs/'+\
+									 time.strftime('%Y_%m_%d_%H_%M_%S') + test_filename + '.csv'
+			else:
+				self.csv_file_path = args.dirpath +'csv_logs/'+\
+									 time.strftime('%Y_%m_%d_%H_%M_%S') + args.csv_filename + '.csv'
 		self.fieldnames = fieldnames
 		self.iteration_fieldnames = iteration_fieldnames
 		all_fieldnames = self.iteration_fieldnames + self.fieldnames

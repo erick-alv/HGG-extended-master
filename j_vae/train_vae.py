@@ -9,12 +9,12 @@ from torchvision.utils import save_image
 
 
 img_size = 84
-encoding_of = 'obstacle'
+encoding_of = 'size'
 
 if encoding_of == 'goal':
     latent_size = 2
-    n_path = '../data/FetchPush/vae_model_goal'
-    train_file = '../data/FetchPush/goal_set.npy'
+    n_path = '../data/FetchPushObstacle/vae_model_goal_test'
+    train_file = '../data/FetchPushObstacle/goal_set.npy'
 elif encoding_of == 'obstacle':
     latent_size = 2
     n_path = '../data/FetchPushObstacle/vae_model_obstacle'
@@ -30,14 +30,14 @@ elif encoding_of == 'size_and_position':
 
 
 class VAE(nn.Module):
-    def __init__(self):
+    def __init__(self, img_size, latent_size, fully_connected_size=256):
         super(VAE, self).__init__()
-        self.fc1 = nn.Linear(img_size * img_size * 3, 400)
+        self.fc1 = nn.Linear(img_size * img_size * 3, fully_connected_size)
         # Try to reduce
-        self.fc21 = nn.Linear(400, latent_size)
-        self.fc22 = nn.Linear(400, latent_size)
-        self.fc3 = nn.Linear(latent_size, 400)
-        self.fc4 = nn.Linear(400, img_size * img_size * 3)
+        self.fc21 = nn.Linear(fully_connected_size, latent_size)
+        self.fc22 = nn.Linear(fully_connected_size, latent_size)
+        self.fc3 = nn.Linear(latent_size, fully_connected_size)
+        self.fc4 = nn.Linear(fully_connected_size, img_size * img_size * 3)
 
     def encode(self, x):
         h1 = F.relu(self.fc1(x))
@@ -106,7 +106,6 @@ def train(epoch, model, optimizer, device, log_interval, batch_size):
             #           'results/original.png')
             #save_image(recon_batch.cpu().view(-1, 3, img_size, img_size),
             #           'results/recon.png')
-            #           'results/recon_' + str(epoch) + '.png')
 
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, (batch_idx+1) * len(data), data_size,
@@ -124,7 +123,7 @@ def train_Vae(batch_size=128, epochs=100, no_cuda=False, seed=1, log_interval=10
 
     device = torch.device("cuda" if cuda else "cpu")
     if load:
-        model = VAE().to(device)
+        model = VAE(img_size=img_size, latent_size=latent_size).to(device)
         optimizer = optim.Adam(model.parameters(), lr=1e-3)
         checkpoint = torch.load(n_path)
         model.load_state_dict(checkpoint['model_state_dict'])
@@ -132,7 +131,7 @@ def train_Vae(batch_size=128, epochs=100, no_cuda=False, seed=1, log_interval=10
         epoch = checkpoint['epoch']
         start_epoch = epoch + 1
     else:
-        model = VAE().to(device)
+        model = VAE(img_size=img_size, latent_size=latent_size).to(device)
         optimizer = optim.Adam(model.parameters(), lr=1e-3)
         start_epoch = 1
 
@@ -167,7 +166,7 @@ def test_Vae(no_cuda=False, seed=1):
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
     device = torch.device("cuda" if cuda else "cpu")
-    model = VAE().to(device)
+    model = VAE(img_size=img_size, latent_size=latent_size).to(device)
     checkpoint = torch.load(n_path)
     model.load_state_dict(checkpoint['model_state_dict'])
     test_on_data_set(model, device, 'test')
@@ -186,20 +185,18 @@ def test_on_data_set(model, device, filename_suffix):
         recon, mu, logvar = model(data)
 
         recon = recon.view(10, 3, img_size, img_size)
-        mu = mu.view(10, 2)
-        logvar = logvar.view(10, 2)
 
         comparison = torch.cat([data, recon])
         save_image(comparison.cpu(), 'results/reconstruction_{}.png'.format(filename_suffix),
                    nrow=10)
 
-def load_Vae(path, no_cuda=False, seed=1):
+def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1):
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
     device = torch.device("cuda" if cuda else "cpu")
     kwargs = {'num_workers': 1, 'pin_memory': True} if cuda else {}
 
-    model = VAE().to(device)
+    model = VAE(img_size=img_size, latent_size=latent_size).to(device)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     checkpoint = torch.load(path)
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -216,7 +213,7 @@ def show_2d_manifold(no_cuda=False, seed=1):
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
     device = torch.device("cuda" if cuda else "cpu")
-    model = VAE().to(device)
+    model = VAE(img_size=img_size, latent_size=latent_size).to(device)
     checkpoint = torch.load(n_path)
     model.load_state_dict(checkpoint['model_state_dict'])
     n = 20  # figure with nxn images
@@ -256,7 +253,7 @@ def show_2d_manifold_with_fixed_axis(no_cuda=False, seed=1, fixed_axis=0, fixed_
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
     device = torch.device("cuda" if cuda else "cpu")
-    model = VAE().to(device)
+    model = VAE(img_size=img_size, latent_size=latent_size).to(device)
     checkpoint = torch.load(n_path)
     model.load_state_dict(checkpoint['model_state_dict'])
 
@@ -305,7 +302,7 @@ def show_1d_manifold(no_cuda=False, seed=1):
     torch.manual_seed(seed)
 
     device = torch.device("cuda" if cuda else "cpu")
-    model = VAE().to(device)
+    model = VAE(img_size=img_size, latent_size=latent_size).to(device)
     checkpoint = torch.load(n_path)
     model.load_state_dict(checkpoint['model_state_dict'])
 
@@ -313,7 +310,7 @@ def show_1d_manifold(no_cuda=False, seed=1):
     figure = np.zeros((img_size*n,img_size, 3))
 
     # Contruct grid of latent variable values.
-    grid_x = norm.ppf(np.linspace(0.005, 0.995, n, endpoint=True))  # with probabilities to values of the distribution
+    grid_x = norm.ppf(np.linspace(0.00005, 0.99995, n, endpoint=True))  # with probabilities to values of the distribution
     # grid_x = np.linspace(-2, 2, n, endpoint=True)#with values of the distribution
 
     # Decode for each square in the grid.
@@ -346,7 +343,8 @@ def show_1d_manifold(no_cuda=False, seed=1):
 if __name__ == '__main__':
     # Train VAE
     print('Train VAE...')
-    #train_Vae(batch_size=128, epochs=100, load=True)
+    #train_Vae(batch_size=128, epochs=80, load=False)
     #test_Vae()
-    show_2d_manifold()
+    #show_2d_manifold()
+    show_1d_manifold()
     print('Successfully trained VAE')

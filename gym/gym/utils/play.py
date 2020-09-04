@@ -28,7 +28,7 @@ def play(env, transpose=True, fps=30, zoom=None, callback=None, keys_to_action=N
         play(gym.make("Pong-v4"))
 
     Above code works also if env is wrapped, so it's particularly useful in
-    verifying that the frame-level preprocessing does not render the game
+    verifying that the frames-level preprocessing does not render the game
     unplayable.
 
     If you wish to plot real time statistics as you play, you can use

@@ -86,7 +86,7 @@ class DistanceEstimator:
     def train_with_labels(self, batch, ae, trainer_ae, optimize_ae_too=False):
         #it is possible to read latents states from trajectories, but then is not possible to backpropagate
         #in the encoder if we want to
-        for _ in range(5):
+        for _ in range(3):
             loss = None
             for trajectory in batch:
                 l = len(trajectory)

@@ -4,7 +4,6 @@ import envs.hand as hand_env
 from .utils import goal_distance, goal_distance_obs
 
 Robotics_envs_id = [
-	'FetchPushDyn-v1',
 	'FetchReach-v1',
 	'FetchPush-v1',
 	'FetchSlide-v1',
@@ -12,12 +11,11 @@ Robotics_envs_id = [
 	'FetchPushNew-v1',
 	'FetchCurling-v1',
 	'FetchPushObstacle-v1',
+	'FetchPushObstacleFetchEnv-v1',
 	'FetchPickObstacle-v1',
 	'FetchPushNoObstacle-v1',
 	'FetchPickNoObstacle-v1',
 	'FetchPushLabyrinth-v1',
-    'FetchPushLabyrinth-v2',
-	'FetchPushLabyrinth-v3',
 	'FetchPickAndThrow-v1',
 	'FetchPickAndSort-v1',
 	'HandManipulateBlock-v0',
@@ -35,16 +33,16 @@ def make_env(args):
 
 def clip_return_range(args):
 	gamma_sum = 1.0/(1.0-args.gamma)
-	return{
-		'FetchPushDyn-v1': (-gamma_sum, 0.0),
+	return {
 		'FetchReach-v1': (-gamma_sum, 0.0),
 		'FetchPush-v1': (-gamma_sum, 0.0),
 		'FetchSlide-v1': (-gamma_sum, 0.0),
 		'FetchPickAndPlace-v1': (-gamma_sum, 0.0),
 		'FetchPickObstacle-v1': (-gamma_sum, 0.0),
 		'FetchPickNoObstacle-v1': (-gamma_sum, 0.0),
+		'FetchPushObstacle-v1': (-gamma_sum, 0.0),
+		'FetchPushObstacleFetchEnv-v1':(-gamma_sum, 0.0),
 		'FetchPushLabyrinth-v1': (-gamma_sum, 0.0),
-		'FetchPushLabyrinth-v2': (-gamma_sum, 0.0),
 		'FetchPickAndThrow-v1': (-gamma_sum, 0.0),
 		'FetchPickAndSort-v1': (-gamma_sum, 0.0),
 		'HandManipulateBlock-v0': (-gamma_sum, 0.0),

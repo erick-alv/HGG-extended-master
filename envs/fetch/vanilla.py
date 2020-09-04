@@ -2,6 +2,7 @@ import gym
 import numpy as np
 from envs.utils import goal_distance, goal_distance_obs
 from utils.os_utils import remove_color
+from vae_env_inter import take_goal_image, take_obstacle_image, goal_latent_from_images, obstacle_latent_from_images
 
 class VanillaGoalEnv():
 	def __init__(self, args):
@@ -22,9 +23,12 @@ class VanillaGoalEnv():
 		self.target_offset = self.env.env.target_offset
 		self.target_in_the_air = self.env.env.target_in_the_air
 		if self.has_object: self.height_offset = self.env.env.height_offset
+		if hasattr(self.env.env, 'target_goal_center'):
+			self.target_goal_center = self.env.env.target_goal_center
+		if hasattr(self.env.env, 'object_center'):
+			self.object_center = self.env.env.object_center
 
 		self.render = self.env.render
-		self.get_obs = self.env.env._get_obs
 		self.reset_sim = self.env.env._reset_sim
 
 		self.reset_ep()
@@ -57,20 +61,60 @@ class VanillaGoalEnv():
 			for key, value_func in self.env_info.items()
 		}
 
+	def get_obs(self):
+		if self.args.transform_dense:
+			obs = self.env.env._get_obs()
+			obs['desired_goal_latent'] = self.desired_goal_latent.copy()
+			obs['achieved_goal_latent'] = self.achieved_goal_latent.copy()
+			obs['obstacle_latent'] = self.obstacle_latent.copy()
+			obs['obstacle_size_latent'] = self.obstacle_size_latent.copy()
+			return obs
+		else:
+			return self.env.env._get_obs()
+
 	def step(self, action):
 		# imaginary infinity horizon (without done signal)
 		obs, reward, done, info = self.env.step(action)
-		info = self.process_info(obs, reward, info)
-		reward = self.compute_reward((obs['achieved_goal'],self.last_obs['achieved_goal']), obs['desired_goal'])
+		if self.args.transform_dense:
+			achieved_goal_image = take_goal_image(self, self.args.img_size)
+			latents = goal_latent_from_images(np.array([achieved_goal_image]), self.args)
+			self.achieved_goal_latent = latents[0].copy()
+
+			reward = -self.args.compute_reward_dense(self.obstacle_latent.copy(), self.obstacle_size_latent.copy(),
+							   self.achieved_goal_latent.copy(), self.desired_goal_latent.copy(), None, None)
+			if not np.isscalar(reward):
+				reward = reward[0]
+			info = self.process_info(obs, reward, info)
+
+		else:
+			info = self.process_info(obs, reward, info)
+			reward = self.compute_reward((obs['achieved_goal'],self.last_obs['achieved_goal']), obs['desired_goal'])
+		obs = self.get_obs()
 		self.last_obs = obs.copy()
 		return obs, reward, False, info
 
 	def reset_ep(self):
+		if self.args.transform_dense:
+			obs = self.env.env._get_obs()
+			self.env.env._move_object(position=obs['desired_goal'].copy())
+			desired_goal_image = take_goal_image(self, self.args.img_size)
+			self.env.env._move_object(position=obs['achieved_goal'].copy())
+			achieved_goal_image = take_goal_image(self, self.args.img_size)
+			latents = goal_latent_from_images(np.array([desired_goal_image, achieved_goal_image]), self.args)
+			self.desired_goal_latent = latents[0].copy()
+			self.achieved_goal_latent = latents[1].copy()
+
+			obstacle_image = take_obstacle_image(self, self.args.img_size)
+			latents_obstacle, latents_o_size = obstacle_latent_from_images(np.array([obstacle_image]), self.args)
+			self.obstacle_latent = latents_obstacle[0].copy()
+			self.obstacle_size_latent = latents_o_size[0].copy()
+
 		self.rewards = 0.0
 
 	def reset(self):
+		self.env.reset()
 		self.reset_ep()
-		self.last_obs = (self.env.reset()).copy()
+		self.last_obs = self.get_obs().copy()
 		return self.last_obs.copy()
 
 	@property
@@ -94,3 +138,10 @@ class VanillaGoalEnv():
 	@goal.setter
 	def goal(self, value):
 		self.env.env.goal = value.copy()
+		if self.args.transform_dense:
+			obs = self.env.env._get_obs()
+			self.env.env._move_object(position=value.copy())
+			desired_goal_image = take_goal_image(self, self.args.img_size)
+			self.env.env._move_object(position=obs['achieved_goal'].copy())
+			latents = goal_latent_from_images(np.array([desired_goal_image]), self.args)
+			self.desired_goal_latent = latents[0].copy()

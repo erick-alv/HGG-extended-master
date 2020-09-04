@@ -22,10 +22,11 @@ def make_text_im(width, height_per_line, text, fontsize=15):
         fontsize +=1
     '''
 
-    img = Image.new('RGB', (width, height), color=(0, 0, 0))
-    d = ImageDraw.Draw(img)
-    d.text((0, 0), text)
-    return np.asarray(img)
+    with Image.new('RGB', (width, height), color=(0, 0, 0)) as img:
+        d = ImageDraw.Draw(img)
+        d.text((0, 0), text)
+        im_line.close()
+        return np.asarray(img)
 
 def save_and_show_npy_to_image(npy_path, image_save_path, display=False):
     def process_image(single_image_array, image_path):
@@ -47,6 +48,18 @@ def save_and_show_npy_to_image(npy_path, image_save_path, display=False):
             process_image(npy_as_array[i], name+'_'+str(i)+'.png')
     else:
         process_image(npy_as_array, image_save_path)
+
+def create_rollout_video(trajectory_images_array, filename, args, goal_image = None):
+    for i in range(len(trajectory_images_array)):
+        if goal_image is not None:
+            ims = stack_images_row([trajectory_images_array[i], goal_image])
+        else:
+            ims = trajectory_images_array[i]
+        store_image_array_at(ims, args.logger.logger_log_dir + 'temp/', 'frame_{}'.format(i))
+    make_video(args.logger.logger_log_dir + 'temp/', '.png', path_to_save=args.logger.logger_log_dir, filename_save=filename)
+    for f in os.listdir(args.logger.logger_log_dir + 'temp/'):
+        if f.endswith('.png'):
+            os.remove(args.logger.logger_log_dir + 'temp/' + f)
 
 def fill_width(im1, im2):
     w1 = im1.shape[1]
@@ -73,8 +86,6 @@ def fill_width(im1, im2):
     else:
         return m, to_fit
 
-
-
 def store_image_array_at(single_image_array, path_to_folder, img_name, force_remap_to_255=False, text_append=None):
     if single_image_array.max() <= 1.0 or force_remap_to_255:
         #assume is normalized in [0,1]
@@ -84,9 +95,8 @@ def store_image_array_at(single_image_array, path_to_folder, img_name, force_rem
     if text_append is not None:
         text_im = make_text_im(single_image_array.shape[0], 40, text_append)
         single_image_array = stack_images_column_2([single_image_array, text_im])
-    image = Image.fromarray(single_image_array.astype(np.uint8), 'RGB')
-
-    image.save(path_to_folder+img_name+'.png')
+    with Image.fromarray(single_image_array.astype(np.uint8), 'RGB') as image:
+        image.save(path_to_folder+img_name+'.png')
 
 def make_random_imarray():
     return np.array([
@@ -245,3 +255,6 @@ def plt_to_numpy(fig):
     data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
     plt.close()
     return data
+if __name__=='__main__':
+    im = create_black_im_of_dims(80, 80)
+    store_image_array_at(im, '../logsdir/vae_results/', 'test')

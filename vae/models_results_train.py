@@ -1,6 +1,5 @@
 import numpy as np
 from utils.image_util import store_image_array_at, stack_images_column, stack_images_row, make_video
-from vae.conv_vae_keras import CVAE_Keras
 from envs import make_env
 import pickle
 from custom_start import get_args_and_initialize

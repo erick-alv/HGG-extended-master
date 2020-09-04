@@ -9,7 +9,8 @@ from torchvision.utils import save_image
 
 
 img_size = 84
-n_path = '../data/FetchPush/vae_model_goal'
+n_path = '../data/FetchPushObstacle/vae_model_goal'
+train_file = '../data/FetchPushObstacle/goal_set.npy'
 
 
 class VAE(nn.Module):
@@ -69,7 +70,7 @@ def loss_function(recon_x, x, mu, logvar):
 def train(epoch, model, optimizer, device, log_interval, batch_size):
     model.train()
     train_loss = 0
-    data_set = np.load('../data/FetchPush/goal_set.npy')
+    data_set = np.load(train_file)
     data_size = len(data_set)
     data_set = np.split(data_set, data_size / batch_size)
 
@@ -85,10 +86,10 @@ def train(epoch, model, optimizer, device, log_interval, batch_size):
         train_loss += loss.item()
         optimizer.step()
         if batch_idx % log_interval == 0:
-            save_image(data.cpu().view(-1, 3, img_size, img_size),
-                       'results/original.png')
-            save_image(recon_batch.cpu().view(-1, 3, img_size, img_size),
-                       'results/recon.png')
+            #save_image(data.cpu().view(-1, 3, img_size, img_size),
+            #           'results/original.png')
+            #save_image(recon_batch.cpu().view(-1, 3, img_size, img_size),
+            #           'results/recon.png')
             #           'results/recon_' + str(epoch) + '.png')
 
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
@@ -101,7 +102,7 @@ def train(epoch, model, optimizer, device, log_interval, batch_size):
         epoch, train_loss / data_size))
 
 
-def train_Vae(batch_size=128, epochs=100, no_cuda=False, seed=1, log_interval=9, load=False):
+def train_Vae(batch_size=128, epochs=100, no_cuda=False, seed=1, log_interval=100, load=False):
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
 
@@ -113,11 +114,13 @@ def train_Vae(batch_size=128, epochs=100, no_cuda=False, seed=1, log_interval=9,
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epoch = checkpoint['epoch']
+        start_epoch = epoch + 1
     else:
         model = VAE().to(device)
         optimizer = optim.Adam(model.parameters(), lr=1e-3)
+        start_epoch = 1
 
-    for epoch in range(1, epochs + 1):
+    for epoch in range(start_epoch, epochs + start_epoch):
         train(epoch, model, optimizer, device, log_interval, batch_size)
         # test(epoch, model, test_loader, batch_size, device)
         # with torch.no_grad():
@@ -125,20 +128,54 @@ def train_Vae(batch_size=128, epochs=100, no_cuda=False, seed=1, log_interval=9,
         #    sample = model.decode(sample).cpu()
         #    save_image(sample.view(64, 3, img_size, img_size),
         #               'results/sample.png')
-        if not (epoch % 100):
+        if not (epoch % 25):
+            test_on_data_set(model, device,'epoch_{}'.format(epoch))
             print('Saving Progress!')
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
             }, n_path)
-
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+            }, n_path+'_epoch_'+str(epoch))
     torch.save({
         'epoch': epoch,
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
     }, n_path)
 
+def test_Vae(no_cuda=False, seed=1):
+    cuda = not no_cuda and torch.cuda.is_available()
+    torch.manual_seed(seed)
+    device = torch.device("cuda" if cuda else "cpu")
+    model = VAE().to(device)
+    checkpoint = torch.load(n_path)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    test_on_data_set(model, device, 'test')
+
+
+def test_on_data_set(model, device, filename_suffix):
+    data_set = np.load(train_file)
+    data_size = len(data_set)
+    idx = np.random.randint(0, data_size, size=10)
+    data = data_set[idx]
+    with torch.no_grad():
+        data = torch.from_numpy(data).float().to(device)
+        data /= 255
+        data = data.permute([0, 3, 1, 2])
+        data = data.reshape([-1, 3, img_size, img_size])
+        recon, mu, logvar = model(data)
+
+        recon = recon.view(10, 3, img_size, img_size)
+        mu = mu.view(10, 2)
+        logvar = logvar.view(10, 2)
+
+        comparison = torch.cat([data, recon])
+        save_image(comparison.cpu(), 'results/reconstruction_{}.png'.format(filename_suffix),
+                   nrow=10)
 
 def load_Vae(path, no_cuda=False, seed=1):
     cuda = not no_cuda and torch.cuda.is_available()
@@ -158,5 +195,6 @@ def load_Vae(path, no_cuda=False, seed=1):
 if __name__ == '__main__':
     # Train VAE
     print('Train VAE...')
-    train_Vae(batch_size=128, epochs=100, load=True)
+    train_Vae(batch_size=128, epochs=400, load=False)
+    #test_Vae()
     print('Successfully trained VAE')

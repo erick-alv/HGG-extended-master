@@ -1,17 +1,15 @@
-from gym.envs.robotics.fetch_env import FetchEnv
+from gym.envs.robotics.fetch_env import FetchEnv#TODO there is actually just fetchEnv
 from gym.envs.robotics.fetch.slide import FetchSlideEnv
 from gym.envs.robotics.fetch.pick_and_place import FetchPickAndPlaceEnv
 from gym.envs.robotics.fetch.push import FetchPushEnv
 from gym.envs.robotics.fetch.reach import FetchReachEnv
+from gym.envs.robotics.fetch.push_obstacle_fetch import FetchPushObstacleFetchEnv
 
-from gym.envs.robotics.fetch.push_dyn import FetchPushDynEnv
 from gym.envs.robotics.fetch.pick_obstacle import FetchPickObstacleEnv
 from gym.envs.robotics.fetch.pick_noobstacle import FetchPickNoObstacleEnv
 from gym.envs.robotics.fetch.push_obstacle import FetchPushObstacleEnv
 from gym.envs.robotics.fetch.push_noobstacle import FetchPushNoObstacleEnv
 from gym.envs.robotics.fetch.push_labyrinth import FetchPushLabyrinthEnv
-from gym.envs.robotics.fetch.push_labyrinth2 import FetchPushLabyrinthEnv2
-from gym.envs.robotics.fetch.push_labyrinth3 import FetchPushLabyrinthEnv3
 from gym.envs.robotics.fetch.pick_and_throw import FetchPickAndThrowEnv
 from gym.envs.robotics.fetch.pick_and_sort import FetchPickAndSortEnv
 from gym.envs.robotics.fetch.slide_new import FetchSlideNewEnv

@@ -18,7 +18,7 @@ from pyglet import gl
 #
 # State consists of STATE_W x STATE_H pixels.
 #
-# Reward is -0.1 every frame and +1000/N for every track tile visited, where N is
+# Reward is -0.1 every frames and +1000/N for every track tile visited, where N is
 # the total number of tiles visited in the track. For example, if you have finished in 732 frames,
 # your reward is 1000 - 0.1*732 = 926.8 points.
 #
@@ -49,7 +49,7 @@ WINDOW_H = 800
 SCALE       = 6.0        # Track scale
 TRACK_RAD   = 900/SCALE  # Track is heavily morphed circle with this radius
 PLAYFIELD   = 2000/SCALE # Game over boundary
-FPS         = 50         # Frames per second
+FPS         = 50         # frames per second
 ZOOM        = 2.7        # Camera zoom
 ZOOM_FOLLOW = True       # Set to False for fixed view (don't use zoom)
 

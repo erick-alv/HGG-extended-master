@@ -1,26 +1,13 @@
 import numpy as np
 import gym
+from envs.utils import goal_distance, goal_distance_obs
 from utils.os_utils import remove_color
-from vae.vae_wrapper import VAEWrapper
-from vae.goal_pixel_wrapper import PixelAndGoalWrapper
 
 
 class CustomGoalEnv():
     def __init__(self, args):
         self.args = args
         self.env = gym.make(args.env)
-        if hasattr(args, 'img_dim'):
-            self.env.env.set_goal_img_size(args.img_dim)
-        if hasattr(args, 'wrap_with_vae') and args.wrap_with_vae:
-            self._env = VAEWrapper(args, env=self.env, pixels_only=False,
-                                   render_kwargs={'state_image':args.vae_wrap_kwargs},
-                                   pixel_keys=('state_image', ))
-        elif hasattr(args, 'wrap_with_pixel') and args.wrap_with_pixel:
-            self._env = PixelAndGoalWrapper(args, env=self.env, pixels_only=False,
-                                            render_kwargs={'state_image':args.pixel_wrap_kwargs},
-                                            pixel_keys=('state_image', ))
-            self.env.env.set_goal_img_size(args.img_dim)
-
         self.np_random = self.env.env.np_random
         self.distance_threshold = self.env.env.distance_threshold
         self.action_space = self.env.action_space
@@ -35,11 +22,7 @@ class CustomGoalEnv():
         if self.has_object: self.height_offset = self.env.env.height_offset
 
         self.render = self.env.render
-        if (hasattr(args, 'wrap_with_vae') and args.wrap_with_vae) \
-                or (hasattr(args, 'wrap_with_pixel') and args.wrap_with_pixel):
-            self.get_obs = self._env._get_obs
-        else:
-            self.get_obs = self.env.env._get_obs
+        self.get_obs = self.env.env._get_obs
         self.reset_sim = self.env.env._reset_sim
 
         self.reset_ep()
@@ -83,7 +66,6 @@ class CustomGoalEnv():
         info = self.process_info(obs, reward, info)
         reward = self.compute_reward((obs['achieved_goal'], self.last_obs['achieved_goal']),
                                      obs['desired_goal'])  # TODO: why the heck second argument if it is then ignored??
-        obs = self.get_obs()
         self.last_obs = obs.copy()
         return obs, reward, False, info
 
@@ -138,9 +120,9 @@ class CustomGoalEnv():
         """
         return self.env.env._sample_goal()
 
-    def reset(self, **kwargs):
+    def reset(self):
         self.reset_ep()
-        self.env.env._reset_sim(**kwargs)
+        self.env.env._reset_sim()
         """
         self.sim.set_state(self.initial_state)
 

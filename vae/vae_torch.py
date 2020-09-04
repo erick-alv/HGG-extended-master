@@ -531,7 +531,7 @@ def setup_distance_ae_and_trainer(args,  recover_filename=None, compat_extra=Fal
     dec2 = VaeDecoderRange(6, args.latent_dim, min_range=[-2.] * 6, max_range=[2] * 6,
                            device=args.device, hidden_dim=800).to(args.device)
     if compat_extra:
-        dec3 = VaeDecoderRange(1, args.latent_dim, min_range=[0],max_range=[200],device=args.device)
+        dec3 = VaeDecoderRange(1, args.latent_dim, min_range=[0],max_range=[200],device=args.device,hidden_dim=400)
         model = MultiAE(encoder, [dec1, dec2, dec3]).to(args.device)
     else:
         model = MultiAE(encoder, [dec1, dec2]).to(args.device)

@@ -12,6 +12,9 @@
 		<body name="floor0" pos="0.8 0.75 0">
 			<site name="target0" pos="0 0 0.5" size="0.02 0.02 0.02" rgba="1 0 0 1" type="sphere"></site>
 		</body>
+		<body name="external_camera_1" pos="3.5 0.75 1.6">
+			<camera euler="0 1.1 1.57" fovy="43.3" name="ex_camera_1" pos="0 0 0"></camera>
+		</body>
 
 		<include file="robot.xml"></include>
 

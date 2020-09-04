@@ -26,7 +26,7 @@ class AtariPreprocessing(gym.Wrapper):
         env (Env): environment
         noop_max (int): max number of no-ops
         frame_skip (int): the frequency at which the agent experiences the game. 
-        screen_size (int): resize Atari frame
+        screen_size (int): resize Atari frames
         terminal_on_life_loss (bool): if True, then step() returns done=True whenever a
             life is lost. 
         grayscale_obs (bool): if True, then gray scale observation is returned, otherwise, RGB observation
@@ -42,8 +42,8 @@ class AtariPreprocessing(gym.Wrapper):
         assert screen_size > 0
         assert noop_max >= 0
         if frame_skip > 1:
-            assert 'NoFrameskip' in env.spec.id, 'disable frame-skipping in the original env. for more than one' \
-                                                 ' frame-skip as it will be done by the wrapper'
+            assert 'NoFrameskip' in env.spec.id, 'disable frames-skipping in the original env. for more than one' \
+                                                 ' frames-skip as it will be done by the wrapper'
         self.noop_max = noop_max
         assert env.unwrapped.get_action_meanings()[0] == 'NOOP'
 

@@ -7,22 +7,20 @@ from temp_func import conc_latent
 from copy import copy
 from algorithm.replay_buffer import Trajectory, goal_concat, ReplayBuffer_Episodic
 from vae.vae_torch import setup_distance_ae_and_trainer
-from utils.transforms_utils import extend_obs
+from utils.transforms_utils import extend_obs, BA
 from agents.distance_estimator import DistanceEstimator
 from collections import namedtuple
 from distance_evaluation import process_distances, create_dist_images, create_rollout_video_with_distances, write_distances_to_csv
 import gym
 from gym.wrappers import Monitor
 
-
-BA = namedtuple('BA', 'buffer_type buffer_size')
 AGENT_CHECKPOINT_NAME = 'simpler_to_test'
 AGENT_LAST = 'td3_simpler_to_test_last'
 ESTIMATOR1_CHECKPOINT_NAME = 'dist_estimator_simpler_to_test'
 ESTIMATOR2_CHECKPOINT_NAME = 'dist_estimator2_simpler_to_test'
 ESTIMATOR1_LAST = 'dist_estimator_simpler_to_test_last'
 ESTIMATOR2_LAST = 'dist_estimator2_simpler_to_test_last'
-CSV_VID_PATTERN = 'dist_estimator2_simpler_to_test_epoch_{}_it_{}'
+CSV_VID_PATTERN = 'dist_simpler_to_test_epoch_{}_it_{}'
 def training_loop(start_epoch, env, agent, replay_buffer, dist_estimator, dist_estimator2,
                   args, ou_noiser=None):
     if start_epoch > 0:#retraining; replay buffer must be filled again

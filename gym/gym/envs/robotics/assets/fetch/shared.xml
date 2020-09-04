@@ -1,6 +1,7 @@
 <mujoco>
     <asset>
-        <texture type="skybox" builtin="gradient" rgb1="0.44 0.85 0.56" rgb2="0.46 0.87 0.58" width="32" height="32"></texture>
+        <!--texture type="skybox" builtin="gradient" rgb1="0.44 0.85 0.56" rgb2="0.46 0.87 0.58" width="32" height="32"></texture-->
+        <texture type="skybox" builtin="gradient" rgb1="0.44 0.85 0.56" rgb2="0.44 0.85 0.56" width="32" height="32"></texture>
         <texture name="texture_block" file="block.png" gridsize="3 4" gridlayout=".U..LFRB.D.."></texture>
 
         <material name="floor_mat" specular="0" shininess="0.5" reflectance="0" rgba="0.2 0.2 0.2 1"></material>
@@ -47,19 +48,19 @@
     
     <default>
         <default class="robot0:fetch">
-            <geom margin="0.001" material="robot0:geomMat" rgba="1 1 1 0.1" solimp="0.99 0.99 0.01" solref="0.01 1" type="mesh" user="0"></geom>
+            <geom margin="0.001" material="robot0:geomMat" rgba="1 1 1 1" solimp="0.99 0.99 0.01" solref="0.01 1" type="mesh" user="0"></geom>
             <joint armature="1" damping="50" frictionloss="0" stiffness="0"></joint>
             
             <default class="robot0:fetchGripper">
-                <geom condim="4" margin="0.001" type="box" user="0" rgba="0 1 0 1"></geom>
+                <geom condim="4" margin="0.001" type="box" user="0" rgba="0.356 0.361 0.376 1"></geom>
                 <joint armature="100" damping="1000" limited="true" solimplimit="0.99 0.999 0.01" solreflimit="0.01 1" type="slide"></joint>
             </default>
 
             <default class="robot0:grey">
-                <geom rgba="0.356 0.361 0.376 1.0"></geom>
+                <geom rgba="0.356 0.361 0.376 1"></geom>
             </default>
             <default class="robot0:blue">
-                <geom rgba="1 1 1 0.1"></geom>
+                <geom rgba="0.086 0.506 0.767 1"></geom>
             </default>
         </default>
     </default>

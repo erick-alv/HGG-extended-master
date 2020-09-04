@@ -62,7 +62,6 @@ class FetchPickAndThrowEnv(robot_env.RobotEnv, gym.utils.EzPickle):
                                         [1.55 + 0.175, 0.75, 0.6 - 0.15, 0.175, 0.01, 0.05],
                                         [1.55 + 0.175, 0.75 - 0.17, 0.6 - 0.15, 0.175, 0.01, 0.05]]
         self.adapt_dict["spaces"] = [50, 50, 6] # [50, 50, 6]
-        self.adapt_dict["z_penalty"] = 1
 
         super(FetchPickAndThrowEnv, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
@@ -148,9 +147,10 @@ class FetchPickAndThrowEnv(robot_env.RobotEnv, gym.utils.EzPickle):
         lookat = self.sim.data.body_xpos[body_id]
         for idx, value in enumerate(lookat):
             self.viewer.cam.lookat[idx] = value
+	# video settings: 01: 2.5/132/-50  // 02: 2.5/100/-50
         self.viewer.cam.distance = 2.5
-        self.viewer.cam.azimuth = 132.
-        self.viewer.cam.elevation = -14.
+        self.viewer.cam.azimuth = 100.
+        self.viewer.cam.elevation = -50.
 
     def _render_callback(self):
         # Visualize target.
@@ -165,7 +165,6 @@ class FetchPickAndThrowEnv(robot_env.RobotEnv, gym.utils.EzPickle):
         # Randomize start position of object.
         if self.has_object:
             object_xpos = self.initial_gripper_xpos[:2]
-            # while np.linalg.norm(object_xpos - self.initial_gripper_xpos[:2]) < 0.1: # TODO: next line was in loop
             object_xpos = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.obj_range, self.obj_range,
                                                                                  size=2)
             object_qpos = self.sim.data.get_joint_qpos('object0:joint')
@@ -198,7 +197,7 @@ class FetchPickAndThrowEnv(robot_env.RobotEnv, gym.utils.EzPickle):
         utils.reset_mocap_welds(self.sim)
         self.sim.forward()
 
-        # TODO: initial markers (index 3 nur zufällig, aufpassen!)
+        # initial markers (index 3 is arbitrary)
         self.target_1 = self.sim.data.get_site_xpos('target_1')
         self.target_2 = self.sim.data.get_site_xpos('target_2')
         self.target_3 = self.sim.data.get_site_xpos('target_3')
@@ -213,8 +212,7 @@ class FetchPickAndThrowEnv(robot_env.RobotEnv, gym.utils.EzPickle):
         self.init_center = self.sim.data.get_site_xpos('init_center')
         sites_offset = (self.sim.data.site_xpos - self.sim.model.site_pos).copy()[3]
 
-        # Move end effector into position. # TODO: changed that to the left
-        #gripper_target = np.array([-0.498, 0.005, -0.431 + self.gripper_extra_height]) + self.sim.data.get_site_xpos('robot0:grip')
+        # Move end effector into position. 
         gripper_target = self.init_center + self.gripper_extra_height #+ self.sim.data.get_site_xpos('robot0:grip')
         gripper_rotation = np.array([1., 0., 1., 0.])
         self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
@@ -252,14 +250,7 @@ class FetchPickAndThrowEnv(robot_env.RobotEnv, gym.utils.EzPickle):
         if self.has_object:
             self.height_offset = self.sim.data.get_site_xpos('object0')[2]
 
-    def render(self, mode='human', width=500, height=500):
+    def render(self, mode='human', width=1080, height=1080):
         return super(FetchPickAndThrowEnv, self).render(mode, width, height)
 
-    def chose_region(self, probs):
-        random = self.np_random.uniform(0,1)
-        acc = 0
-        for i, p in enumerate(probs):
-            acc += p
-            if random < acc:
-                return i
-        print(acc)
+

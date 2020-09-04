@@ -1,6 +1,6 @@
 <mujoco>
 	<body mocap="true" name="robot0:mocap" pos="0 0 0">
-		<geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0" size="0.005 0.005 0.005" type="box"></geom>
+		<geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0" size="0.005 0.005 0.005" type="box"></geom> <!-- 0.7 / 0.1-->
 		<geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0" size="1 0.005 0.005" type="box"></geom>
 		<geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0" size="0.005 1 0.001" type="box"></geom>
 		<geom conaffinity="0" contype="0" pos="0 0 0" rgba="0 0.5 0 0" size="0.005 0.005 1" type="box"></geom>
@@ -105,11 +105,11 @@
 		</body>
 		<body name="robot0:estop_link" pos="-0.1246 0.2389 0.3113" quat="0.7071 0.7071 0 0">
 			<inertial diaginertia="0 0 0" mass="0.002" pos="0.0024 -0.0033 0.0067" quat="0.3774 -0.1814 0.1375 0.8977"></inertial>
-			<geom mesh="robot0:estop_link" rgba="0.8 0 0 0" name="robot0:estop_link"></geom>
+			<geom mesh="robot0:estop_link" rgba="0.8 0 0 1" name="robot0:estop_link"></geom>
 		</body>
 		<body name="robot0:laser_link" pos="0.235 0 0.2878" quat="0 1 0 0">
 			<inertial diaginertia="0 0 0" mass="0.0083" pos="-0.0306 0.0007 0.0552" quat="0.5878 0.5378 -0.4578 0.3945"></inertial>
-			<geom mesh="robot0:laser_link" rgba="0.7922 0.8196 0.9333 0" name="robot0:laser_link"></geom>
+			<geom mesh="robot0:laser_link" rgba="0.7922 0.8196 0.9333 1" name="robot0:laser_link"></geom>
 			<camera euler="1.55 -1.55 3.14" fovy="25" name="lidar" pos="0 0 0.02"></camera>
 		</body>
 		<body name="robot0:torso_fixed_link" pos="-0.0869 0 0.3774">

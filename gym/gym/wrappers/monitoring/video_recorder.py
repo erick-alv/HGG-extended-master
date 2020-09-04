@@ -13,7 +13,7 @@ def touch(path):
     open(path, 'a').close()
 
 class VideoRecorder(object):
-    """VideoRecorder renders a nice movie of a rollout, frame by frame. It
+    """VideoRecorder renders a nice movie of a rollout, frames by frames. It
     comes with an `enabled` option so you can still use the same code
     on episodes where you don't want to record video.
 
@@ -93,9 +93,9 @@ class VideoRecorder(object):
         return self.enabled and not self.broken
 
     def capture_frame(self):
-        """Render the given `env` and add the resulting frame to the video."""
+        """Render the given `env` and add the resulting frames to the video."""
         if not self.functional: return
-        logger.debug('Capturing video frame: path=%s', self.path)
+        logger.debug('Capturing video frames: path=%s', self.path)
 
         render_mode = 'ansi' if self.ansi_mode else 'rgb_array'
         frame = self.env.render(mode=render_mode)
@@ -165,7 +165,7 @@ class VideoRecorder(object):
         try:
             self.encoder.capture_frame(frame)
         except error.InvalidFrame as e:
-            logger.warn('Tried to pass invalid video frame, marking as broken: %s', e)
+            logger.warn('Tried to pass invalid video frames, marking as broken: %s', e)
             self.broken = True
         else:
             self.empty = False
@@ -188,7 +188,7 @@ class TextEncoder(object):
         elif isinstance(frame, StringIO):
             string = frame.getvalue()
         else:
-            raise error.InvalidFrame('Wrong type {} for {}: text frame must be a string or StringIO'.format(type(frame), frame))
+            raise error.InvalidFrame('Wrong type {} for {}: text frames must be a string or StringIO'.format(type(frame), frame))
 
         frame_bytes = string.encode('utf-8')
 
@@ -211,7 +211,7 @@ class TextEncoder(object):
         # Decode the bytes as UTF-8 since JSON may only contain UTF-8
         events = [ (frame_duration, (clear_code+frame.replace(six.b('\n'),six.b('\r\n'))).decode('utf-8'))  for frame in self.frames ]
 
-        # Calculate frame size from the largest frames.
+        # Calculate frames size from the largest frames.
         # Add some padding since we'll get cut off otherwise.
         height = max([frame.count(six.b('\n')) for frame in self.frames]) + 1
         width = max([max([len(line) for line in frame.split(six.b('\n'))]) for frame in self.frames]) + 2
@@ -241,7 +241,7 @@ class ImageEncoder(object):
         # Frame shape should be lines-first, so w and h are swapped
         h, w, pixfmt = frame_shape
         if pixfmt != 3 and pixfmt != 4:
-            raise error.InvalidFrame("Your frame has shape {}, but we require (w,h,3) or (w,h,4), i.e., RGB values for a w-by-h image, with an optional alpha channel.".format(frame_shape))
+            raise error.InvalidFrame("Your frames has shape {}, but we require (w,h,3) or (w,h,4), i.e., RGB values for a w-by-h image, with an optional alpha channel.".format(frame_shape))
         self.wh = (w,h)
         self.includes_alpha = (pixfmt == 4)
         self.frame_shape = frame_shape
@@ -295,9 +295,9 @@ class ImageEncoder(object):
         if not isinstance(frame, (np.ndarray, np.generic)):
             raise error.InvalidFrame('Wrong type {} for {} (must be np.ndarray or np.generic)'.format(type(frame), frame))
         if frame.shape != self.frame_shape:
-            raise error.InvalidFrame("Your frame has shape {}, but the VideoRecorder is configured for shape {}.".format(frame.shape, self.frame_shape))
+            raise error.InvalidFrame("Your frames has shape {}, but the VideoRecorder is configured for shape {}.".format(frame.shape, self.frame_shape))
         if frame.dtype != np.uint8:
-            raise error.InvalidFrame("Your frame has data type {}, but we require uint8 (i.e. RGB values from 0-255).".format(frame.dtype))
+            raise error.InvalidFrame("Your frames has data type {}, but we require uint8 (i.e. RGB values from 0-255).".format(frame.dtype))
 
         if distutils.version.LooseVersion(np.__version__) >= distutils.version.LooseVersion('1.9.0'):
             self.proc.stdin.write(frame.tobytes())

@@ -6,6 +6,12 @@ from algorithm import create_agent
 from learner import create_learner, learner_collection
 from test import Tester
 from algorithm.replay_buffer import ReplayBuffer_Episodic, goal_based_process
+import torch
+from j_vae.train_vae_sb import load_Vae as load_Vae_SB
+from j_vae.train_vae import load_Vae
+from PIL import Image
+from vae_env_inter import take_env_image
+from j_vae.distance_estimation import calculate_distance
 
 def get_args():
 	parser = get_arg_parser()
@@ -66,6 +72,13 @@ def get_args():
 
 	parser.add_argument('--save_acc', help='save successful rate', type=str2bool, default=True)
 
+	#arguments for VAEs and images
+	parser.add_argument('--vae_dist_help', help='using vaes yes or no', type=str2bool, default=False)
+	parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
+	#for dense reward transformation
+	parser.add_argument('--transform_dense', help='if transform to dense with VAES or not', type=str2bool, default=False)
+
+
 	args = parser.parse_args()
 	args.num_vertices = [args.n_x, args.n_y, args.n_z]
 	args.goal_based = (args.env in Robotics_envs_id)
@@ -82,11 +95,31 @@ def get_args():
 	for key, value in args.__dict__.items():
 		if key!='logger':
 			args.logger.info('{}: {}'.format(key,value))
+
+	cuda = torch.cuda.is_available()
+	torch.manual_seed(1)
+	device = torch.device("cuda" if cuda else "cpu")
+	args.device = device
+
 	return args
 
 def experiment_setup(args):
+	if args.vae_dist_help or args.transform_dense:
+		args.vae_model_obstacle = load_Vae_SB(path='data/FetchPushObstacle/vae_sb_model_obstacle')
+		args.vae_model_goal = load_Vae_SB(path='data/FetchPushObstacle/vae_sb_model_goal')
+		args.vae_model_size = load_Vae(path='data/FetchPushObstacle/vae_model_sizes',
+									   img_size=args.img_size, latent_size=1)
+	if args.transform_dense:
+		args.compute_reward_dense = calculate_distance
+
 	env = make_env(args)
 	env_test = make_env(args)
+	#
+	#rgb_array = take_env_image(env, args.img_size)
+	#img = Image.fromarray(rgb_array)
+	#img.show()
+	#img.close()
+
 	if args.goal_based:
 		args.obs_dims = list(goal_based_process(env.reset()).shape)
 		args.acts_dims = [env.action_space.shape[0]]
@@ -100,5 +133,6 @@ def experiment_setup(args):
 	args.tester = tester = Tester(args)
 	args.logger.info('*** tester initialization complete ***')
 	args.timesteps = env.env.env.spec.max_episode_steps
+
 
 	return env, env_test, agent, buffer, learner, tester
