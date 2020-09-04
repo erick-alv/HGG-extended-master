@@ -55,11 +55,11 @@ def create_rollout_video(trajectory_images_array, filename, args, goal_image = N
             ims = stack_images_row([trajectory_images_array[i], goal_image])
         else:
             ims = trajectory_images_array[i]
-        store_image_array_at(ims, args.logger.logger_log_dir + 'temp/', 'frame_{}'.format(i))
-    make_video(args.logger.logger_log_dir + 'temp/', '.png', path_to_save=args.logger.logger_log_dir, filename_save=filename)
-    for f in os.listdir(args.logger.logger_log_dir + 'temp/'):
+        store_image_array_at(ims, args.logger.my_log_dir + 'temp/', 'frame_{}'.format(i))
+    make_video(args.logger.my_log_dir + 'temp/', '.png', path_to_save=args.logger.my_log_dir, filename_save=filename)
+    for f in os.listdir(args.logger.my_log_dir + 'temp/'):
         if f.endswith('.png'):
-            os.remove(args.logger.logger_log_dir + 'temp/' + f)
+            os.remove(args.logger.my_log_dir + 'temp/' + f)
 
 def fill_width(im1, im2):
     w1 = im1.shape[1]

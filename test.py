@@ -34,7 +34,7 @@ class Tester:
 
 
 	def test_acc(self, key, env, agent):
-		if True:
+		if False:
 			ex_log = LoggerExtra(self.args.logger.my_log_dir, 'results_it_{}_test'.format(self.calls))
 			ex_log.add_item('')
 
