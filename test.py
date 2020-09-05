@@ -2,6 +2,11 @@ import numpy as np
 from envs import make_env
 from algorithm.replay_buffer import goal_based_process
 from utils.os_utils import make_dir, LoggerExtra
+from utils.image_util import create_rollout_video
+from j_vae.distance_estimation import calculate_distance
+from vae_env_inter import take_env_image
+import copy
+
 
 class Tester:
 	def __init__(self, args):
@@ -28,22 +33,33 @@ class Tester:
 				self.info.append('MaxDistance')
 				self.info.append('MinDistance')
 
-	def process_extra_log(self, prev_ob, ob, i, logger, env):
-		pass
-
-
 
 	def test_acc(self, key, env, agent):
-		if False:
-			ex_log = LoggerExtra(self.args.logger.my_log_dir, 'results_it_{}_test'.format(self.calls))
-			ex_log.add_item('')
+		if self.args.vae_dist_help or self.args.transform_dense:
+			eps_idx = [0, 10, 20, self.test_rollouts-1]
+			ex_logs = [LoggerExtra(self.args.logger.my_log_dir, 'results_it_{}_ep_{}_test'.format(self.calls, i))
+					   for i in eps_idx]
+			for i in range(len(eps_idx)):
+				ex_logs[i].add_item('Step')
+				ex_logs[i].add_item('Success')
+				ex_logs[i].add_item('RealDirectDistance')
+				ex_logs[i].add_item('RealPathDistance')
+				ex_logs[i].add_item('RealDirectToPrevDistance')
+				ex_logs[i].add_item('LatentDirectDistance')
+				ex_logs[i].add_item('LatentPathDistance')
+				ex_logs[i].add_item('LatentDirectToPrevDistance')
+				
 
 			acc_sum, obs = 0.0, []
 			prev_obs = []
+			env_images = [[] for _ in eps_idx]
 			for i in range(self.test_rollouts):
 				o = env[i].reset()
 				obs.append(goal_based_process(o))
 				prev_obs.append(o)
+				if i in eps_idx:
+					t = eps_idx.index(i)
+					env_images[t].append(take_env_image(env[i], self.args.img_size))
 			for timestep in range(self.args.timesteps):
 				actions = agent.step_batch(obs)
 				obs, infos = [], []
@@ -51,10 +67,36 @@ class Tester:
 					ob, _, _, info = env[i].step(actions[i])
 					obs.append(goal_based_process(ob))
 					infos.append(info)
-					if i == self.test_rollouts - 1:
+					if i in eps_idx:
+						t = eps_idx.index(i)
+						ex_logs[t].add_record('Step', timestep)
+						ex_logs[t].add_record('Success', info['Success'])
+						ex_logs[t].add_record('RealDirectDistance', info['Distance'])
+						rpd = calculate_distance(np.array([1.3, 0.75]), obstacle_radius=np.array(0.13),
+												 current_pos=ob['achieved_goal'][:2], goal_pos=ob['desired_goal'][:2],
+												 range_x=None, range_y=None)
+						ex_logs[t].add_record('RealPathDistance', rpd)
+						rddpr = env[i].compute_distance(ob['achieved_goal'][:2], prev_obs[i]['achieved_goal'][:2])
+						ex_logs[t].add_record('RealDirectToPrevDistance', rddpr)
+						ldd = env[i].compute_distance(ob['achieved_goal_latent'], ob['desired_goal_latent'])
+						ex_logs[t].add_record('LatentDirectDistance', ldd)
+						lpd = calculate_distance(ob['obstacle_latent'], obstacle_radius=ob['obstacle_size_latent'],
+												 current_pos=ob['achieved_goal_latent'],
+												 goal_pos=ob['desired_goal_latent'],
+												 range_x=None, range_y=None)
+						ex_logs[t].add_record('LatentPathDistance', lpd)
+						lddpr = env[i].compute_distance(ob['achieved_goal_latent'], prev_obs[i]['achieved_goal_latent'])
+						ex_logs[t].add_record('LatentDirectToPrevDistance', lddpr)
+						ex_logs[t].save_csv()
 
-						self.process_extra_log(prev_obs[i], ob, i, env)
-					prev_obs[i] = ob
+						env_images[t].append(take_env_image(env[i], self.args.img_size))
+					prev_obs[i] = copy.deepcopy(ob)
+			for i, t in enumerate(eps_idx):
+				create_rollout_video(np.array(env_images[i]), args=self.args,
+									 filename='rollout_it_{}_ep_{}_test'.format(self.calls, t))
+
+
+			
 		else:
 			acc_sum, obs = 0.0, []
 			for i in range(self.test_rollouts):

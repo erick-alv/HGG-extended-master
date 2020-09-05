@@ -247,15 +247,13 @@ class LoggerExtra:
 
 	def add_record(self, key, value, count=1):
 		key, _ = self.check_color(key)
-		if type(value)==np.ndarray:
-			count *= np.prod(value.shape)
-			value = np.mean(value) # convert to scalar
-		if self.counts[key]>0:
-			self.values[key] += value*count
-			self.counts[key] += count
-		else:
-			self.values[key] = value*count
-			self.counts[key] = count
+		if key == 'Step':
+			a = 1
+		#if type(value)==np.ndarray:
+		#	count *= np.prod(value.shape)
+		#	value = np.mean(value) # convert to scalar
+		self.values[key] = value
+		self.counts[key] = count
 
 	def add_dict(self, info, prefix='', count=1):
 		for key, value in info.items():

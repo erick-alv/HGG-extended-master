@@ -337,6 +337,7 @@ def show_1d_manifold(no_cuda=False, seed=1):
     ax.set_yticks(np.arange(0, n * img_size, img_size))
     plt.grid(color='black', linewidth='1.2')
 
+
     plt.show()
 
 

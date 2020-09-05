@@ -23,7 +23,7 @@ def calculate_angle_goal():
     to_rotate = wanted_angles - goal_angles
     print(goal_angles[0])
 
-angle_goal = -66.49
+angle_goal = 27.17
 
 def calculate_angle_obstacle():
     o_corner_imgs = np.load('../data/FetchPushObstacle/obstacle_corners.npy')
@@ -49,7 +49,7 @@ def calculate_angle_obstacle():
     to_rotate = wanted_angles - goal_angles
     print(goal_angles[0])
 
-angle_obstacle = 67.345
+angle_obstacle = 35.14
 
 
 def interval_map_function(a,b,c, d):
@@ -73,11 +73,11 @@ o_x_max = table_map_x(1.55-obstacle_size)
 o_y_min = table_map_y(0.5+obstacle_size)
 o_y_max = table_map_y(1.0-obstacle_size)
 
-goal_map_x = interval_map_function(-1.95111, 2.2392, g_x_min, g_x_max)
-goal_map_y = interval_map_function(-2.0518, 1.9019, g_y_min, g_y_max)
+goal_map_x = interval_map_function(-1.91871, 1.9067, g_x_min, g_x_max)
+goal_map_y = interval_map_function(-1.91544, 1.96032, g_y_min, g_y_max)
 
-obstacle_map_x = interval_map_function(-1.3176, 2.0076, o_x_min, o_x_max)
-obstacle_map_y = interval_map_function(-1.842813, 1.33413, o_y_min, o_y_max)
+obstacle_map_x = interval_map_function(-1.3196, 1.917, o_x_min, o_x_max)
+obstacle_map_y = interval_map_function(-2.03191, 1.3557, o_y_min, o_y_max)
 
 
 def create_rotation_matrix(angle):
@@ -178,7 +178,7 @@ def torch_obstacle_transformation(batch_p, device):
 img_size = 84
 
 
-def return_min_and_max_from_sizes():
+def print_min_and_max_from_sizes():
     from j_vae.train_vae import load_Vae
     vae_model_size = load_Vae(path='../data/FetchPushObstacle/vae_model_sizes', img_size=img_size, latent_size=1)
     train_file = '../data/FetchPushObstacle/obstacle_sizes_set.npy'
@@ -210,8 +210,8 @@ def return_min_and_max_from_sizes():
     print('min val: {} \nmax val: {}'.format(min_val, max_val))
 
 
-min_latent_size = -11.74#this is best for current size
-max_latent_size = 4.702
+min_latent_size = -4.2777#this is best for current size
+max_latent_size = 12.9686
 
 #min_latent_size = -4.703
 #max_latent_size = 4.703
@@ -224,7 +224,7 @@ def get_size_in_space(v, range=[-1, 1]):
     prc = np.abs(v-min_latent_size)/dist
     max_size = np.abs(range[1] - range[0])
     #substracted since space encodes from biggest to smallest
-    return (1.- prc)*max_size
+    return prc*max_size
 
 
 def torch_get_size_in_space(v, device, range=[-1, 1]):
@@ -232,7 +232,7 @@ def torch_get_size_in_space(v, device, range=[-1, 1]):
     prc = torch.abs(v-min_latent_size)/dist
     max_size = torch.abs(torch.tensor(range[1] - range[0]).float())
     #substracted since space encodes from biggest to smallest
-    return (1.- prc)*max_size
+    return prc*max_size
 
 
 def from_real_pos_to_range(pos):
@@ -308,7 +308,7 @@ def reflect_obstacle_transformation(p):
     print(bb)'''
 
 if __name__ == '__main__':
-    calculate_angle_obstacle()
+    print_min_and_max_from_sizes()
 
 
 

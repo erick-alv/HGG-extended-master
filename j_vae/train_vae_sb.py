@@ -7,7 +7,7 @@ from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torchvision.utils import save_image
 
-doing_goal = False
+doing_goal = True
 
 if doing_goal:
     train_file = '../data/FetchPushObstacle/goal_set.npy'

@@ -17,7 +17,7 @@ from j_vae.latent_space_transformations import create_rotation_matrix, rotate_li
     get_size_in_space, map_size_space, torch_get_size_in_space
 
 using_sb = True
-using_goal = False
+using_goal = True
 img_size = 84
 if not using_sb:
     if using_goal:
@@ -98,9 +98,9 @@ def visualization_grid_points(n):
 
 
     if using_goal:
-        #rm = create_rotation_matrix(angle_goal)
-        #mu = rotate_list_of_points(mu, rm)
-        #mu = map_points(mu, goal_map_x, goal_map_y)
+        rm = create_rotation_matrix(angle_goal)
+        mu = rotate_list_of_points(mu, rm)
+        mu = map_points(mu, goal_map_x, goal_map_y)
         pass
     else:
         #for i, p in enumerate(mu):
@@ -166,8 +166,8 @@ def visualization_sizes(n):
     from j_vae.train_vae import load_Vae
     vae_model_size = load_Vae(path='../data/FetchPushObstacle/vae_model_sizes', img_size=img_size, latent_size=1)
 
-    sizes = np.linspace(min_obstacle_size, max_obstacle_size, num=n)
-    #sizes = np.linspace(obstacle_size, obstacle_size, num=n)
+    #sizes = np.linspace(min_obstacle_size, max_obstacle_size, num=n)
+    sizes = np.linspace(obstacle_size, obstacle_size, num=n)
     n_labels = np.arange(len(sizes))
 
     sizes = np.array(sizes)
@@ -201,8 +201,8 @@ def visualization_sizes(n):
     mu, logvar = vae_model_size.encode(data.reshape(-1, img_size * img_size * 3))
     mu = mu.detach().cpu().numpy()
 
-    #for i, p in enumerate(mu):
-    #    mu[i] = get_size_in_space(mu[i])
+    for i, p in enumerate(mu):
+        mu[i] = get_size_in_space(mu[i])
     #    mu[i] = map_size_space(mu[i])
     #    mu[i] = get_size_in_space(map_size_space(mu[i]))
 
@@ -225,7 +225,7 @@ def visualization_sizes(n):
 
 if __name__ =='__main__':
     visualization_grid_points(7)
-    #visualization_sizes(5)
+    #visualization_sizes(1)
     #save_corners()
 
 

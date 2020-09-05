@@ -4,7 +4,7 @@ import time
 from PIL import Image
 from envs import make_env
 import copy
-from j_vae.common_data import lower_limits, upper_limits,center_obstacle , range_x, range_y, obstacle_size, \
+from j_vae.common_data import center_obstacle, range_x, range_y, obstacle_size, \
     min_obstacle_size, max_obstacle_size, puck_size, z_table_height
 
 encoding_of = 'obstacle'
@@ -74,18 +74,18 @@ def loop_goals(env):
 
     env.env.env._set_arm_visible(visible=False)
     #move the obstacle away fro table
-    env.env.env._set_position(names_list=['obstacle'], position=[2.0,2.0,2.0])
+    env.env.env._set_position(names_list=['obstacle'], position=[2.0, 2.0, 2.0])
 
 
     env.env.env._set_size(names_list=['object0'], size=[puck_size, 0.035, 0.0])
     # The puck can be at the edgeneeds other dimensions
-    points = generate_points([1.05, 1.55], [0.5, 1.0], 0.43, 40, [0.015, 0.015])
+    points = np.load(points_goal_file)
 
     for i in range(count):
         if i < len(points):
             env.env.env._move_object(position=points[i])
         else:
-            p = random_pos_inside(range_x, range_y, z=0.43, object_x_y_size=[0.015, 0.015])
+            p = random_pos_inside(range_x, range_y, z=0.435, object_x_y_size=[0.015, 0.015])
             env.env.env._move_object(position=p)
         rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
         train_data[i] = rgb_array
@@ -127,6 +127,9 @@ def loop_obstacles(env, generate_sizes=False):
     env.env.env._set_visibility(names_list=['obstacle'], alpha_val=1.0)
     env.env.env._set_visibility(names_list=['object0'], alpha_val=0.0)
     env.env.env._set_size(names_list=['obstacle'],size=[obstacle_size, 0.035, 0.0])
+    #move other away
+    env.env.env._move_object(position=[2.,2.,2.])
+
     if generate_sizes:
         sizes = np.load(size_file)
     else:
@@ -196,6 +199,8 @@ def loop_obstacles_precreated_points(env,):
 if __name__ == '__main__':
     #create samples before hand
     #create_and_save_points(40, points_file, obstacle_size)
+    # The puck can be at the edgeneeds other dimensions
+    #create_and_save_points(40, points_goal_file, 0.015)
     #create_and_save_sizes(count)
     # Getting arguments from command line + defaults
     # Set up learning environment including, gym env, ddpg agent, hgg/normal learner, tester
