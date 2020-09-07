@@ -4,7 +4,7 @@ import argparse
 import numpy as np
 import torch
 import torch.utils.data
-from utils.os_utils import os
+from utils.os_utils import make_dir
 from torch import nn, optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
@@ -378,7 +378,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # get names corresponding folders, and files where to store data
-
+    make_dir(this_file_dir+'results/', clear=False)
     base_data_dir = this_file_dir + '../data/'
     data_dir = base_data_dir + args.env + '/'
     train_file = data_dir + train_file_name[args.enc_type]
