@@ -11,7 +11,7 @@ from common import get_args
 from envs import make_env
 
 img_size = 84
-vae_model = load_Vae(path='../data/FetchPushObstacle/vae_model_sizes')
+vae_model = load_Vae(path='../data/FetchPushObstacle/vae_model_obstacle_sizes')
 
 
 

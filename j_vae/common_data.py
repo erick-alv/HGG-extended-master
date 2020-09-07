@@ -9,3 +9,24 @@ min_obstacle_size = 0.001
 max_obstacle_size = (range_x[1] - range_x[0])/2.
 puck_size = 0.045
 z_table_height=0.43
+
+
+### configuration information ####
+train_file_name = {'goal': 'goal_set.npy',
+                   'obstacle':'obstacle_set.npy',
+                   'obstacle_sizes':'obstacle_sizes_set.npy',
+                   'goal_sizes':'goal_sizes_set.npy'
+                   }
+
+vae_sb_weights_file_name = {'goal': 'vae_sb_model_goal',
+                   'obstacle':'vae_sb_model_obstacle',
+                   }
+
+vae_weights_file_name = {
+                   'obstacle_sizes':'vae_model_obstacle_sizes',
+                   'goal_sizes':'vae_model_goal_sizes'
+                   }
+
+vae_sb_latent_size = {'goal': 10,
+                   'obstacle': 10
+                      }

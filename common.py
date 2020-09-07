@@ -107,8 +107,8 @@ def experiment_setup(args):
 	if args.vae_dist_help or args.transform_dense:
 		args.vae_model_obstacle = load_Vae_SB(path='data/FetchPushObstacle/vae_sb_model_obstacle')
 		args.vae_model_goal = load_Vae_SB(path='data/FetchPushObstacle/vae_sb_model_goal')
-		args.vae_model_size = load_Vae(path='data/FetchPushObstacle/vae_model_sizes',
-									   img_size=args.img_size, latent_size=1)
+		args.vae_model_size = load_Vae(path='data/FetchPushObstacle/vae_model_obstacle_sizes',
+                                       img_size=args.img_size, latent_size=1)
 	if args.transform_dense:
 		args.compute_reward_dense = calculate_distance
 

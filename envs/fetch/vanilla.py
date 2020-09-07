@@ -1,6 +1,7 @@
 import gym
 import numpy as np
 from envs.utils import goal_distance, goal_distance_obs
+import copy
 from utils.os_utils import remove_color
 from vae_env_inter import take_goal_image, take_obstacle_image, goal_latent_from_images, obstacle_latent_from_images
 
@@ -18,15 +19,12 @@ class VanillaGoalEnv():
 
 		self.fixed_obj = False
 		self.has_object = self.env.env.has_object
-		self.obj_range = self.env.env.obj_range
-		self.target_range = self.env.env.target_range
-		self.target_offset = self.env.env.target_offset
 		self.target_in_the_air = self.env.env.target_in_the_air
 		if self.has_object: self.height_offset = self.env.env.height_offset
-		if hasattr(self.env.env, 'target_goal_center'):
-			self.target_goal_center = self.env.env.target_goal_center
-		if hasattr(self.env.env, 'object_center'):
-			self.object_center = self.env.env.object_center
+		if not hasattr(self.env.env, 'target_goal_center'):
+			delattr(self, 'target_goal_center')
+		if not hasattr(self.env.env, 'object_center'):
+			delattr(self, 'object_center')
 
 		self.render = self.env.render
 		self.reset_sim = self.env.env._reset_sim
@@ -62,7 +60,7 @@ class VanillaGoalEnv():
 		}
 
 	def get_obs(self):
-		if self.args.transform_dense:
+		if hasattr(self.args, 'transform_dense') and self.args.transform_dense:
 			obs = self.env.env._get_obs()
 			obs['desired_goal_latent'] = self.desired_goal_latent.copy()
 			obs['achieved_goal_latent'] = self.achieved_goal_latent.copy()
@@ -75,7 +73,7 @@ class VanillaGoalEnv():
 	def step(self, action):
 		# imaginary infinity horizon (without done signal)
 		obs, reward, done, info = self.env.step(action)
-		if self.args.transform_dense:
+		if hasattr(self.args, 'transform_dense') and self.args.transform_dense:
 			achieved_goal_image = take_goal_image(self, self.args.img_size)
 			latents = goal_latent_from_images(np.array([achieved_goal_image]), self.args)
 			self.achieved_goal_latent = latents[0].copy()
@@ -94,7 +92,7 @@ class VanillaGoalEnv():
 		return obs, reward, False, info
 
 	def reset_ep(self):
-		if self.args.transform_dense:
+		if hasattr(self.args, 'transform_dense') and self.args.transform_dense:
 			obs = self.env.env._get_obs()
 			self.env.env._move_object(position=obs['desired_goal'].copy())
 			desired_goal_image = take_goal_image(self, self.args.img_size)
@@ -138,10 +136,49 @@ class VanillaGoalEnv():
 	@goal.setter
 	def goal(self, value):
 		self.env.env.goal = value.copy()
-		if self.args.transform_dense:
+		if hasattr(self.args, 'transform_dense') and self.args.transform_dense:
 			obs = self.env.env._get_obs()
 			self.env.env._move_object(position=value.copy())
 			desired_goal_image = take_goal_image(self, self.args.img_size)
 			self.env.env._move_object(position=obs['achieved_goal'].copy())
 			latents = goal_latent_from_images(np.array([desired_goal_image]), self.args)
 			self.desired_goal_latent = latents[0].copy()
+
+	@property
+	def target_goal_center(self):
+		return self.env.env.target_goal_center.copy()
+
+	@target_goal_center.setter
+	def target_goal_center(self, value):
+		self.env.env.target_goal_center = value.copy()
+
+	@property
+	def object_center(self):
+		return self.env.env.object_center.copy()
+
+	@object_center.setter
+	def object_center(self, value):
+		self.env.env.object_center = value.copy()
+
+	@property
+	def obj_range(self):
+		return copy.deepcopy(self.env.env.obj_range)
+	@obj_range.setter
+	def obj_range(self, value):
+		self.env.env.obj_range = copy.deepcopy(value)
+
+	@property
+	def target_range(self):
+		return copy.deepcopy(self.env.env.target_range)
+
+	@target_range.setter
+	def target_range(self, value):
+		self.env.env.target_range = copy.deepcopy(value)
+
+	@property
+	def target_offset(self):
+		return copy.deepcopy(self.env.env.target_offset)
+
+	@target_offset.setter
+	def target_offset(self, value):
+		self.env.env.target_offset = copy.deepcopy(value)

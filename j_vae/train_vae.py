@@ -21,7 +21,7 @@ elif encoding_of == 'obstacle':
     train_file = '../data/FetchPushObstacle/obstacle_set.npy'
 elif encoding_of == 'size':
     latent_size = 1
-    n_path = '../data/FetchPushObstacle/vae_model_sizes'
+    n_path = '../data/FetchPushObstacle/vae_model_obstacle_sizes'
     train_file = '../data/FetchPushObstacle/obstacle_sizes_set.npy'
 elif encoding_of == 'size_and_position':
     latent_size = 3

@@ -27,7 +27,7 @@ if not using_sb:
         data_set = np.load('../data/FetchPushObstacle/obstacle_set.npy')
 else:
     if doing_goal:
-        vae_model = load_Vae_SB(path='../data/FetchPushObstacle/vae_sb_model_goal_epoch_10')
+        vae_model = load_Vae_SB(path='../data/FetchPushObstacle/vae_sb_model_goal')
         size_to_use = 0.015
         data_set = np.load('../data/FetchPushObstacle/goal_set.npy')
     else:

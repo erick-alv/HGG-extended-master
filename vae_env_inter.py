@@ -17,17 +17,21 @@ from j_vae.latent_space_transformations import torch_goal_transformation, torch_
         env.env.env._set_size(names_list=['obstacle'], size=[obstacle_size, 0.035, 0.0])'''
 
 
-def take_obstacle_image(env, img_size):
+def take_obstacle_image(env, img_size, make_table_invisible=False):
     env.env.env._set_arm_visible(visible=False)
     env.env.env._set_visibility(names_list=['obstacle'], alpha_val=1.0)
     env.env.env._set_visibility(names_list=['object0'], alpha_val=0.0)
+    if not make_table_invisible:
+        env.env.env._set_visibility(names_list=['table0'], alpha_val=1.0)
     rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
     return rgb_array
 
 
-def take_goal_image(env, img_size):
+def take_goal_image(env, img_size, make_table_invisible=False):
     env.env.env._set_arm_visible(visible=False)
     env.env.env._set_visibility(names_list=['object0'], alpha_val=1.0)
+    if not make_table_invisible:
+        env.env.env._set_visibility(names_list=['table0'], alpha_val=1.0)
     rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
     return rgb_array
 

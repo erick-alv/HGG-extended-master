@@ -180,7 +180,7 @@ img_size = 84
 
 def print_min_and_max_from_sizes():
     from j_vae.train_vae import load_Vae
-    vae_model_size = load_Vae(path='../data/FetchPushObstacle/vae_model_sizes', img_size=img_size, latent_size=1)
+    vae_model_size = load_Vae(path='../data/FetchPushObstacle/vae_model_obstacle_sizes', img_size=img_size, latent_size=1)
     train_file = '../data/FetchPushObstacle/obstacle_sizes_set.npy'
     data_set = np.load(train_file)
     cuda = torch.cuda.is_available()

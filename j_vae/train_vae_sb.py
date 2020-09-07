@@ -1,4 +1,6 @@
 from __future__ import print_function
+import os
+import argparse
 import numpy as np
 import torch
 import torch.utils.data
@@ -6,16 +8,8 @@ from torch import nn, optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torchvision.utils import save_image
+from j_vae.common_data import train_file_name, vae_sb_weights_file_name, vae_sb_latent_size
 
-doing_goal = True
-
-if doing_goal:
-    train_file = '../data/FetchPushObstacle/goal_set.npy'
-    n_path = '../data/FetchPushObstacle/vae_sb_model_goal'
-
-else:
-    train_file = '../data/FetchPushObstacle/obstacle_set.npy'
-    n_path = '../data/FetchPushObstacle/vae_sb_model_obstacle'
 
 def spatial_broadcast(z, width, height):
     z_b = np.tile(A=z, reps=(height, width, 1))
@@ -43,9 +37,8 @@ def torch_spatial_broadcast(z, width, height, device):
     return z_sb
 
 
-
 class VAE_SB(nn.Module):
-    def __init__(self, device, img_size=84, latent_size=2,full_connected_size=320, input_channels=3,
+    def __init__(self, device, img_size, latent_size, full_connected_size=320, input_channels=3,
                  kernel_size=3, encoder_stride=2, decoder_stride=1):
         super(VAE_SB, self).__init__()
         self.device = device
@@ -102,13 +95,6 @@ class VAE_SB(nn.Module):
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
 
-    '''def format(self, rgb_array):
-        data = torch.from_numpy(rgb_array).float().to(device='cuda')
-        data /= 255
-        data = data.permute([2, 0, 1])
-        data = data.reshape([-1, 3, img_size, img_size])
-        return data.reshape(-1, img_size * img_size * 3)'''
-
 # Reconstruction + KL divergence losses summed over all elements and batch
 def loss_function(recon_x, x, mu, logvar):
     BCE = F.binary_cross_entropy(recon_x, x, reduction='sum')
@@ -124,10 +110,11 @@ def loss_function(recon_x, x, mu, logvar):
     return BCE + KLD
 
 # torch.Size([128, 1, img_size, img_size])
-def train(epoch, model, optimizer, device, log_interval, batch_size):
+def train(epoch, model, optimizer, device, log_interval, data_set, batch_size):
     model.train()
     train_loss = 0
-    data_set = np.load(train_file)
+    data_set = data_set.copy()
+    
     data_size = len(data_set)
     data_set = np.split(data_set, data_size / batch_size)
 
@@ -157,8 +144,9 @@ def train(epoch, model, optimizer, device, log_interval, batch_size):
         epoch, train_loss / data_size))
 
 
-def train_Vae(batch_size=128, epochs=100, no_cuda=False, seed=1, log_interval=100, load=False,
-              img_size=84, latent_size=2):
+def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, epochs=100, no_cuda=False, seed=1,
+              log_interval=100, load=False):
+    data_set = np.load(train_file)
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
 
@@ -166,7 +154,7 @@ def train_Vae(batch_size=128, epochs=100, no_cuda=False, seed=1, log_interval=10
     if load:
         model = VAE_SB(device, img_size=img_size, latent_size=latent_size).to(device)
         optimizer = optim.Adam(model.parameters(), lr=1e-4)
-        checkpoint = torch.load(n_path)
+        checkpoint = torch.load(vae_weights_path)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epoch = checkpoint['epoch']
@@ -177,44 +165,39 @@ def train_Vae(batch_size=128, epochs=100, no_cuda=False, seed=1, log_interval=10
         start_epoch = 1
 
     for epoch in range(start_epoch, epochs + start_epoch):
-        train(epoch, model, optimizer, device, log_interval, batch_size)
-        # test(epoch, model, test_loader, batch_size, device)
-        # with torch.no_grad():
-        #    sample = torch.randn(64, 5).to(device)
-        #    sample = model.decode(sample).cpu()
-        #    save_image(sample.view(64, 3, img_size, img_size),
-        #               'results/sample.png')
+        train(epoch, model, optimizer, device, log_interval, data_set.copy(), batch_size)
         if not (epoch % 5) or epoch == 1:
-            test_on_data_set(model, device,'epoch_{}'.format(epoch))
+            test_on_data_set(model, device,filename_suffix='epoch_{}'.format(epoch), latent_size=latent_size,
+                             data_set=data_set.copy())
             print('Saving Progress!')
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
-            }, n_path)
+            }, vae_weights_path)
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
-            }, n_path+'_epoch_'+str(epoch))
+            }, vae_weights_path+'_epoch_'+str(epoch))
     torch.save({
         'epoch': epoch,
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
-    }, n_path)
+    }, vae_weights_path)
 
-def test_Vae(no_cuda=False, seed=1):
+def test_Vae(img_size, latent_size, train_file, vae_weights_path,no_cuda=False, seed=1):
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
     device = torch.device("cuda" if cuda else "cpu")
-    model = VAE_SB(device).to(device)
-    checkpoint = torch.load(n_path)
+    model = VAE_SB(device, img_size=img_size, latent_size=latent_size).to(device)
+    checkpoint = torch.load(vae_weights_path)
     model.load_state_dict(checkpoint['model_state_dict'])
-    test_on_data_set(model, device, 'test')
-
-
-def test_on_data_set(model, device, filename_suffix, latent_size=2):
     data_set = np.load(train_file)
+    test_on_data_set(model, device, latent_size=latent_size, filename_suffix='test', data_set=data_set.copy())
+
+
+def test_on_data_set(model, device, filename_suffix, latent_size, data_set):
     data_size = len(data_set)
     idx = np.random.randint(0, data_size, size=10)
     data = data_set[idx]
@@ -231,7 +214,7 @@ def test_on_data_set(model, device, filename_suffix, latent_size=2):
         save_image(comparison.cpu(), 'results/reconstruction_{}.png'.format(filename_suffix),
                    nrow=10)
 
-def load_Vae(path, no_cuda=False, seed=1, img_size=84, latent_size=2):
+def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1):
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
     device = torch.device("cuda" if cuda else "cpu")
@@ -242,20 +225,19 @@ def load_Vae(path, no_cuda=False, seed=1, img_size=84, latent_size=2):
     checkpoint = torch.load(path)
     model.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    epoch = checkpoint['epoch']
     return model
 
 #adapted from https://github.com/Natsu6767/Variational-Autoencoder/blob/master/main.py
 import matplotlib.pyplot as plt
 from scipy.stats import norm
 
-
-def show_2d_manifold(img_size, no_cuda=False, seed=1):
+def show_2d_manifold(img_size, vae_weights_path, no_cuda=False, seed=1):
+    latent_size = 2
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
     device = torch.device("cuda" if cuda else "cpu")
-    model = VAE_SB(device).to(device)
-    checkpoint = torch.load(n_path)
+    model = VAE_SB(device, img_size=img_size, latent_size=latent_size).to(device)
+    checkpoint = torch.load(vae_weights_path)
     model.load_state_dict(checkpoint['model_state_dict'])
     n = 20  # figure with nxn images
     figure = np.zeros((img_size * n, img_size * n, 3))
@@ -291,12 +273,14 @@ def show_2d_manifold(img_size, no_cuda=False, seed=1):
     plt.show()
 
 
-def show_2d_manifold_with_fixed_axis(img_size, no_cuda=False, seed=1, fixed_axis=0, fixed_prob_val=0.5):
+#todo make wit list of values axes to block
+def show_2d_manifold_with_fixed_axis(img_size, latent_size, vae_weights_path,no_cuda=False, seed=1,
+                                     fixed_axis=0, fixed_prob_val=0.5):
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
     device = torch.device("cuda" if cuda else "cpu")
-    model = VAE_SB(device).to(device)
-    checkpoint = torch.load(n_path)
+    model = VAE_SB(device, img_size=img_size, latent_size=latent_size).to(device)
+    checkpoint = torch.load(vae_weights_path)
     model.load_state_dict(checkpoint['model_state_dict'])
 
     assert fixed_axis in [0,1,2]
@@ -339,13 +323,14 @@ def show_2d_manifold_with_fixed_axis(img_size, no_cuda=False, seed=1, fixed_axis
     plt.show()
 
 
-def show_1d_manifold(img_size, no_cuda=False, seed=1):
+#todo make wit list of values axes to block
+def show_1d_manifold(img_size, latent_size, vae_weights_path, no_cuda=False, seed=1):
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
 
     device = torch.device("cuda" if cuda else "cpu")
-    model = VAE_SB(device).to(device)
-    checkpoint = torch.load(n_path)
+    model = VAE_SB(device, img_size=img_size, latent_size=latent_size).to(device)
+    checkpoint = torch.load(vae_weights_path)
     model.load_state_dict(checkpoint['model_state_dict'])
 
     n = 20  # figure with nxn images
@@ -382,9 +367,27 @@ def show_1d_manifold(img_size, no_cuda=False, seed=1):
     plt.show()
 
 if __name__ == '__main__':
-    print('Train VAE...')
-    train_Vae(batch_size=128/8, epochs=15, load=False)
-    # test_VAE_SB(device)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--env_dir_name', help='gym env id', type=str, default='FetchReach-v1')
+
+    parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
+                        default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
+    parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
+    args = parser.parse_args()
+
+    # get names corresponding folders, and files where to store data
+    this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
+    base_data_dir = this_file_dir + '../data/'
+    data_dir = base_data_dir + args.env_dir_name + '/'
+    train_file = data_dir + train_file_name[args.enc_type]
+    weights_path = data_dir + vae_sb_weights_file_name[args.enc_type]
+
+    #load the latent_size
+    args.latent_size = vae_sb_latent_size[args.enc_type]
+
+
+    train_Vae(batch_size=16, img_size=args.img_size, latent_size=args.latent_size,
+              train_file=train_file, vae_weights_path=weights_path, epochs=15, load=False)
     # show_1d_manifold()
     #show_2d_manifold(84)
     print('Successfully trained VAE')

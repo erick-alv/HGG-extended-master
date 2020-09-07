@@ -164,7 +164,7 @@ def save_corners():
 
 def visualization_sizes(n):
     from j_vae.train_vae import load_Vae
-    vae_model_size = load_Vae(path='../data/FetchPushObstacle/vae_model_sizes', img_size=img_size, latent_size=1)
+    vae_model_size = load_Vae(path='../data/FetchPushObstacle/vae_model_obstacle_sizes', img_size=img_size, latent_size=1)
 
     #sizes = np.linspace(min_obstacle_size, max_obstacle_size, num=n)
     sizes = np.linspace(obstacle_size, obstacle_size, num=n)
