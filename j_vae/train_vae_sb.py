@@ -368,7 +368,7 @@ def show_1d_manifold(img_size, latent_size, vae_weights_path, no_cuda=False, see
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env_dir_name', help='gym env id', type=str, default='FetchReach-v1')
+    parser.add_argument('--env', help='gym env id', type=str, default='FetchReach-v1')
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
@@ -378,7 +378,7 @@ if __name__ == '__main__':
     # get names corresponding folders, and files where to store data
     this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
     base_data_dir = this_file_dir + '../data/'
-    data_dir = base_data_dir + args.env_dir_name + '/'
+    data_dir = base_data_dir + args.env + '/'
     train_file = data_dir + train_file_name[args.enc_type]
     weights_path = data_dir + vae_sb_weights_file_name[args.enc_type]
 
