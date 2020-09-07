@@ -4,11 +4,13 @@ import argparse
 import numpy as np
 import torch
 import torch.utils.data
+from utils.os_utils import os
 from torch import nn, optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torchvision.utils import save_image
 from j_vae.common_data import train_file_name, vae_sb_weights_file_name, vae_sb_latent_size
+this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
 
 
 def spatial_broadcast(z, width, height):
@@ -129,10 +131,6 @@ def train(epoch, model, optimizer, device, log_interval, data_set, batch_size):
         train_loss += loss.item()
         optimizer.step()
         if batch_idx % log_interval == 0:
-            #save_image(data.cpu().view(-1, 3, img_size, img_size),
-            #           'results/original.png')
-            #save_image(recon_batch.cpu().view(-1, 3, img_size, img_size),
-            #           'results/recon.png')
 
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, (batch_idx+1) * len(data), data_size,
@@ -211,7 +209,7 @@ def test_on_data_set(model, device, filename_suffix, latent_size, data_set):
         logvar = logvar.view(10, latent_size)
 
         comparison = torch.cat([data, recon])
-        save_image(comparison.cpu(), 'results/reconstruction_{}.png'.format(filename_suffix),
+        save_image(comparison.cpu(), this_file_dir+'results/reconstruction_{}.png'.format(filename_suffix),
                    nrow=10)
 
 def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1):
@@ -372,11 +370,15 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
+    parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
+                        default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
+    parser.add_argument('--train_epochs', help='size image in pixels', type=np.int32, default=25)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
+
     args = parser.parse_args()
 
     # get names corresponding folders, and files where to store data
-    this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
+
     base_data_dir = this_file_dir + '../data/'
     data_dir = base_data_dir + args.env + '/'
     train_file = data_dir + train_file_name[args.enc_type]
@@ -387,7 +389,7 @@ if __name__ == '__main__':
 
 
     train_Vae(batch_size=16, img_size=args.img_size, latent_size=args.latent_size,
-              train_file=train_file, vae_weights_path=weights_path, epochs=15, load=False)
+              train_file=train_file, vae_weights_path=weights_path, epochs=args.train_epochs, load=False)
     # show_1d_manifold()
     #show_2d_manifold(84)
     print('Successfully trained VAE')
