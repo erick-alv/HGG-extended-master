@@ -370,8 +370,6 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
-                        default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
     parser.add_argument('--train_epochs', help='size image in pixels', type=np.int32, default=25)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
 
