@@ -3,7 +3,8 @@ import copy
 import torch
 from j_vae.train_vae_sb import VAE_SB
 from j_vae.train_vae import load_Vae, VAE
-from j_vae.latent_space_transformations import torch_goal_transformation, torch_obstacle_transformation, torch_get_size_in_space
+from j_vae.latent_space_transformations import torch_goal_transformation, torch_obstacle_transformation, \
+    torch_get_size_in_space
 
 
 '''def setup_env_sizes(env, object_size=None, size_of_obstacle=None):
@@ -17,7 +18,8 @@ from j_vae.latent_space_transformations import torch_goal_transformation, torch_
         env.env.env._set_size(names_list=['obstacle'], size=[obstacle_size, 0.035, 0.0])'''
 
 
-def take_obstacle_image(env, img_size, make_table_invisible=False):
+#todo set to false once is trained with table
+def take_obstacle_image(env, img_size, make_table_invisible=True):
     env.env.env._set_arm_visible(visible=False)
     env.env.env._set_visibility(names_list=['obstacle'], alpha_val=1.0)
     env.env.env._set_visibility(names_list=['object0'], alpha_val=0.0)
@@ -70,7 +72,7 @@ def goal_latent_from_images(goals_images, args):
     lg, lg_var = transform_image_to_latent_batch_torch(goals_images.copy(), args.vae_model_goal,
                                                        args.img_size, args.device)
     del lg_var
-    lg = torch_goal_transformation(lg, args.device)
+    lg = torch_goal_transformation(lg, args.device, ind_1=args.goal_ind_1, ind_2=args.goal_ind_2)
     lg = lg.detach().cpu().numpy()
     return lg
 
@@ -79,7 +81,7 @@ def obstacle_latent_from_images(obstacles_images, args):
     lo, lo_var = transform_image_to_latent_batch_torch(obstacles_images.copy(), args.vae_model_obstacle,
                                                        args.img_size, args.device)
     del lo_var
-    lo = torch_obstacle_transformation(lo, args.device)
+    lo = torch_obstacle_transformation(lo, args.device, ind_1=args.obstacle_ind_1, ind_2=args.obstacle_ind_2)
     lo = lo.detach().cpu().numpy()
     lo_s, lo_s_var = transform_image_to_latent_batch_torch(obstacles_images.copy(), args.vae_model_size,
                                                            args.img_size, args.device)

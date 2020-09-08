@@ -1,20 +1,18 @@
 import numpy as np
 import torch
-from j_vae.common_data import obstacle_size, train_file_name, vae_sb_weights_file_name, vae_sb_latent_size
+from j_vae.common_data import obstacle_size, train_file_name, vae_sb_weights_file_name, file_corners_name
 
-def calculate_angle_goal():
-    g_corner_imgs = np.load('../data/FetchPushObstacle/goal_corners.npy')
-    from j_vae.train_vae_sb import load_Vae as load_Vae_SB
-    vae_model_goal = load_Vae_SB(path='../data/FetchPushObstacle/vae_sb_model_goal')
+def calculate_angle(model, corners_file):
+    corner_imgs = np.load(corners_file)
 
     cuda = torch.cuda.is_available()
     torch.manual_seed(1)
     device = torch.device("cuda" if cuda else "cpu")
 
-    data = torch.from_numpy(g_corner_imgs).float().to(device)
+    data = torch.from_numpy(corner_imgs).float().to(device)
     data /= 255
     data = data.permute([0, 3, 1, 2])
-    mu, logvar = vae_model_goal.encode(data)
+    mu, logvar = model.encode(data)
     mu = mu.detach().cpu().numpy()
     #calculates angles from center of coordinate system to corners
     goal_angles = np.arctan2(mu[:, 1], mu[:, 0]) * 180 / np.pi #to degree
@@ -25,29 +23,6 @@ def calculate_angle_goal():
 
 angle_goal = 27.17
 
-def calculate_angle_obstacle():
-    o_corner_imgs = np.load('../data/FetchPushObstacle/obstacle_corners.npy')
-    from j_vae.train_vae_sb import load_Vae as load_Vae_SB
-    vae_model_obstacle = load_Vae_SB(path='../data/FetchPushObstacle/vae_sb_model_obstacle')
-
-    cuda = torch.cuda.is_available()
-    torch.manual_seed(1)
-    device = torch.device("cuda" if cuda else "cpu")
-
-    data = torch.from_numpy(o_corner_imgs).float().to(device)
-    data /= 255
-    data = data.permute([0, 3, 1, 2])
-    mu, logvar = vae_model_obstacle.encode(data)
-    mu = mu.detach().cpu().numpy()
-    '''if reflect_obstacle:
-        for i, p in enumerate(mu):
-            mu[i] = reflect_obstacle_transformation(p)'''
-    # calculates angles from center of coordinate system to corners
-    goal_angles = np.arctan2(mu[:, 1], mu[:, 0]) * 180 / np.pi  # to degree
-    goal_angles = np.array([a if a >= 0 else 360 + a for a in goal_angles])
-    wanted_angles = np.array([225., 135., 315., 45.])
-    to_rotate = wanted_angles - goal_angles
-    print(goal_angles[0])
 
 angle_obstacle = 35.14
 
@@ -115,7 +90,10 @@ def goal_transformation(points):
     return map_points(rotated, goal_map_x, goal_map_y)
 
 
-def torch_goal_transformation(batch_p, device):
+def torch_goal_transformation(batch_p, device, ind_1=None, ind_2=None):
+    if ind_1 is not None and ind_2 is not None:
+        assert ind_1 != ind_2
+        batch_p = torch.cat([batch_p[:, ind_1].unsqueeze(axis=1),batch_p[:, ind_2].unsqueeze(axis=1)], axis=1)
     theta = np.radians(angle_goal)
     r = np.array([[np.cos(theta), -np.sin(theta)],
                   [np.sin(theta), np.cos(theta)]])
@@ -145,7 +123,7 @@ def obstacle_transformation(points):
     return map_points(rotated, obstacle_map_x, obstacle_map_y)
 
 
-def torch_obstacle_transformation(batch_p, device):
+def torch_obstacle_transformation(batch_p, device, ind_1=None, ind_2=None):
     '''if reflect_obstacle:
         A = inclination_m_obstacle
         B = -1
@@ -156,6 +134,10 @@ def torch_obstacle_transformation(batch_p, device):
         n_y = (A ** 2 - B ** 2) * batch_p[:, 1] + 2 * A * B * batch_p[:, 0] - 2 * A * B
         n_y /= D
         batch_p = torch.cat([torch.unsqueeze(n_x, dim=1), torch.unsqueeze(n_y, dim=1)], dim=1).to(device)'''
+    if ind_1 is not None and ind_2 is not None:
+        assert ind_1 != ind_2
+        batch_p = torch.cat([batch_p[:, ind_1].unsqueeze(axis=1),batch_p[:, ind_2].unsqueeze(axis=1)], axis=1)
+
     theta = np.radians(angle_obstacle)
     r = np.array([[np.cos(theta), -np.sin(theta)],
                   [np.sin(theta), np.cos(theta)]])
@@ -178,10 +160,7 @@ def torch_obstacle_transformation(batch_p, device):
 img_size = 84
 
 
-def print_min_and_max_from_sizes():
-    from j_vae.train_vae import load_Vae
-    vae_model_size = load_Vae(path='../data/FetchPushObstacle/vae_model_obstacle_sizes', img_size=img_size, latent_size=1)
-    train_file = '../data/FetchPushObstacle/obstacle_sizes_set.npy'
+def print_min_and_max_from_sizes(model, train_file):
     data_set = np.load(train_file)
     cuda = torch.cuda.is_available()
     torch.manual_seed(1)
@@ -195,7 +174,7 @@ def print_min_and_max_from_sizes():
         data = data.unsqueeze(0)
         data = data.permute([0, 3, 1, 2])
         data = data.reshape(-1, img_size * img_size * 3)
-        mu, logvar = vae_model_size.encode(data)
+        mu, logvar = model.encode(data)
         mu = mu.detach().cpu().numpy()
         mu = mu[0][0]
 
@@ -215,9 +194,6 @@ max_latent_size = 12.9686
 
 #min_latent_size = -4.703
 #max_latent_size = 4.703
-
-map_size_space = interval_map_function(-11.747,4.703,-4.703, 4.703)#currentlz not used
-
 
 def get_size_in_space(v, range=[-1, 1]):
     dist = np.abs(max_latent_size-min_latent_size)
@@ -277,9 +253,9 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--train_epochs', help='size image in pixels', type=np.int32, default=25)
     parser.add_argument('--batch_size', help='size image in pixels', type=np.int32, default=16)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
+    parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=5)
 
     args = parser.parse_args()
 
@@ -292,13 +268,19 @@ if __name__ == '__main__':
     data_dir = base_data_dir + args.env + '/'
     train_file = data_dir + train_file_name[args.enc_type]
     weights_path = data_dir + vae_sb_weights_file_name[args.enc_type]
-    args.latent_size = vae_sb_latent_size[args.enc_type]
     cuda = torch.cuda.is_available()
     device = torch.device("cuda" if cuda else "cpu")
 
     from j_vae.train_vae_sb import load_Vae as load_Vae_SB
     model = load_Vae_SB(weights_path, args.img_size, args.latent_size)
     analyze_lowest_variance_components(model, args.latent_size, train_file, args.batch_size, device)
+
+    ##print_min_and_max_from_sizes
+    #print_min_and_max_from_sizes(model, train_file)
+
+    ##for angle
+    '''file_corners = data_dir + file_corners_name[args.enc_type]
+    calculate_angle(model, file_corners)'''
 
 
 

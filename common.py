@@ -9,6 +9,7 @@ from algorithm.replay_buffer import ReplayBuffer_Episodic, goal_based_process
 import torch
 from j_vae.train_vae_sb import load_Vae as load_Vae_SB
 from j_vae.train_vae import load_Vae
+from j_vae.common_data import vae_sb_weights_file_name, vae_weights_file_name
 from PIL import Image
 from vae_env_inter import take_env_image
 from j_vae.distance_estimation import calculate_distance
@@ -75,6 +76,13 @@ def get_args():
 	#arguments for VAEs and images
 	parser.add_argument('--vae_dist_help', help='using vaes yes or no', type=str2bool, default=False)
 	parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
+	parser.add_argument('--latent_size_obstacle', help='size latent space obstacle', type=np.int32, default=None)
+	parser.add_argument('--latent_size_goal', help='size latent space goal', type=np.int32, default=None)
+	parser.add_argument('--obstacle_ind_1', help='index 1 component latent vector', type=np.int32, default=None)
+	parser.add_argument('--obstacle_ind_2', help='index 2 component latent vector', type=np.int32, default=None)
+	parser.add_argument('--goal_ind_1', help='index 1 component latent vector', type=np.int32, default=None)
+	parser.add_argument('--goal_ind_2', help='index 2 component latent vector', type=np.int32, default=None)
+
 	#for dense reward transformation
 	parser.add_argument('--transform_dense', help='if transform to dense with VAES or not', type=str2bool, default=False)
 
@@ -105,10 +113,14 @@ def get_args():
 
 def experiment_setup(args):
 	if args.vae_dist_help or args.transform_dense:
-		args.vae_model_obstacle = load_Vae_SB(path='data/FetchPushObstacle/vae_sb_model_obstacle')
-		args.vae_model_goal = load_Vae_SB(path='data/FetchPushObstacle/vae_sb_model_goal')
-		args.vae_model_size = load_Vae(path='data/FetchPushObstacle/vae_model_obstacle_sizes',
-                                       img_size=args.img_size, latent_size=1)
+		base_data_dir = 'data/'
+		data_dir = base_data_dir + args.env + '/'
+		weights_path_goal = data_dir + vae_sb_weights_file_name['goal']
+		weights_path_obstacle = data_dir + vae_sb_weights_file_name['obstacle']
+		weights_path_obstacle_sizes = data_dir + vae_weights_file_name['obstacle_sizes']
+		args.vae_model_obstacle = load_Vae_SB(weights_path_obstacle, args.img_size, args.latent_size_obstacle)
+		args.vae_model_goal = load_Vae_SB(weights_path_goal, args.img_size, args.latent_size_goal)
+		args.vae_model_size = load_Vae(path=weights_path_obstacle_sizes, img_size=args.img_size, latent_size=1)
 	if args.transform_dense:
 		args.compute_reward_dense = calculate_distance
 

@@ -17,10 +17,13 @@ train_file_name = {'goal': 'goal_set.npy',
                    'obstacle_sizes':'obstacle_sizes_set.npy',
                    'goal_sizes':'goal_sizes_set.npy'
                    }
+file_corners_name = {'goal': 'goal_corners.npy',
+                     'obstacle':'obstacle_corners.npy',
+                     }
 
 vae_sb_weights_file_name = {'goal': 'vae_sb_model_goal',
-                   'obstacle':'vae_sb_model_obstacle',
-                   }
+                            'obstacle':'vae_sb_model_obstacle',
+                            }
 
 vae_weights_file_name = {
                    'obstacle_sizes':'vae_model_obstacle_sizes',

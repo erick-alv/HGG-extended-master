@@ -4,7 +4,7 @@ import numpy as np
 
 from j_vae.generate_vae_data import random_pos_inside, size_file,random_size_at,generate_points
 from j_vae.common_data import  min_obstacle_size, max_obstacle_size, range_x, range_y, obstacle_size, \
-    puck_size, z_table_height, center_obstacle, train_file_name, vae_sb_latent_size, vae_sb_weights_file_name
+    puck_size, z_table_height, center_obstacle, train_file_name, vae_sb_weights_file_name, file_corners_name
 import torch
 import matplotlib.pyplot as plt
 from j_vae.train_vae_sb import load_Vae as load_Vae_SB
@@ -13,7 +13,7 @@ from vae_env_inter import take_goal_image, take_obstacle_image
 from j_vae.train_vae import load_Vae
 from j_vae.latent_space_transformations import create_rotation_matrix, rotate_list_of_points, map_points, \
     goal_map_x, goal_map_y, obstacle_map_y, obstacle_map_x, angle_obstacle, angle_goal,\
-    get_size_in_space, map_size_space, torch_get_size_in_space
+    get_size_in_space, torch_get_size_in_space
 
 
 def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, using_sb=True,
@@ -191,8 +191,7 @@ def visualization_sizes(env, model, img_size, n):
     plt.close()
 
 
-
-if __name__ =='__main__':
+if __name__ == '__main__':
     import argparse
     import os
     parser = argparse.ArgumentParser()
@@ -214,6 +213,7 @@ if __name__ =='__main__':
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
+    parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=5)
 
     args = parser.parse_args()
 
@@ -225,10 +225,12 @@ if __name__ =='__main__':
     weights_path = data_dir + vae_sb_weights_file_name[args.enc_type]
 
     # load the latent_size and model
-    args.latent_size = vae_sb_latent_size[args.enc_type]
     cuda = torch.cuda.is_available()
     device = torch.device("cuda" if cuda else "cpu")
-    model = load_Vae_SB(weights_path, args.img_size, args.latent_size)
+    if args.enc_type == 'goal' or args.enc_type == 'obstacle':
+        model = load_Vae_SB(weights_path, args.img_size, args.latent_size)
+    else:
+        model = load_Vae(weights_path, args.imgsize, args.latent_size)
 
     # load environment
     env = make_env(args)
@@ -239,7 +241,16 @@ if __name__ =='__main__':
     elif args.enc_type == 'obstacle':
         size_to_use = obstacle_size
 
-    visualization_grid_points(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
-                              enc_type=args.enc_type, select_components=True, comp_ind_1=5, comp_ind_2=9)
+    if args.enc_type == 'goal' or args.enc_type == 'obstacle':
+        visualization_grid_points(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
+                                  enc_type=args.enc_type, select_components=True, comp_ind_1=4, comp_ind_2=1)
+    else:
+        visualization_sizes(env, model, args.img_size, 5)
+
+    ##for corners
+    '''file_corners = data_dir + file_corners_name[args.enc_type]
+    save_corners(env, size_to_use, file_corners, args.img_size, args.enc_type)'''
+
+
 
 
