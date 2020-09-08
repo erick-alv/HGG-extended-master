@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from j_vae.common_data import obstacle_size
+from j_vae.common_data import obstacle_size, train_file_name, vae_sb_weights_file_name, vae_sb_latent_size
 
 def calculate_angle_goal():
     g_corner_imgs = np.load('../data/FetchPushObstacle/goal_corners.npy')
@@ -244,6 +244,63 @@ def from_real_radius_to_range(radius, real_range_size = 0.5, latent_range=[-1, 1
     max_radius = np.abs(latent_range[1] - latent_range[0]) / 2
     return prc * max_radius
 
+#https://dfdazac.github.io/01-sbd.html based on
+def analyze_lowest_variance_components(model, latent_size, train_file, batch_size, device):
+    avg_var = torch.zeros(latent_size).to(device).detach()
+    data_set = np.load(train_file)
+    data_size = len(data_set)
+    data_set = np.split(data_set, data_size / batch_size)
+
+    for batch_idx, data in enumerate(data_set):
+        data = torch.from_numpy(data).float().to(device)
+        data /= 255
+        data = data.permute([0, 3, 1, 2])
+        mu, logvar = model.encode(data)
+        mu = mu.detach()
+        logvar = logvar.detach()
+        avg_var += torch.mean(logvar.exp(), dim=0)/data_size
+
+    #get_smallest_pair
+    sorted_latents = sorted(range(avg_var.shape[0]), key=lambda x: avg_var[x])
+    x_latent, y_latent, *_ = sorted_latents
+    a = avg_var.cpu().numpy()
+
+    print(f'Axes with lowest variance: {x_latent:d} and {y_latent:d}')
+
+
+if __name__ == '__main__':
+    import argparse
+    import os
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--env', help='gym env id', type=str, default='FetchReach-v1')
+
+    parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
+                        default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
+    parser.add_argument('--train_epochs', help='size image in pixels', type=np.int32, default=25)
+    parser.add_argument('--batch_size', help='size image in pixels', type=np.int32, default=16)
+    parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
+
+    args = parser.parse_args()
+
+    args = parser.parse_args()
+    args = parser.parse_args()
+
+    # get names corresponding folders, and files where to store data
+    this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
+    base_data_dir = this_file_dir + '../data/'
+    data_dir = base_data_dir + args.env + '/'
+    train_file = data_dir + train_file_name[args.enc_type]
+    weights_path = data_dir + vae_sb_weights_file_name[args.enc_type]
+    args.latent_size = vae_sb_latent_size[args.enc_type]
+    cuda = torch.cuda.is_available()
+    device = torch.device("cuda" if cuda else "cpu")
+
+    from j_vae.train_vae_sb import load_Vae as load_Vae_SB
+    model = load_Vae_SB(weights_path, args.img_size, args.latent_size)
+    analyze_lowest_variance_components(model, args.latent_size, train_file, args.batch_size, device)
+
+
 
 '''def get_interpolation_points_obstacle():
     g_corner_imgs = np.load('../data/FetchPushObstacle/goal_corners.npy')
@@ -307,8 +364,6 @@ def reflect_obstacle_transformation(p):
     print(mm)
     print(bb)'''
 
-if __name__ == '__main__':
-    print_min_and_max_from_sizes()
 
 
 

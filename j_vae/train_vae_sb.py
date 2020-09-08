@@ -9,7 +9,7 @@ from torch import nn, optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torchvision.utils import save_image
-from j_vae.common_data import train_file_name, vae_sb_weights_file_name, vae_sb_latent_size
+from j_vae.common_data import train_file_name, vae_sb_weights_file_name
 this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
 
 
@@ -98,7 +98,7 @@ class VAE_SB(nn.Module):
         return self.decode(z), mu, logvar
 
 # Reconstruction + KL divergence losses summed over all elements and batch
-def loss_function(recon_x, x, mu, logvar):
+def loss_function(recon_x, x, mu, logvar, beta):
     BCE = F.binary_cross_entropy(recon_x, x, reduction='sum')
 
     # see Appendix B from VAE paper:
@@ -109,10 +109,10 @@ def loss_function(recon_x, x, mu, logvar):
     # Try to adjust
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-    return BCE + KLD
+    return BCE + beta*KLD
 
 # torch.Size([128, 1, img_size, img_size])
-def train(epoch, model, optimizer, device, log_interval, data_set, batch_size):
+def train(epoch, model, optimizer, device, log_interval, data_set, batch_size, beta):
     model.train()
     train_loss = 0
     data_set = data_set.copy()
@@ -126,7 +126,7 @@ def train(epoch, model, optimizer, device, log_interval, data_set, batch_size):
         data = data.permute([0, 3, 1, 2])
         optimizer.zero_grad()
         recon_batch, mu, logvar = model(data)
-        loss = loss_function(recon_batch, data, mu, logvar)
+        loss = loss_function(recon_batch, data, mu, logvar, beta)
         loss.backward()
         train_loss += loss.item()
         optimizer.step()
@@ -142,7 +142,7 @@ def train(epoch, model, optimizer, device, log_interval, data_set, batch_size):
         epoch, train_loss / data_size))
 
 
-def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, epochs=100, no_cuda=False, seed=1,
+def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, beta, epochs=100, no_cuda=False, seed=1,
               log_interval=100, load=False):
     data_set = np.load(train_file)
     cuda = not no_cuda and torch.cuda.is_available()
@@ -163,7 +163,7 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, e
         start_epoch = 1
 
     for epoch in range(start_epoch, epochs + start_epoch):
-        train(epoch, model, optimizer, device, log_interval, data_set.copy(), batch_size)
+        train(epoch, model, optimizer, device, log_interval, data_set.copy(), batch_size, beta)
         if not (epoch % 5) or epoch == 1:
             test_on_data_set(model, device,filename_suffix='epoch_{}'.format(epoch), latent_size=latent_size,
                              data_set=data_set.copy())
@@ -272,8 +272,8 @@ def show_2d_manifold(img_size, vae_weights_path, no_cuda=False, seed=1):
 
 
 #todo make wit list of values axes to block
-def show_2d_manifold_with_fixed_axis(img_size, latent_size, vae_weights_path,no_cuda=False, seed=1,
-                                     fixed_axis=0, fixed_prob_val=0.5):
+def show_2d_manifold_with_fixed_axis(img_size, latent_size, free_axis_1, free_axis_2,vae_weights_path,no_cuda=False,
+                                     seed=1,fixed_prob_val=0.5):
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
     device = torch.device("cuda" if cuda else "cpu")
@@ -281,7 +281,6 @@ def show_2d_manifold_with_fixed_axis(img_size, latent_size, vae_weights_path,no_
     checkpoint = torch.load(vae_weights_path)
     model.load_state_dict(checkpoint['model_state_dict'])
 
-    assert fixed_axis in [0,1,2]
     n = 20  # figure with nxn images
     figure = np.zeros((img_size * n, img_size * n, 3))
     # Contruct grid of latent variable values.
@@ -293,13 +292,11 @@ def show_2d_manifold_with_fixed_axis(img_size, latent_size, vae_weights_path,no_
     fixed_val = norm.ppf(fixed_prob_val)
     for i, xi in enumerate(grid_x):
         for j, yj in enumerate(grid_y):
-            if fixed_axis == 0:
-                z_sample = np.array([fixed_val, xi, yj])
-            elif fixed_axis ==1:
-                z_sample = np.array([xi, fixed_val, yj])
-            else:
-                z_sample = np.array([xi, yj, fixed_val])
+            z_sample = np.repeat(fixed_val, latent_size)
+            z_sample[free_axis_1] = xi
+            z_sample[free_axis_2] = yj
             z_sample = torch.from_numpy(z_sample).to(device).float()
+            z_sample = torch.unsqueeze(z_sample, 0)
             im_decoded = model.decode(z_sample)
             im_decoded = im_decoded.view(3, img_size, img_size)
             im_decoded = im_decoded.permute([1, 2, 0])
@@ -370,8 +367,11 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--train_epochs', help='size image in pixels', type=np.int32, default=25)
+    parser.add_argument('--batch_size', help='size image in pixels', type=np.int32, default=16)
+    parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=20)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
+    parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=5)
+    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=2.)
 
     args = parser.parse_args()
 
@@ -382,12 +382,14 @@ if __name__ == '__main__':
     train_file = data_dir + train_file_name[args.enc_type]
     weights_path = data_dir + vae_sb_weights_file_name[args.enc_type]
 
-    #load the latent_size
-    args.latent_size = vae_sb_latent_size[args.enc_type]
 
-
-    train_Vae(batch_size=16, img_size=args.img_size, latent_size=args.latent_size,
+    train_Vae(batch_size=args.batch_size, img_size=args.img_size, latent_size=args.latent_size,beta=args.beta,
               train_file=train_file, vae_weights_path=weights_path, epochs=args.train_epochs, load=False)
+    '''show_2d_manifold_with_fixed_axis(img_size=args.img_size,latent_size=args.latent_size, free_axis_1=9, free_axis_2=5,
+                                     vae_weights_path=weights_path)'''
+    '''for v in np.linspace(start=0.05, stop=0.95, num=8):
+        show_2d_manifold_with_fixed_axis(img_size=args.img_size,latent_size=args.latent_size, free_axis_1=9, free_axis_2=4,
+                                     vae_weights_path=weights_path, fixed_prob_val=v)'''
     # show_1d_manifold()
     #show_2d_manifold(84)
     print('Successfully trained VAE')

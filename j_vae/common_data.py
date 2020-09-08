@@ -26,7 +26,3 @@ vae_weights_file_name = {
                    'obstacle_sizes':'vae_model_obstacle_sizes',
                    'goal_sizes':'vae_model_goal_sizes'
                    }
-
-vae_sb_latent_size = {'goal': 10,
-                   'obstacle': 10
-                      }

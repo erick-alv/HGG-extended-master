@@ -14,15 +14,6 @@ from j_vae.latent_space_transformations import obstacle_transformation, goal_tra
 
 from PIL import Image
 
-using_sb = True
-
-img_size = 84
-if not using_sb:
-    vae_model_obstacle = load_Vae(path='../data/FetchPushObstacle/vae_model_obstacle')
-    vae_model_goal = load_Vae(path='../data/FetchPushObstacle/vae_model_goal')
-else:
-    vae_model_obstacle = load_Vae_SB(path='../data/FetchPushObstacle/vae_sb_model_obstacle')
-    vae_model_goal = load_Vae_SB(path='../data/FetchPushObstacle/vae_sb_model_goal')
 
 
 
