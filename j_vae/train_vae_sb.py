@@ -112,9 +112,10 @@ def loss_function(recon_x, x, mu, logvar, beta):
     return BCE + beta*KLD
 
 # torch.Size([128, 1, img_size, img_size])
-def train(epoch, model, optimizer, device, log_interval, data_set, batch_size, beta):
+def train(epoch, model, optimizer, device, log_interval, train_file, batch_size, beta):
     model.train()
     train_loss = 0
+    data_set = np.load(train_file)
     data_set = data_set.copy()
     
     data_size = len(data_set)
@@ -144,7 +145,6 @@ def train(epoch, model, optimizer, device, log_interval, data_set, batch_size, b
 
 def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, beta, epochs=100, no_cuda=False, seed=1,
               log_interval=100, load=False):
-    data_set = np.load(train_file)
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
 
@@ -163,10 +163,11 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
         start_epoch = 1
 
     for epoch in range(start_epoch, epochs + start_epoch):
-        train(epoch, model, optimizer, device, log_interval, data_set.copy(), batch_size, beta)
+        train(epoch=epoch, model=model, optimizer=optimizer, device=device, log_interval=log_interval,
+              train_file=train_file, batch_size=batch_size, beta=beta)
         if not (epoch % 5) or epoch == 1:
             test_on_data_set(model, device,filename_suffix='epoch_{}'.format(epoch), latent_size=latent_size,
-                             data_set=data_set.copy())
+                             train_file=train_file)
             print('Saving Progress!')
             torch.save({
                 'epoch': epoch,
@@ -195,7 +196,8 @@ def test_Vae(img_size, latent_size, train_file, vae_weights_path,no_cuda=False, 
     test_on_data_set(model, device, latent_size=latent_size, filename_suffix='test', data_set=data_set.copy())
 
 
-def test_on_data_set(model, device, filename_suffix, latent_size, data_set):
+def test_on_data_set(model, device, filename_suffix, latent_size, train_file):
+    data_set = np.load(train_file)
     data_size = len(data_set)
     idx = np.random.randint(0, data_size, size=10)
     data = data_set[idx]
