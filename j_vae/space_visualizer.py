@@ -1,5 +1,6 @@
 from envs.utils import goal_distance
 from utils.stable_baselines_plotter import plot_curves
+from PIL import Image
 import numpy as np
 
 from j_vae.generate_vae_data import random_pos_inside, size_file,random_size_at,generate_points
@@ -52,12 +53,30 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, us
     for i,p in enumerate(points):
         if enc_type == 'goal':
             env.env.env._move_object(position=p)
-            data_set[i] = take_goal_image(env, img_size)
+            data_set[i] = take_goal_image(env, img_size, make_table_invisible=True)#todo!!!!!
         elif enc_type == 'obstacle':
             env.env.env._set_position(names_list=['obstacle'], position=p)
             data_set[i] = take_obstacle_image(env, img_size)
         else:
             raise Exception('Not supported enc type')
+    all_array = None
+    t = 0
+    for r in range(n):
+        row = None
+        for c in range(n):
+            rcim = data_set[t].copy()
+            t+=1
+            if row is None:
+                row = rcim
+            else:
+                row = np.concatenate([row.copy(), rcim], axis=1)
+        if all_array is None:
+            all_array = row.copy()
+        else:
+            all_array = np.concatenate([all_array.copy(), row], axis=0)
+    all_ims = Image.fromarray(all_array.astype(np.uint8))
+    all_ims.show()
+    all_ims.close()
     data = torch.from_numpy(data_set).float().to(device)
     data /= 255
     data = data.permute([0, 3, 1, 2])
@@ -243,7 +262,7 @@ if __name__ == '__main__':
 
     if args.enc_type == 'goal' or args.enc_type == 'obstacle':
         visualization_grid_points(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
-                                  enc_type=args.enc_type, select_components=True, comp_ind_1=4, comp_ind_2=1)
+                                  enc_type=args.enc_type, select_components=True, comp_ind_1=1, comp_ind_2=0)
     else:
         visualization_sizes(env, model, args.img_size, 5)
 

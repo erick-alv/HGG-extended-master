@@ -363,11 +363,11 @@ def show_1d_manifold(img_size, latent_size, vae_weights_path, no_cuda=False, see
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env', help='gym env id', type=str, default='FetchReach-v1')
+    parser.add_argument('--env', help='gym env id', type=str)
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--batch_size', help='size image in pixels', type=np.int32, default=16)
+    parser.add_argument('--batch_size', help='numer of batch to train', type=np.int32, default=16)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=20)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=5)
