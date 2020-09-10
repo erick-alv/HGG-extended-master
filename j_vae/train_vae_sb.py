@@ -12,7 +12,7 @@ from torchvision.utils import save_image
 from j_vae.common_data import train_file_name, vae_sb_weights_file_name
 this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
 
-
+#TODO verify why this version of code is not working anymore
 def spatial_broadcast(z, width, height):
     z_b = np.tile(A=z, reps=(height, width, 1))
     x = np.linspace(-1,1, width)

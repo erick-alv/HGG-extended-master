@@ -53,7 +53,7 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, us
     for i,p in enumerate(points):
         if enc_type == 'goal':
             env.env.env._move_object(position=p)
-            data_set[i] = take_goal_image(env, img_size, make_table_invisible=True)
+            data_set[i] = take_goal_image(env, img_size)
         elif enc_type == 'obstacle':
             env.env.env._set_position(names_list=['obstacle'], position=p)
             data_set[i] = take_obstacle_image(env, img_size)
