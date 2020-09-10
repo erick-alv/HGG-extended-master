@@ -79,7 +79,8 @@ class VanillaGoalEnv():
 			self.achieved_goal_latent = latents[0].copy()
 
 			reward = -self.args.compute_reward_dense(self.obstacle_latent.copy(), self.obstacle_size_latent.copy(),
-							   self.achieved_goal_latent.copy(), self.desired_goal_latent.copy(), None, None)
+							   self.achieved_goal_latent.copy(), self.desired_goal_latent.copy(),
+													 range_x=[-1., 1.], range_y=[-1., 1.])
 			if not np.isscalar(reward):
 				reward = reward[0]
 			info = self.process_info(obs, reward, info)

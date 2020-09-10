@@ -308,7 +308,7 @@ class ReplayBuffer_Episodic:
 							self.buffer['obs'][idx][step + 1]['obstacle_latent'].copy(),
 							self.buffer['obs'][idx][step + 1]['obstacle_size_latent'].copy(),
 							self.buffer['obs'][idx][step + 1]['achieved_goal_latent'].copy(),
-							goal_latent, None, None)
+							goal_latent, range_x=[-1., 1.], range_y=[-1., 1.])
 						if not np.isscalar(rew):
 							rew = rew[0]
 					else:

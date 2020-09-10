@@ -49,6 +49,36 @@ def check_for_collision_batch(g0, g1, o, r_o):
 
 def calculate_distance(obstacle_pos, obstacle_radius, current_pos, goal_pos, range_x, range_y, extra_r=0.001):
     # todo see how to measure distance if route out of range
+    if current_pos[0] > range_x[1] or current_pos[0] < range_x[0] \
+            or current_pos[1] > range_y[1] or current_pos[1] < range_y[0]:
+        return np.array(120.)
+
+    obstacle_radius = copy.copy(obstacle_radius) + extra_r
+    if not check_for_collision(current_pos, goal_pos, obstacle_pos, obstacle_radius):
+        return np.linalg.norm(current_pos - goal_pos)
+
+    current_pos = push_check_to_edge(current_pos, obstacle_pos, obstacle_radius)
+    goal_pos = push_check_to_edge(goal_pos, obstacle_pos, obstacle_radius)
+
+    a1_curr, a2_curr = get_tangent_points(current_pos, obstacle_pos, obstacle_radius)
+    a1_goal, a2_goal = get_tangent_points(goal_pos, obstacle_pos, obstacle_radius)
+
+    if np.linalg.norm(a1_curr - a1_goal) < np.linalg.norm(a1_curr - a2_goal):
+        t1_c, t1_g = a1_curr, a1_goal
+        t2_c, t2_g = a2_curr, a2_goal
+    else:
+        t1_c, t1_g = a1_curr, a2_goal
+        t2_c, t2_g = a2_curr, a1_goal
+
+    arc1_length = get_arc_length(t1_c, t1_g, obstacle_pos, obstacle_radius)
+    arc2_length = get_arc_length(t2_c, t2_g, obstacle_pos, obstacle_radius)
+
+    d1 = np.linalg.norm(current_pos - t1_c) + arc1_length + np.linalg.norm(t1_g - goal_pos)
+    d2 = np.linalg.norm(current_pos - t2_c) + arc2_length + np.linalg.norm(t2_g - goal_pos)
+    return min(d1, d2)
+
+def calculate_distance_real(obstacle_pos, obstacle_radius, current_pos, goal_pos, range_x, range_y, extra_r=0.001):
+    # todo see how to measure distance if route out of range
     obstacle_radius = copy.copy(obstacle_radius) + extra_r
     if not check_for_collision(current_pos, goal_pos, obstacle_pos, obstacle_radius):
         return np.linalg.norm(current_pos - goal_pos)
@@ -164,6 +194,7 @@ def push_check_to_edge_batch(p_batch, center, r):
 
 def calculate_distance_batch(obstacle_pos, obstacle_radius, current_pos_batch, goal_pos, range_x, range_y,
                              extra_r=0.001):
+
     #todo see how to measure distance if route out of range
     obstacle_radius = copy.copy(obstacle_radius) + extra_r
     b_v = check_for_collision_batch(current_pos_batch, goal_pos, obstacle_pos, obstacle_radius)

@@ -3,7 +3,7 @@ from envs import make_env
 from algorithm.replay_buffer import goal_based_process
 from utils.os_utils import make_dir, LoggerExtra
 from utils.image_util import create_rollout_video
-from j_vae.distance_estimation import calculate_distance
+from j_vae.distance_estimation import calculate_distance, calculate_distance_real
 from vae_env_inter import take_env_image
 import copy
 
@@ -72,7 +72,7 @@ class Tester:
 						ex_logs[t].add_record('Step', timestep)
 						ex_logs[t].add_record('Success', info['Success'])
 						ex_logs[t].add_record('RealDirectDistance', info['Distance'])
-						rpd = calculate_distance(np.array([1.3, 0.75]), obstacle_radius=np.array(0.13),
+						rpd = calculate_distance_real(np.array([1.3, 0.75]), obstacle_radius=np.array(0.13),
 												 current_pos=ob['achieved_goal'][:2], goal_pos=ob['desired_goal'][:2],
 												 range_x=None, range_y=None)
 						ex_logs[t].add_record('RealPathDistance', rpd)
@@ -83,7 +83,7 @@ class Tester:
 						lpd = calculate_distance(ob['obstacle_latent'], obstacle_radius=ob['obstacle_size_latent'],
 												 current_pos=ob['achieved_goal_latent'],
 												 goal_pos=ob['desired_goal_latent'],
-												 range_x=None, range_y=None)
+												 range_x=[-1., 1.], range_y=[-1., 1.])
 						ex_logs[t].add_record('LatentPathDistance', lpd)
 						lddpr = env[i].compute_distance(ob['achieved_goal_latent'], prev_obs[i]['achieved_goal_latent'])
 						ex_logs[t].add_record('LatentDirectToPrevDistance', lddpr)

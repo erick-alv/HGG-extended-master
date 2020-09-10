@@ -17,10 +17,14 @@ from j_vae.latent_space_transformations import create_rotation_matrix, rotate_li
     get_size_in_space, torch_get_size_in_space
 
 
-def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, using_sb=True,
-                              select_components=False, comp_ind_1=None, comp_ind_2=None):
+def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, ind_1, ind_2,
+                              using_sb=True, ):
     points = generate_points(range_x=range_x, range_y=range_y, z=z_table_height, total=n,
                              object_x_y_size=[size_to_use, size_to_use])
+    '''d = 0.05
+    points = generate_points(range_x=[range_x[0]-d,range_x[1]+d], range_y=[range_y[0]-d,range_y[1]+d],
+                             z=z_table_height, total=n,
+                             object_x_y_size=[size_to_use, size_to_use])'''
 
     n_labels = np.arange(len(points))
 
@@ -87,16 +91,15 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, us
         mu, logvar = model.encode(data)
     mu = mu.detach().cpu().numpy()
 
-    if select_components:
-        assert comp_ind_1 is not None and comp_ind_2 is not None and comp_ind_1 != comp_ind_2
-        mu = np.concatenate([np.expand_dims(mu[:, comp_ind_1], axis=1),
-                             np.expand_dims(mu[:, comp_ind_2], axis=1)], axis=1)
+    assert ind_1 != ind_2
+    mu = np.concatenate([np.expand_dims(mu[:, ind_1], axis=1),
+                         np.expand_dims(mu[:, ind_2], axis=1)], axis=1)
 
 
     if enc_type == 'goal':
-        #rm = create_rotation_matrix(angle_goal)
-        #mu = rotate_list_of_points(mu, rm)
-        #mu = map_points(mu, goal_map_x, goal_map_y)
+        rm = create_rotation_matrix(angle_goal)
+        mu = rotate_list_of_points(mu, rm)
+        mu = map_points(mu, goal_map_x, goal_map_y)
         pass
     elif enc_type == 'obstacle':
         #for i, p in enumerate(mu):
@@ -135,9 +138,6 @@ def print_max_and_min(points):
 def save_corners(env, size_to_use, file_corners, img_size, enc_type):
     points = generate_points(range_x=range_x, range_y=range_y, z=z_table_height, total=2,
                              object_x_y_size=[size_to_use, size_to_use])
-    cuda = torch.cuda.is_available()
-    torch.manual_seed(1)
-    device = torch.device("cuda" if cuda else "cpu")
 
     # sample images
     data_set = np.empty([len(points), img_size, img_size, 3])
@@ -160,7 +160,7 @@ def save_corners(env, size_to_use, file_corners, img_size, enc_type):
     np.save(file_corners, data_set)
 
 
-def visualization_sizes(env, model, img_size, n):
+def visualization_sizes_obstacle(env, model, img_size, n):
     #sizes = np.linspace(min_obstacle_size, max_obstacle_size, num=n)
     sizes = np.linspace(obstacle_size, obstacle_size, num=n)
     n_labels = np.arange(len(sizes))
@@ -215,7 +215,9 @@ if __name__ == '__main__':
     import argparse
     import os
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env', help='gym env id', type=str, default='FetchReach-v1')
+    parser.add_argument('--env', help='gym env id', type=str, default='FetchReach-v1', required=True)
+    parser.add_argument('--task', help='the type of attribute that we want to generate/encode', type=str,
+                        default='show_space', choices=['show_space', 'save_corners', 'show_size'], required=True)
     args, _ = parser.parse_known_args()
     if args.env == 'HandReach-v0':
         parser.add_argument('--goal', help='method of goal generation', type=str, default='reach',
@@ -230,10 +232,15 @@ if __name__ == '__main__':
             parser.add_argument('--init_rotation', help='initial rotation in hand environments', type=np.float32,
                                 default=0.25)
 
+    if args.task == 'show_space':
+        parser.add_argument('--ind_1', help='first index to extract from latent vector', type=np.int32)
+        parser.add_argument('--ind_2', help='second index to extract from latent vector', type=np.int32)
+
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=5)
+
 
     args = parser.parse_args()
 
@@ -261,16 +268,17 @@ if __name__ == '__main__':
     elif args.enc_type == 'obstacle':
         size_to_use = obstacle_size
 
-    if args.enc_type == 'goal' or args.enc_type == 'obstacle':
+    if args.task == 'show_space':
+        assert args.enc_type == 'goal' or args.enc_type == 'obstacle'
         visualization_grid_points(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
-                                  enc_type=args.enc_type, select_components=False)
-    else:
-        visualization_sizes(env, model, args.img_size, 5)
-
-    ##for corners
-    '''file_corners = data_dir + file_corners_name[args.enc_type]
-    save_corners(env, size_to_use, file_corners, args.img_size, args.enc_type)'''
-
+                                  enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2)
+    elif args.task == 'show_size':
+        assert args.enc_type == 'obstacle_sizes'
+        visualization_sizes_obstacle(env, model, args.img_size, 5)#todo make also goal if necessary
+    elif args.task == 'save_corners':
+        assert args.enc_type == 'goal' or args.enc_type == 'obstacle'
+        file_corners = data_dir + file_corners_name[args.enc_type]
+        save_corners(env, size_to_use, file_corners, args.img_size, args.enc_type)
 
 
 

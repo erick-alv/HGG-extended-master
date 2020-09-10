@@ -228,7 +228,7 @@ class MatchSampler:
 											 obstacle_radius=achieved_latent_obstacles_sizes[i][0].copy(),
 											 current_pos_batch=achieved_latent_goals[i].copy(),
 											 goal_pos=desired_goals_latents[j].copy(),
-											 range_x=None, range_y=None)
+											 range_x=[-1., 1.], range_y=[-1., 1.])
 					res = distances - achieved_value[i] / (self.args.hgg_L / self.max_dis / (1 - self.args.gamma))
 				else:
 					#(2.22) || g^ ^i - m(s_t^i) || - (1/L) V^(pi)(s_0^i || m(s_t^i))
@@ -240,7 +240,7 @@ class MatchSampler:
 									   obstacle_radius=achieved_latent_obstacles_sizes[i][0].copy(),
 									   current_pos=achieved_latent_goals[i][0].copy(),
 											 goal_pos=initial_goals_latents[j].copy(),
-									   range_x=None, range_y=None)
+									   range_x=[-1., 1.], range_y=[-1., 1.])
 					match_dis = np.min(res) + d_i * self.args.hgg_c
 				else:
 					match_dis = np.min(res)+goal_distance(achieved_pool[i][0], initial_goals[j])*self.args.hgg_c # TODO: distance of initial positions: take l2 norm_as before
