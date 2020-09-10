@@ -110,7 +110,6 @@ def loss_function(recon_x, x, mu, logvar, beta):
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
     #return BCE + beta*KLD
-    print('Beta!! {}'.format(beta))
     return BCE + KLD
 
 # torch.Size([128, 1, img_size, img_size])
@@ -118,8 +117,6 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
     model.train()
     train_loss = 0
     data_set = np.load(train_file)
-    #data_set = data_set.copy()
-    print(train_file)
     
     data_size = len(data_set)
     data_set = np.split(data_set, data_size / batch_size)
@@ -148,9 +145,6 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
 
 def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, beta, epochs=100, no_cuda=False, seed=1,
               log_interval=100, load=False):
-    print("Img_size {}".format(img_size))
-    print("latent_size {}".format(latent_size))
-    print("beta {}".format(beta))
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
 
