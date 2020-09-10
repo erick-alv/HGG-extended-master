@@ -383,7 +383,11 @@ if __name__ == '__main__':
     data_dir = base_data_dir + args.env + '/'
     train_file = data_dir + train_file_name[args.enc_type]
     weights_path = data_dir + vae_sb_weights_file_name[args.enc_type]
-
+    data_set = np.load(train_file)
+    from PIL import Image
+    im = Image.fromarray(data_set[0].astype(np.uint8))
+    im.show()
+    im.close()
 
     train_Vae(batch_size=args.batch_size, img_size=args.img_size, latent_size=args.latent_size,beta=args.beta,
               train_file=train_file, vae_weights_path=weights_path, epochs=args.train_epochs, load=False)
