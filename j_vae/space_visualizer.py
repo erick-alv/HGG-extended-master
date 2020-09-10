@@ -53,7 +53,7 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, us
     for i,p in enumerate(points):
         if enc_type == 'goal':
             env.env.env._move_object(position=p)
-            data_set[i] = take_goal_image(env, img_size, make_table_invisible=True)#todo!!!!!
+            data_set[i] = take_goal_image(env, img_size, make_table_invisible=True)
         elif enc_type == 'obstacle':
             env.env.env._set_position(names_list=['obstacle'], position=p)
             data_set[i] = take_obstacle_image(env, img_size)
@@ -65,7 +65,7 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, us
         row = None
         for c in range(n):
             rcim = data_set[t].copy()
-            t+=1
+            t += 1
             if row is None:
                 row = rcim
             else:
@@ -80,6 +80,7 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, us
     data = torch.from_numpy(data_set).float().to(device)
     data /= 255
     data = data.permute([0, 3, 1, 2])
+    model.eval()
     if not using_sb:
         mu, logvar = model.encode(data.reshape(-1, img_size * img_size * 3))
     else:
@@ -256,13 +257,13 @@ if __name__ == '__main__':
 
     #other arguments for the algorithms
     if args.enc_type == 'goal':
-        size_to_use = 0.15 #
+        size_to_use = 0.015 #
     elif args.enc_type == 'obstacle':
         size_to_use = obstacle_size
 
     if args.enc_type == 'goal' or args.enc_type == 'obstacle':
         visualization_grid_points(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
-                                  enc_type=args.enc_type, select_components=True, comp_ind_1=1, comp_ind_2=0)
+                                  enc_type=args.enc_type, select_components=False)
     else:
         visualization_sizes(env, model, args.img_size, 5)
 
