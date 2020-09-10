@@ -109,14 +109,17 @@ def loss_function(recon_x, x, mu, logvar, beta):
     # Try to adjust
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-    return BCE + beta*KLD
+    #return BCE + beta*KLD
+    print('Beta!! {}'.format(beta))
+    return BCE + KLD
 
 # torch.Size([128, 1, img_size, img_size])
 def train(epoch, model, optimizer, device, log_interval, train_file, batch_size, beta):
     model.train()
     train_loss = 0
     data_set = np.load(train_file)
-    data_set = data_set.copy()
+    #data_set = data_set.copy()
+    print(train_file)
     
     data_size = len(data_set)
     data_set = np.split(data_set, data_size / batch_size)
@@ -145,6 +148,9 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
 
 def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, beta, epochs=100, no_cuda=False, seed=1,
               log_interval=100, load=False):
+    print("Img_size {}".format(img_size))
+    print("latent_size {}".format(latent_size))
+    print("beta {}".format(beta))
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
 
@@ -369,13 +375,17 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--batch_size', help='numer of batch to train', type=np.int32, default=16)
+    parser.add_argument('--batch_size', help='numer of batch to train', type=np.float, default=16.)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=20)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=5)
     parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=2.)
 
     args = parser.parse_args()
+    args.env = 'FetchPushObstacleFetchEnv-v1'
+    args.beta = 1.0
+    args.latent_size = 2
+    args.train_epochs = 15
 
     # get names corresponding folders, and files where to store data
     make_dir(this_file_dir+'results/', clear=False)
@@ -388,6 +398,7 @@ if __name__ == '__main__':
     im = Image.fromarray(data_set[0].astype(np.uint8))
     im.show()
     im.close()
+
 
     train_Vae(batch_size=args.batch_size, img_size=args.img_size, latent_size=args.latent_size,beta=args.beta,
               train_file=train_file, vae_weights_path=weights_path, epochs=args.train_epochs, load=False)
