@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='goal',choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--count', help='number of samples', type=np.int32, default=1280 * 20)
+    parser.add_argument('--count', help='number of samples', type=np.int32, default=1280 * 30)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
     args = parser.parse_args()
 
@@ -90,13 +90,17 @@ if __name__ == "__main__":
                 action = env.action_space.sample()
                 env.step(action)
                 if args.enc_type == 'goal' or args.enc_type == 'goal_sizes':
-                    rgb_array = take_goal_image(env, img_size=args.img_size)
+                    rgb_array = take_goal_image(env, img_size=args.img_size, make_table_invisible=False)
                 else:
-                    rgb_array = take_obstacle_image(env, img_size=args.img_size)
+                    rgb_array = take_obstacle_image(env, img_size=args.img_size, make_table_invisible=False)
                 train_data[i] = rgb_array.copy()
                 i += 1
             else:
                 break
+        '''if i % 300 == 0:
+            im = Image.fromarray(rgb_array)
+            im.show()
+            im.close()'''
 
     '''def show_some_sampled_images():
         n = 8

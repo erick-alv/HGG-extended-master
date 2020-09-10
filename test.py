@@ -35,7 +35,7 @@ class Tester:
 
 
 	def test_acc(self, key, env, agent):
-		if self.args.vae_dist_help or self.args.transform_dense:
+		if (self.args.vae_dist_help or self.args.transform_dense) and self.calls % 40 == 0:
 			eps_idx = [0, 10, 20, self.test_rollouts-1]
 			ex_logs = [LoggerExtra(self.args.logger.my_log_dir, 'results_it_{}_ep_{}_test'.format(self.calls, i))
 					   for i in eps_idx]
@@ -48,7 +48,7 @@ class Tester:
 				ex_logs[i].add_item('LatentDirectDistance')
 				ex_logs[i].add_item('LatentPathDistance')
 				ex_logs[i].add_item('LatentDirectToPrevDistance')
-				
+
 
 			acc_sum, obs = 0.0, []
 			prev_obs = []

@@ -49,10 +49,6 @@ def check_for_collision_batch(g0, g1, o, r_o):
 
 def calculate_distance(obstacle_pos, obstacle_radius, current_pos, goal_pos, range_x, range_y, extra_r=0.001):
     # todo see how to measure distance if route out of range
-    if current_pos[0] > range_x[1] or current_pos[0] < range_x[0] \
-            or current_pos[1] > range_y[1] or current_pos[1] < range_y[0]:
-        return np.array(120.)
-
     obstacle_radius = copy.copy(obstacle_radius) + extra_r
     if not check_for_collision(current_pos, goal_pos, obstacle_pos, obstacle_radius):
         return np.linalg.norm(current_pos - goal_pos)

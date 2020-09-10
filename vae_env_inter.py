@@ -28,8 +28,8 @@ def take_obstacle_image(env, img_size, make_table_invisible=True):
     rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
     return rgb_array
 
-# todo set to false once trained wit visible table
-def take_goal_image(env, img_size, make_table_invisible=True):
+
+def take_goal_image(env, img_size, make_table_invisible=False):
     env.env.env._set_arm_visible(visible=False)
     env.env.env._set_visibility(names_list=['object0'], alpha_val=1.0)
     if not make_table_invisible:
