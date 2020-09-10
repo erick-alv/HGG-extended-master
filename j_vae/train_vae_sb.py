@@ -185,7 +185,7 @@ def train_Vae(batch_size=128, epochs=100, no_cuda=False, seed=1, log_interval=10
         #    save_image(sample.view(64, 3, img_size, img_size),
         #               'results/sample.png')
         if not (epoch % 5) or epoch == 1:
-            test_on_data_set(model, device,'epoch_{}'.format(epoch))
+            test_on_data_set(model, device,'epoch_{}'.format(epoch), latent_size=latent_size)
             print('Saving Progress!')
             torch.save({
                 'epoch': epoch,
@@ -383,7 +383,7 @@ def show_1d_manifold(img_size, no_cuda=False, seed=1):
 
 if __name__ == '__main__':
     print('Train VAE...')
-    train_Vae(batch_size=128/8, epochs=15, load=False)
+    train_Vae(batch_size=128/8, epochs=15, load=False, latent_size=3)
     # test_VAE_SB(device)
     # show_1d_manifold()
     #show_2d_manifold(84)
