@@ -7,19 +7,19 @@ import copy
 from j_vae.common_data import center_obstacle, range_x, range_y, obstacle_size, \
     min_obstacle_size, max_obstacle_size, puck_size, z_table_height
 
-encoding_of = 'obstacle'
+encoding_of = 'goal'
 if encoding_of == 'goal':
-    file = '../data/FetchPushObstacle/goal_set.npy'
+    file = '../data/FetchPushObstacleFetchEnv-v1/goal_set.npy'
 elif encoding_of == 'obstacle':
-    file = '../data/FetchPushObstacle/obstacle_set.npy'
+    file = '../data/FetchPushObstacleFetchEnv-v1/obstacle_set.npy'
 elif encoding_of == 'size':
-    file = '../data/FetchPushObstacle/obstacle_sizes_set.npy'
+    file = '../data/FetchPushObstacleFetchEnv-v1/obstacle_sizes_set.npy'
 elif encoding_of == 'size_and_position':
-    file = '../data/FetchPushObstacle/obstacle_sizes_points_set.npy'
+    file = '../data/FetchPushObstacleFetchEnv-v1/obstacle_sizes_points_set.npy'
 
-points_file = '../data/FetchPushObstacle/points_for_sample.npy'
-points_goal_file = '../data/FetchPushObstacle/goals_for_sample.npy'
-size_file = '../data/FetchPushObstacle/sizes_for_sample.npy'
+points_file = '../data/FetchPushObstacleFetchEnv-v1/points_for_sample.npy'
+points_goal_file = '../data/FetchPushObstacleFetchEnv-v1/goals_for_sample.npy'
+size_file = '../data/FetchPushObstacleFetchEnv-v1/sizes_for_sample.npy'
 
 
 count = 1280*15#25#some more since now more positions exist
@@ -89,7 +89,7 @@ def loop_goals(env):
             env.env.env._move_object(position=p)
         rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
         train_data[i] = rgb_array
-        #if i % 640 == 0:
+        ##if i % 640 == 0:
         #    img = Image.fromarray(rgb_array)
         #    img.show()
         #    img.close()

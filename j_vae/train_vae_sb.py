@@ -10,12 +10,12 @@ from torchvision.utils import save_image
 doing_goal = True
 
 if doing_goal:
-    train_file = '../data/FetchPushObstacle/goal_set.npy'
-    n_path = '../data/FetchPushObstacle/vae_sb_model_goal'
+    train_file = '../data/FetchPushObstacleFetchEnv-v1/goal_set.npy'
+    n_path = '../data/FetchPushObstacleFetchEnv-v1/vae_sb_model_goal'
 
 else:
-    train_file = '../data/FetchPushObstacle/obstacle_set.npy'
-    n_path = '../data/FetchPushObstacle/vae_sb_model_obstacle'
+    train_file = '../data/FetchPushObstacleFetchEnv-v1/obstacle_set.npy'
+    n_path = '../data/FetchPushObstacleFetchEnv-v1/vae_sb_model_obstacle'
 
 def spatial_broadcast(z, width, height):
     z_b = np.tile(A=z, reps=(height, width, 1))
