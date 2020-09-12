@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='goal',choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--count', help='number of samples', type=np.int32, default=1280 * 20)
+    parser.add_argument('--count', help='number of samples', type=np.int32, default=1280 * 30)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
     args = parser.parse_args()
 
@@ -70,13 +70,13 @@ if __name__ == "__main__":
     make_dir(env_data_dir, clear=False)
     data_file = env_data_dir + train_file_name[args.enc_type]
 
-    '''#load environment
+    #load environment
     env = make_env(args)
     #setup env(change generation region; move other objects(just leave those we need)??)
     for func in gen_setup_env_ops[args.env]:
         func(env, args)
 
-    #loop through(moving object and making
+    #loop through(moving object and making)
     train_data = np.empty([args.count, args.img_size, args.img_size, 3])
     i = 0
     while i < args.count:
@@ -84,7 +84,7 @@ if __name__ == "__main__":
         for func in after_env_reset_ops[args.env]:
             func(env, args)
         if args.enc_type == 'goal' or args.enc_type == 'goal_sizes':
-            rgb_array = take_goal_image(env, img_size=args.img_size)
+            rgb_array = take_goal_image(env, img_size=args.img_size, make_table_invisible=False)
         else:
             rgb_array = take_obstacle_image(env, img_size=args.img_size)
         train_data[i] = rgb_array.copy()
@@ -102,17 +102,18 @@ if __name__ == "__main__":
                 i += 1
             else:
                 break
-        #if i % 300 == 0:
-        #    im = Image.fromarray(rgb_array)
-        #    im.show()
-        #    im.close()
+            #if i % 10 == 0:
+            #    im = Image.fromarray(rgb_array)
+            #    im.show()
+            #    im.close()
     #store files
-    np.save(data_file, train_data)'''
+    np.save(data_file, train_data)
 
-    train_data = np.load(data_file)
+
+    '''train_data = np.load(data_file)
     all_idx = np.arange(len(train_data)).tolist()
     def show_some_sampled_images():
-        n = 15
+        n = 10
         a = None
         for i in range(n):
             b = None
@@ -131,5 +132,5 @@ if __name__ == "__main__":
         img = Image.fromarray(a.astype(np.uint8))
         img.show()
         img.close()
-    for _ in range(6):
-        show_some_sampled_images()
+    for _ in range(5):
+        show_some_sampled_images()'''
