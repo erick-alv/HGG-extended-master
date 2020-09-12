@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='goal',choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--count', help='number of samples', type=np.int32, default=1280 * 30)
+    parser.add_argument('--count', help='number of samples', type=np.int32, default=1280 * 20)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
     args = parser.parse_args()
 
