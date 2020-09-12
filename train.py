@@ -1,6 +1,7 @@
 import numpy as np
 import time
 from common import get_args, experiment_setup
+from hindsight_goals_visualizer import show_points
 from copy import deepcopy
 import pickle
 import tensorflow as tf
@@ -79,10 +80,14 @@ if __name__=='__main__':
 		# Plot current goal distribution for visualization (G-HGG only)
 		if args.learn == 'hgg' and goal_list and args.show_goals != 0:
 			name = "{}goals_{}".format(args.logger.my_log_dir, epoch)
-			if args.graph:
-				learner.sampler.graph.plot_graph(goals=goal_list, save_path=name)
+			'''if args.graph:
+				learner.sampler.graph.plot_graph(goals=goal_list, save_path=name)'''
 			with open('{}.pkl'.format(name), 'wb') as file:
 					pickle.dump(goal_list, file)
+			if args.vae_dist_help:
+				show_points(np.array(goal_list), name, 'latent')
+			else:
+				show_points(np.array(goal_list), name, 'real')
 
 		tester.epoch_summary()
 

@@ -49,45 +49,21 @@ class TrajectoryPool_VAEs(TrajectoryPool):
 		self.latent_obstacles_sizes = []
 
 
-	def insert(self, trajectory, init_state, trajectory_goals_images, trajectory_obstacle_images,
-			   trajectory_init_states_images):
+	def insert(self, trajectory, init_state, achieved_trajectory_goals_latents,
+			   achieved_trajectory_init_goals_latents, achieved_trajectory_obstacle_latents,
+			   achieved_trajectory_obstacle_latents_sizes):
 		super(TrajectoryPool_VAEs, self).insert(trajectory, init_state)
 		self.counter -= 1
-		#first transform them in latent_representation
-		lg, lg_var = transform_image_to_latent_batch_torch(trajectory_goals_images.copy(), self.args.vae_model_goal,
-														   self.args.img_size, self.args.device)
-		del lg_var
-		lg = torch_goal_transformation(lg, self.args.device)
-		lg = lg.detach().cpu().numpy()
-
-		lg_init, lg_init_var = transform_image_to_latent_batch_torch(np.array([trajectory_init_states_images]).copy(),
-																	 self.args.vae_model_goal,
-																	 self.args.img_size, self.args.device)
-		del lg_init_var
-		lg_init = torch_goal_transformation(lg_init, self.args.device)[0]
-		lg_init = lg_init.detach().cpu().numpy()
-
-		lo, lo_var = transform_image_to_latent_batch_torch(trajectory_obstacle_images.copy(), self.args.vae_model_obstacle,
-												   self.args.img_size, self.args.device)
-		del lo_var
-		lo = torch_obstacle_transformation(lo, self.args.device)
-		lo = lo.detach().cpu().numpy()
-		lo_s, lo_s_var = transform_image_to_latent_batch_torch(trajectory_obstacle_images.copy(), self.args.vae_model_size,
-												   self.args.img_size, self.args.device)
-		del lo_s_var
-		lo_s = torch_get_size_in_space(lo_s, self.args.device)
-		lo_s = lo_s.detach().cpu().numpy()
-
 		if self.counter<self.length:
-			self.latent_goals.append(lg)
-			self.latent_goals_init.append(lg_init)
-			self.latent_obstacles.append(lo)
-			self.latent_obstacles_sizes.append(lo_s)
+			self.latent_goals.append(achieved_trajectory_goals_latents)
+			self.latent_goals_init.append(achieved_trajectory_init_goals_latents)
+			self.latent_obstacles.append(achieved_trajectory_obstacle_latents)
+			self.latent_obstacles_sizes.append(achieved_trajectory_obstacle_latents_sizes)
 		else:
-			self.latent_goals[self.counter % self.length] = lg
-			self.latent_goals_init[self.counter % self.length] = lg_init
-			self.latent_obstacles[self.counter % self.length] = lo
-			self.latent_obstacles_sizes[self.counter % self.length] = lo_s
+			self.latent_goals[self.counter % self.length] = achieved_trajectory_goals_latents
+			self.latent_goals_init[self.counter % self.length] = achieved_trajectory_init_goals_latents
+			self.latent_obstacles[self.counter % self.length] = achieved_trajectory_obstacle_latents
+			self.latent_obstacles_sizes[self.counter % self.length] = achieved_trajectory_obstacle_latents_sizes
 		self.counter += 1
 
 	def pad(self):
@@ -441,8 +417,8 @@ class HGGLearner_VAEs(HGGLearner):
 		initial_goals = []
 		desired_goals = []
 		goal_list = []
-		initial_goals_images = []
-		desired_goals_images = []
+		initial_goals_latents= []
+		desired_goals_latents = []
 
 		# get initial position and goal from environment for each episode
 		for i in range(args.episodes):
@@ -451,46 +427,23 @@ class HGGLearner_VAEs(HGGLearner):
 			goal_d = obs['desired_goal'].copy()
 			initial_goals.append(goal_a.copy())
 			desired_goals.append(goal_d.copy())
-			init_image = take_goal_image(self.env_List[i], args.img_size)
-			initial_goals_images.append(init_image.copy())
-			self.goal_env_List[i].env.env._move_object(position=goal_d)
-			goal_image = take_goal_image(self.goal_env_List[i], args.img_size)
-			desired_goals_images.append(goal_image.copy())
-		## to debug
-		#create_rollout_video(initial_goals_images, args=args,
-		#					 filename='init_goals_it{}'.format(self.learn_calls))
-		#create_rollout_video(desired_goals_images, args=args,
-		#					 filename='desired_goals_it{}'.format(self.learn_calls))
+			initial_goals_latents.append(obs['achieved_goal_latent'].copy())
+			desired_goals_latents.append(obs['desired_goal_latent'].copy())
 
-		# if HGG has not been stopped yet, perform crucial HGG update step here
-		# by updating the sampler, a set of intermediate goals is provided and stored in sampler
-		# based on distance to target goal distribution, similarity of initial states and expected reward (see paper)
-		# by bipartite matching
+
 		if not self.stop:
-			if self.learn_calls > 0 :#TODO why throws CUDNN an error if transformation is done here at first call before the other??
-				ims = np.array(desired_goals_images)
-				desired_latents, var = transform_image_to_latent_batch_torch(ims.copy(),
-																			 args.vae_model_goal,
-																			 args.img_size, args.device)
-				del var
-				desired_latents = torch_goal_transformation(desired_latents, self.args.device)
-				desired_latents = desired_latents.detach().cpu().numpy()
-
-				init_latents, var = transform_image_to_latent_batch_torch(np.array(initial_goals_images),
-																		  self.args.vae_model_goal,
-																		 self.args.img_size, self.args.device)
-				del var
-				init_latents = torch_goal_transformation(init_latents, self.args.device)
-				init_latents = init_latents.detach().cpu().numpy()
-				self.sampler.update(initial_goals, desired_goals, init_latents,  desired_latents)
+			if self.learn_calls > 0:
+				self.sampler.update(initial_goals, desired_goals, initial_goals_latents, desired_goals_latents)
 			else:
 				self.sampler.update(initial_goals, desired_goals, None, None)
 
 		achieved_trajectories = []
 		achieved_init_states = []
-		trajectory_goals_images = []
-		trajectory_obstacle_images = []
-		trajectory_init_states_images = []
+		achieved_trajectory_goals_latents = []
+		achieved_trajectory_init_goals_latents = []
+		achieved_trajectory_obstacle_latents = []
+		achieved_trajectory_obstacle_latents_sizes = []
+
 
 		explore_goals = []
 		test_goals = []
@@ -521,8 +474,9 @@ class HGGLearner_VAEs(HGGLearner):
 			obs = self.env_List[i].get_obs()
 			current = Trajectory(obs)
 			trajectory = [obs['achieved_goal'].copy()]
-			trajectory_images = [take_goal_image(self.env_List[i], args.img_size)]
-			trajectory_obstacles = [take_obstacle_image(self.env_List[i], args.img_size)]
+			trajectory_goals_latents = [obs['achieved_goal_latent'].copy()]
+			trajectory_obstacles_latents = [obs['obstacle_latent'].copy()]
+			trajectory_obstacles_latents_sizes = [obs['obstacle_size_latent'].copy()]
 			## just for video
 			tr_env_images = [take_env_image(self.env_List[i], args.img_size)]
 			##
@@ -531,8 +485,9 @@ class HGGLearner_VAEs(HGGLearner):
 				action = agent.step(obs, explore=True)
 				obs, reward, done, info = self.env_List[i].step(action)
 				trajectory.append(obs['achieved_goal'].copy())
-				trajectory_images.append(take_goal_image(self.env_List[i], args.img_size))
-				trajectory_obstacles.append(take_obstacle_image(self.env_List[i], args.img_size))
+				trajectory_goals_latents.append(obs['achieved_goal_latent'].copy())
+				trajectory_obstacles_latents.append(obs['obstacle_latent'].copy())
+				trajectory_obstacles_latents_sizes.append(obs['obstacle_size_latent'].copy())
 				## just for video
 				tr_env_images.append(take_env_image(self.env_List[i], args.img_size))
 				##
@@ -555,9 +510,12 @@ class HGGLearner_VAEs(HGGLearner):
 			##
 			achieved_trajectories.append(np.array(trajectory))
 			achieved_init_states.append(init_state)
-			trajectory_goals_images.append(np.array(trajectory_images))
-			trajectory_obstacle_images.append(np.array(trajectory_obstacles))
-			trajectory_init_states_images.append(trajectory_images[0].copy())
+
+			achieved_trajectory_goals_latents.append(np.array(trajectory_goals_latents))
+			achieved_trajectory_init_goals_latents.append(trajectory_goals_latents[0].copy())
+			achieved_trajectory_obstacle_latents.append(np.array(trajectory_obstacles_latents))
+			achieved_trajectory_obstacle_latents_sizes.append(np.array(trajectory_obstacles_latents_sizes))
+
 			# Trajectory is stored in replay buffer, replay buffer can be normal or EBP
 			buffer.store_trajectory(current)
 			agent.normalizer_update(buffer.sample_batch())
@@ -577,9 +535,11 @@ class HGGLearner_VAEs(HGGLearner):
 				selection_trajectory_idx[i] = True
 		for idx in selection_trajectory_idx.keys():
 			self.achieved_trajectory_pool.insert(achieved_trajectories[idx].copy(), achieved_init_states[idx].copy(),
-												 trajectory_goals_images[idx].copy(),
-												 trajectory_obstacle_images[idx].copy(),
-												 trajectory_init_states_images[idx].copy())
+												 achieved_trajectory_goals_latents[idx].copy(),
+												 achieved_trajectory_init_goals_latents[idx].copy(),
+												 achieved_trajectory_obstacle_latents[idx].copy(),
+												 achieved_trajectory_obstacle_latents_sizes[idx].copy())
+
 
 		# unless in first call:
 		# Check which of the explore goals are inside the target goal space

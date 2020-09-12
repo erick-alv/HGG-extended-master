@@ -6,19 +6,23 @@ from envs import make_env, clip_return_range, Robotics_envs_id
 from utils.os_utils import make_dir
 from vae_env_inter import take_env_image, take_obstacle_image, take_goal_image
 from PIL import Image
-from j_vae.common_data import train_file_name
+from j_vae.common_data import train_file_name, puck_size, obstacle_size
 
 
 
 
 #make range biiger than table so there are samples falling and in other positions
 extend_region_parameters_goal = {'FetchPushObstacleFetchEnv-v1':
-                                     {'center':np.array([1.3, 0.75, 0.425]), 'range':0.32}
+                                     {'center':np.array([1.3, 0.75, 0.425]), 'range':0.25}
                             }
 
 def extend_sample_region_goal(env, args):
     env.object_center = extend_region_parameters_goal[args.env]['center']
-    env.obj_range = extend_region_parameters_goal[args.env]['range']
+    if args.enc_type == 'goal' or args.enc_type == 'goal_sizes':
+        env.obj_range = extend_region_parameters_goal[args.env]['range']-puck_size
+    else:
+        env.obj_range = extend_region_parameters_goal[args.env]['range']-obstacle_size
+
 
 def move_other_objects_away(env, args):
     if args.enc_type == 'goal' or args.enc_type == 'goal_sizes':
@@ -87,8 +91,9 @@ if __name__ == "__main__":
         i +=1
         for _ in range(3):
             if i < args.count:
-                action = env.action_space.sample()
-                env.step(action)
+                for a_t in range(25):
+                    action = env.action_space.sample()
+                    env.step(action)
                 if args.enc_type == 'goal' or args.enc_type == 'goal_sizes':
                     rgb_array = take_goal_image(env, img_size=args.img_size, make_table_invisible=False)
                 else:

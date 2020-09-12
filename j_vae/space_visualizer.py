@@ -264,7 +264,7 @@ if __name__ == '__main__':
 
     #other arguments for the algorithms
     if args.enc_type == 'goal':
-        size_to_use = 0.015 #
+        size_to_use = puck_size #
     elif args.enc_type == 'obstacle':
         size_to_use = obstacle_size
 

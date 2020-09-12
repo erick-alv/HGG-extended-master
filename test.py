@@ -94,8 +94,6 @@ class Tester:
 			for i, t in enumerate(eps_idx):
 				create_rollout_video(np.array(env_images[i]), args=self.args,
 									 filename='rollout_it_{}_ep_{}_test'.format(self.calls, t))
-
-
 			
 		else:
 			acc_sum, obs = 0.0, []
@@ -121,8 +119,8 @@ class Tester:
 		acc = acc_sum/self.test_rollouts
 		self.acc_record[key].append((steps, acc, minDist, maxDist))
 		self.args.logger.add_record('Success', acc)
-		self.args.logger.add_record('MaxDistance', minDist)
-		self.args.logger.add_record('MinDistance', maxDist)
+		self.args.logger.add_record('MaxDistance', maxDist)
+		self.args.logger.add_record('MinDistance', minDist)
 		self.calls += 1
 
 	def cycle_summary(self):

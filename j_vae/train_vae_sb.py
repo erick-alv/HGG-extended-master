@@ -109,8 +109,7 @@ def loss_function(recon_x, x, mu, logvar, beta):
     # Try to adjust
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-    #return BCE + beta*KLD
-    return BCE + KLD
+    return BCE + beta*KLD
 
 # torch.Size([128, 1, img_size, img_size])
 def train(epoch, model, optimizer, device, log_interval, train_file, batch_size, beta):
@@ -376,10 +375,6 @@ if __name__ == '__main__':
     parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=2.)
 
     args = parser.parse_args()
-    args.env = 'FetchPushObstacleFetchEnv-v1'
-    args.beta = 1.0
-    args.latent_size = 2
-    args.train_epochs = 15
 
     # get names corresponding folders, and files where to store data
     make_dir(this_file_dir+'results/', clear=False)

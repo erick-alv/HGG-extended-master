@@ -29,11 +29,14 @@ def take_obstacle_image(env, img_size, make_table_invisible=True):
     return rgb_array
 
 
-def take_goal_image(env, img_size, make_table_invisible=False):
+def take_goal_image(env, img_size, make_table_invisible=False, make_walls_invisible=True):
     env.env.env._set_arm_visible(visible=False)
     env.env.env._set_visibility(names_list=['object0'], alpha_val=1.0)
     if not make_table_invisible:
         env.env.env._set_visibility(names_list=['table0'], alpha_val=1.0)
+    if not make_walls_invisible:
+        if 'wall1' in env.env.env.sim.model.body_names:
+            env.env.env._set_visibility(names_list=['wall1', 'wall2', 'wall3', 'wall4'], alpha_val=1.0)
     rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
     return rgb_array
 

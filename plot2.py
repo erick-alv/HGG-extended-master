@@ -83,7 +83,7 @@ if __name__ == "__main__":
         plt.fill_between(xs[0], np.nanpercentile(ys, 25, axis=0), np.nanpercentile(ys, 75, axis=0), alpha=0.25)
 
     plt.title(env_id)
-    plt.xlabel('Iteration')
+    plt.xlabel('Step')
     #plt.ylabel('Median Success Rate')
     plt.legend(loc=location)
 

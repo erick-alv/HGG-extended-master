@@ -60,7 +60,8 @@ class VanillaGoalEnv():
 		}
 
 	def get_obs(self):
-		if hasattr(self.args, 'transform_dense') and self.args.transform_dense:
+		if (hasattr(self.args, 'transform_dense') and self.args.transform_dense) or \
+				(hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help):
 			obs = self.env.env._get_obs()
 			obs['desired_goal_latent'] = self.desired_goal_latent.copy()
 			obs['achieved_goal_latent'] = self.achieved_goal_latent.copy()
@@ -73,16 +74,18 @@ class VanillaGoalEnv():
 	def step(self, action):
 		# imaginary infinity horizon (without done signal)
 		obs, reward, done, info = self.env.step(action)
-		if hasattr(self.args, 'transform_dense') and self.args.transform_dense:
+		if (hasattr(self.args, 'transform_dense') and self.args.transform_dense) or \
+				(hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help):
 			achieved_goal_image = take_goal_image(self, self.args.img_size)
 			latents = goal_latent_from_images(np.array([achieved_goal_image]), self.args)
 			self.achieved_goal_latent = latents[0].copy()
 
-			reward = -self.args.compute_reward_dense(self.obstacle_latent.copy(), self.obstacle_size_latent.copy(),
-							   self.achieved_goal_latent.copy(), self.desired_goal_latent.copy(),
-													 range_x=[-1., 1.], range_y=[-1., 1.])
-			if not np.isscalar(reward):
-				reward = reward[0]
+			if hasattr(self.args, 'transform_dense') and self.args.transform_dense:
+				reward = -self.args.compute_reward_dense(self.obstacle_latent.copy(), self.obstacle_size_latent.copy(),
+								   self.achieved_goal_latent.copy(), self.desired_goal_latent.copy(),
+														 range_x=[-1., 1.], range_y=[-1., 1.])
+				if not np.isscalar(reward):
+					reward = reward[0]
 			info = self.process_info(obs, reward, info)
 
 		else:
@@ -93,7 +96,8 @@ class VanillaGoalEnv():
 		return obs, reward, False, info
 
 	def reset_ep(self):
-		if hasattr(self.args, 'transform_dense') and self.args.transform_dense:
+		if (hasattr(self.args, 'transform_dense') and self.args.transform_dense) or \
+				(hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help):
 			obs = self.env.env._get_obs()
 			self.env.env._move_object(position=obs['desired_goal'].copy())
 			desired_goal_image = take_goal_image(self, self.args.img_size)
@@ -137,7 +141,8 @@ class VanillaGoalEnv():
 	@goal.setter
 	def goal(self, value):
 		self.env.env.goal = value.copy()
-		if hasattr(self.args, 'transform_dense') and self.args.transform_dense:
+		if (hasattr(self.args, 'transform_dense') and self.args.transform_dense) or \
+				(hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help):
 			obs = self.env.env._get_obs()
 			self.env.env._move_object(position=value.copy())
 			desired_goal_image = take_goal_image(self, self.args.img_size)

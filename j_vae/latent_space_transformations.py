@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from j_vae.common_data import obstacle_size, train_file_name, vae_sb_weights_file_name, file_corners_name
+from j_vae.common_data import obstacle_size, puck_size, train_file_name, vae_sb_weights_file_name, file_corners_name
 
 def calculate_angle(model, corners_file, ind_1, ind_2):
     corner_imgs = np.load(corners_file)
@@ -40,10 +40,15 @@ def interval_to_minusone_one(a, b):
 table_map_x = interval_to_minusone_one(1.05, 1.55)
 table_map_y = interval_to_minusone_one(0.5, 1.0)
 
-g_x_min = table_map_x(1.05+0.015)
+'''g_x_min = table_map_x(1.05+0.015)
 g_x_max = table_map_x(1.55-0.015)
 g_y_min = table_map_y(0.5+0.015)
-g_y_max = table_map_y(1.0-0.015)
+g_y_max = table_map_y(1.0-0.015)'''
+
+g_x_min = table_map_x(1.05+puck_size)
+g_x_max = table_map_x(1.55-puck_size)
+g_y_min = table_map_y(0.5+puck_size)
+g_y_max = table_map_y(1.0-puck_size)
 
 o_x_min = table_map_x(1.05+obstacle_size)
 o_x_max = table_map_x(1.55-obstacle_size)
