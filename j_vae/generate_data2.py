@@ -102,18 +102,24 @@ if __name__ == "__main__":
                 i += 1
             else:
                 break
-        '''if i % 300 == 0:
-            im = Image.fromarray(rgb_array)
-            im.show()
-            im.close()'''
+        #if i % 300 == 0:
+        #    im = Image.fromarray(rgb_array)
+        #    im.show()
+        #    im.close()
+    #store files
+    np.save(data_file, train_data)
 
-    '''def show_some_sampled_images():
-        n = 8
+    '''train_data = np.load(data_file)
+    all_idx = np.arange(len(train_data)).tolist()
+    def show_some_sampled_images():
+        n = 15
         a = None
         for i in range(n):
             b = None
             for j in range(n):
-                j_im = train_data[np.random.randint(low=0, high=args.count)].copy()
+                id = np.random.choice(all_idx, size=1)[0]
+                all_idx.remove(id)
+                j_im = train_data[id].copy()
                 if b is None:
                     b = j_im.copy()
                 else:
@@ -125,7 +131,5 @@ if __name__ == "__main__":
         img = Image.fromarray(a.astype(np.uint8))
         img.show()
         img.close()
-    show_some_sampled_images()'''
-
-    #store files
-    np.save(data_file, train_data)
+    for _ in range(6):
+        show_some_sampled_images()'''
