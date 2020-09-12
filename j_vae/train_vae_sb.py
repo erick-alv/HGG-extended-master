@@ -121,7 +121,7 @@ def loss_function(recon_x, x, mu, logvar):
     # Try to adjust
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-    return BCE + 1.5*KLD
+    return BCE + KLD
 
 # torch.Size([128, 1, img_size, img_size])
 def train(epoch, model, optimizer, device, log_interval, batch_size):
