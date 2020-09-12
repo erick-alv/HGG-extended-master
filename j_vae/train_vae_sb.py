@@ -121,7 +121,7 @@ def loss_function(recon_x, x, mu, logvar):
     # Try to adjust
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-    return BCE + 2.0*KLD
+    return BCE + 1.5*KLD
 
 # torch.Size([128, 1, img_size, img_size])
 def train(epoch, model, optimizer, device, log_interval, batch_size):
@@ -383,7 +383,7 @@ def show_1d_manifold(img_size, no_cuda=False, seed=1):
 
 if __name__ == '__main__':
     print('Train VAE...')
-    train_Vae(batch_size=32, epochs=25, load=False, latent_size=5)
+    train_Vae(batch_size=32, epochs=15, load=False, latent_size=3)
     # test_VAE_SB(device)
     # show_1d_manifold()
     #show_2d_manifold(84)
