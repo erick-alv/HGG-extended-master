@@ -97,9 +97,9 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
 
 
     if enc_type == 'goal':
-        #rm = create_rotation_matrix(angle_goal)
-        #mu = rotate_list_of_points(mu, rm)
-        #mu = map_points(mu, goal_map_x, goal_map_y)
+        rm = create_rotation_matrix(angle_goal)
+        mu = rotate_list_of_points(mu, rm)
+        mu = map_points(mu, goal_map_x, goal_map_y)
         pass
     elif enc_type == 'obstacle':
         #for i, p in enumerate(mu):
@@ -151,13 +151,25 @@ def save_corners(env, size_to_use, file_corners, img_size, enc_type):
     for i, p in enumerate(points):
         if enc_type == 'goal':
             env.env.env._move_object(position=p)
-            data_set[i] = take_goal_image(env, img_size)
+            data_set[i] = take_goal_image(env, img_size, make_table_invisible=False)
         elif enc_type == 'obstacle':
             env.env.env._set_position(names_list=['obstacle'], position=p)
             data_set[i] = take_obstacle_image(env, img_size)
         else:
             raise Exception('Not supported enc_type')
     np.save(file_corners, data_set)
+    all_array = None
+    t = 0
+    for r in range(len(points)):
+        rcim = data_set[t].copy()
+        t += 1
+        if all_array is None:
+            all_array = rcim
+        else:
+            all_array = np.concatenate([all_array.copy(), rcim], axis=1)
+    all_ims = Image.fromarray(all_array.astype(np.uint8))
+    all_ims.show()
+    all_ims.close()
 
 
 def visualization_sizes_obstacle(env, model, img_size, n):

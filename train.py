@@ -85,7 +85,8 @@ if __name__=='__main__':
 			with open('{}.pkl'.format(name), 'wb') as file:
 					pickle.dump(goal_list, file)
 			if args.vae_dist_help:
-				show_points(np.array(goal_list), name, 'latent')
+				#!!!!!!!!!! currently the goals are still in real space
+				show_points(np.array(goal_list), name, 'real')
 			else:
 				show_points(np.array(goal_list), name, 'real')
 

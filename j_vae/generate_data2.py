@@ -70,7 +70,7 @@ if __name__ == "__main__":
     make_dir(env_data_dir, clear=False)
     data_file = env_data_dir + train_file_name[args.enc_type]
 
-    #load environment
+    '''#load environment
     env = make_env(args)
     #setup env(change generation region; move other objects(just leave those we need)??)
     for func in gen_setup_env_ops[args.env]:
@@ -107,9 +107,9 @@ if __name__ == "__main__":
         #    im.show()
         #    im.close()
     #store files
-    np.save(data_file, train_data)
+    np.save(data_file, train_data)'''
 
-    '''train_data = np.load(data_file)
+    train_data = np.load(data_file)
     all_idx = np.arange(len(train_data)).tolist()
     def show_some_sampled_images():
         n = 15
@@ -132,4 +132,4 @@ if __name__ == "__main__":
         img.show()
         img.close()
     for _ in range(6):
-        show_some_sampled_images()'''
+        show_some_sampled_images()
