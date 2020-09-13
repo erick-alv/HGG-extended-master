@@ -5,7 +5,8 @@ import numpy as np
 
 from j_vae.generate_vae_data import random_pos_inside, size_file,random_size_at,generate_points
 from j_vae.common_data import  min_obstacle_size, max_obstacle_size, range_x, range_y, obstacle_size, \
-    puck_size, z_table_height, center_obstacle, train_file_name, vae_sb_weights_file_name, file_corners_name
+    puck_size, z_table_height, center_obstacle, train_file_name, vae_sb_weights_file_name, file_corners_name,\
+    file_center_name
 import torch
 import matplotlib.pyplot as plt
 from j_vae.train_vae_sb import load_Vae as load_Vae_SB
@@ -97,9 +98,12 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
 
 
     if enc_type == 'goal':
-        #rm = create_rotation_matrix(angle_goal)
-        #mu = rotate_list_of_points(mu, rm)
-        #mu = map_points(mu, goal_map_x, goal_map_y)
+        #from j_vae.latent_space_transformations import centering_vector_goal
+        #cv = np.array([centering_vector_goal[ind_1], centering_vector_goal[ind_2]])
+        #mu = mu + cv
+        rm = create_rotation_matrix(angle_goal)
+        mu = rotate_list_of_points(mu, rm)
+        mu = map_points(mu, goal_map_x, goal_map_y)
         pass
     elif enc_type == 'obstacle':
         #for i, p in enumerate(mu):
@@ -171,6 +175,30 @@ def save_corners(env, size_to_use, file_corners, img_size, enc_type):
     all_ims.show()
     all_ims.close()
 
+def save_center(env, size_to_use, file_corners, img_size, enc_type):
+    points = generate_points(range_x=range_x, range_y=range_y, z=z_table_height, total=3,
+                             object_x_y_size=[size_to_use, size_to_use])
+
+    # sample images
+    data_set = np.empty([1, img_size, img_size, 3])
+    # move other objects to plaecs they do not disturb
+    if enc_type == 'goal':
+        env.env.env._set_position(names_list=['obstacle'], position=[2., 2., 0.4])
+    elif enc_type == 'obstacle':
+        env.env.env._move_object(position=[2., 2., 0.4])
+    else:
+        raise Exception('Not supported enc_type')
+
+    if enc_type == 'goal':
+        env.env.env._move_object(position=points[4])
+        data_set[0] = take_goal_image(env, img_size, make_table_invisible=False)
+    elif enc_type == 'obstacle':
+        env.env.env._set_position(names_list=['obstacle'], position=points[4])
+        data_set[0] = take_obstacle_image(env, img_size)
+    else:
+        raise Exception('Not supported enc_type')
+    np.save(file_corners, data_set)
+
 
 def visualization_sizes_obstacle(env, model, img_size, n):
     #sizes = np.linspace(min_obstacle_size, max_obstacle_size, num=n)
@@ -229,7 +257,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', help='gym env id', type=str, default='FetchReach-v1', required=True)
     parser.add_argument('--task', help='the type of attribute that we want to generate/encode', type=str,
-                        default='show_space', choices=['show_space', 'save_corners', 'show_size'], required=True)
+                        default='show_space', choices=['show_space', 'save_corners', 'save_center',
+                                                       'show_size'], required=True)
     args, _ = parser.parse_known_args()
     if args.env == 'HandReach-v0':
         parser.add_argument('--goal', help='method of goal generation', type=str, default='reach',
@@ -291,6 +320,10 @@ if __name__ == '__main__':
         assert args.enc_type == 'goal' or args.enc_type == 'obstacle'
         file_corners = data_dir + file_corners_name[args.enc_type]
         save_corners(env, size_to_use, file_corners, args.img_size, args.enc_type)
+    elif args.task == 'save_center':
+        assert args.enc_type == 'goal' or args.enc_type == 'obstacle'
+        file_center = data_dir + file_center_name[args.enc_type]
+        save_center(env, size_to_use, file_center, args.img_size, args.enc_type)
 
 
 

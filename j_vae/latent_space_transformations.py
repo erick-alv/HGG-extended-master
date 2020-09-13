@@ -1,8 +1,9 @@
 import numpy as np
 import torch
-from j_vae.common_data import obstacle_size, puck_size, train_file_name, vae_sb_weights_file_name, file_corners_name
+from j_vae.common_data import obstacle_size, puck_size, train_file_name, vae_sb_weights_file_name, file_corners_name, \
+    file_center_name
 
-def calculate_angle(model, corners_file, ind_1, ind_2):
+def calculate_angle(model, corners_file,  enc_type, ind_1, ind_2):
     corner_imgs = np.load(corners_file)
 
     cuda = torch.cuda.is_available()
@@ -14,6 +15,8 @@ def calculate_angle(model, corners_file, ind_1, ind_2):
     data = data.permute([0, 3, 1, 2])
     mu, logvar = model.encode(data)
     mu = mu.detach().cpu().numpy()
+    if enc_type == 'goal' and do_center_goal:
+        mu = mu + centering_vector_goal
     #calculates angles from center of coordinate system to corners
     goal_angles = np.arctan2(mu[:, ind_2], mu[:, ind_1]) * 180 / np.pi #to degree
     goal_angles = goal_angles % 360
@@ -23,10 +26,31 @@ def calculate_angle(model, corners_file, ind_1, ind_2):
     to_rotate = to_rotate % 360
     print(np.mean(to_rotate))
 
-angle_goal = 127.0196
+#angle_goal = 303.796
+angle_goal = 305.74253
 
 
 angle_obstacle = 35.14
+
+do_center_goal = False
+centering_vector_goal = np.array([-0.67377424, 0.10919745,  3.1180222])
+
+def calculate_center_vec(model, center_file):
+    corner_imgs = np.load(center_file)
+
+    cuda = torch.cuda.is_available()
+    torch.manual_seed(1)
+    device = torch.device("cuda" if cuda else "cpu")
+
+    data = torch.from_numpy(corner_imgs).float().to(device)
+    data /= 255
+    data = data.permute([0, 3, 1, 2])
+    mu, logvar = model.encode(data)
+    mu = mu.detach().cpu().numpy()
+    # calculates angles from center of coordinate system to corners
+    centering_vector = 0 - mu
+    print(centering_vector[0])
+
 
 
 def interval_map_function(a,b,c, d):
@@ -55,8 +79,8 @@ o_x_max = table_map_x(1.55-obstacle_size)
 o_y_min = table_map_y(0.5+obstacle_size)
 o_y_max = table_map_y(1.0-obstacle_size)
 
-goal_map_x = interval_map_function(-1.40278, 1.7775, g_x_min, g_x_max)
-goal_map_y = interval_map_function(-1.8495, 1.152856, g_y_min, g_y_max)
+goal_map_x = interval_map_function(-1.229, 1.87436, g_x_min, g_x_max)
+goal_map_y = interval_map_function(-1.9316, 0.72467, g_y_min, g_y_max)
 
 obstacle_map_x = interval_map_function(-1.3196, 1.917, o_x_min, o_x_max)
 obstacle_map_y = interval_map_function(-1.32474, 1.308284, o_y_min, o_y_max)
@@ -92,6 +116,9 @@ def map_points(points, mapper_x, mapper_y):
 
 
 def goal_transformation(points):
+    if do_center_goal:
+        for i, p in enumerate(points):
+            points[i] = points[i] + centering_vector_goal
     m = create_rotation_matrix(angle_goal)
     rotated = rotate_list_of_points(points, m)
     return map_points(rotated, goal_map_x, goal_map_y)
@@ -99,6 +126,8 @@ def goal_transformation(points):
 
 def torch_goal_transformation(batch_p, device, ind_1, ind_2):
     assert ind_1 != ind_2
+    if do_center_goal:
+        batch_p = batch_p + centering_vector_goal
     batch_p = torch.cat([batch_p[:, ind_1].unsqueeze(axis=1),batch_p[:, ind_2].unsqueeze(axis=1)], axis=1)
     theta = np.radians(angle_goal)
     r = np.array([[np.cos(theta), -np.sin(theta)],
@@ -257,7 +286,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--task', help='the type of attribute that we want to generate/encode', type=str,
                         default='analyze_components', choices=['analyze_components','measure_degree',
-                                                               'print_min_max'],
+                                                               'print_min_max', 'calc_center_vector'],
                         required=True)
     args, _ = parser.parse_known_args()
     if args.task == 'measure_degree':
@@ -297,7 +326,10 @@ if __name__ == '__main__':
     elif args.task == 'measure_degree':
         ##for angle
         file_corners = data_dir + file_corners_name[args.enc_type]
-        calculate_angle(model, file_corners, args.ind_1, args.ind_2)
+        calculate_angle(model, file_corners, args.enc_type, args.ind_1, args.ind_2)
+    elif args.task == 'calc_center_vector':
+        file_center = data_dir + file_center_name[args.enc_type]
+        calculate_center_vec(model, file_center)
 
 
 

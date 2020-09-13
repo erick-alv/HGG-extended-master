@@ -20,6 +20,9 @@ train_file_name = {'goal': 'goal_set.npy',
 file_corners_name = {'goal': 'goal_corners.npy',
                      'obstacle':'obstacle_corners.npy',
                      }
+file_center_name = {'goal': 'goal_center.npy',
+                     'obstacle':'obstacle_center.npy',
+                     }
 
 vae_sb_weights_file_name = {'goal': 'vae_sb_model_goal',
                             'obstacle':'vae_sb_model_obstacle',
