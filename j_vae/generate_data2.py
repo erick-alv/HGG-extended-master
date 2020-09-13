@@ -19,7 +19,9 @@ extend_region_parameters_goal = {'FetchPushObstacleFetchEnv-v1':
 def extend_sample_region_goal(env, args):
     env.object_center = extend_region_parameters_goal[args.env]['center']
     if args.enc_type == 'goal' or args.enc_type == 'goal_sizes':
-        env.obj_range = extend_region_parameters_goal[args.env]['range']-puck_size
+        # todo see with which one it works best
+        #env.obj_range = extend_region_parameters_goal[args.env]['range']-puck_size
+        env.obj_range = extend_region_parameters_goal[args.env]['range'] + 0.05
     else:
         env.obj_range = extend_region_parameters_goal[args.env]['range']-obstacle_size
 
@@ -58,7 +60,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='goal',choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--count', help='number of samples', type=np.int32, default=1280 * 30)
+    parser.add_argument('--count', help='number of samples', type=np.int32, default=1280 * 40)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
     args = parser.parse_args()
 
@@ -71,7 +73,7 @@ if __name__ == "__main__":
     data_file = env_data_dir + train_file_name[args.enc_type]
 
     #load environment
-    '''env = make_env(args)
+    env = make_env(args)
     #setup env(change generation region; move other objects(just leave those we need)??)
     for func in gen_setup_env_ops[args.env]:
         func(env, args)
@@ -84,7 +86,7 @@ if __name__ == "__main__":
         for func in after_env_reset_ops[args.env]:
             func(env, args)
         if args.enc_type == 'goal' or args.enc_type == 'goal_sizes':
-            rgb_array = take_goal_image(env, img_size=args.img_size, make_table_invisible=False)
+            rgb_array = take_goal_image(env, img_size=args.img_size)
         else:
             rgb_array = take_obstacle_image(env, img_size=args.img_size)
         train_data[i] = rgb_array.copy()
@@ -95,9 +97,9 @@ if __name__ == "__main__":
                     action = env.action_space.sample()
                     env.step(action)
                 if args.enc_type == 'goal' or args.enc_type == 'goal_sizes':
-                    rgb_array = take_goal_image(env, img_size=args.img_size, make_table_invisible=False)
+                    rgb_array = take_goal_image(env, img_size=args.img_size)
                 else:
-                    rgb_array = take_obstacle_image(env, img_size=args.img_size, make_table_invisible=False)
+                    rgb_array = take_obstacle_image(env, img_size=args.img_size)
                 train_data[i] = rgb_array.copy()
                 i += 1
             else:
@@ -107,10 +109,10 @@ if __name__ == "__main__":
             #    im.show()
             #    im.close()
     #store files
-    np.save(data_file, train_data)'''
+    np.save(data_file, train_data)
 
 
-    train_data = np.load(data_file)
+    '''train_data = np.load(data_file)
     all_idx = np.arange(len(train_data)).tolist()
     def show_some_sampled_images():
         n = 10
@@ -133,4 +135,4 @@ if __name__ == "__main__":
         img.show()
         img.close()
     for _ in range(5):
-        show_some_sampled_images()
+        show_some_sampled_images()'''

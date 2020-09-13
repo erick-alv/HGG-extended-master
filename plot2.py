@@ -27,7 +27,7 @@ if __name__ == "__main__":
     parser.add_argument('--name_suffix', type=str, default=None)
     parser.add_argument('--smooth', type=int, default=1)
     parser.add_argument('--naming', type=int, default=0)
-    parser.add_argument('--e_per_c', type=int, default=50)
+    parser.add_argument('--e_per_c', type=int, default=100)
     parser.add_argument('--save_path', type=str, default=None)
     args = parser.parse_args()
     env_id = args.env_id
