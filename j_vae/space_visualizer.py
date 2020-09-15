@@ -22,7 +22,7 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
                               using_sb=True, ):
     points = generate_points(range_x=range_x, range_y=range_y, z=z_table_height, total=n,
                              object_x_y_size=[size_to_use, size_to_use])
-    '''d = 0.05
+    '''d = 0.2
     points = generate_points(range_x=[range_x[0]-d,range_x[1]+d], range_y=[range_y[0]-d,range_y[1]+d],
                              z=z_table_height, total=n,
                              object_x_y_size=[size_to_use, size_to_use])'''
@@ -58,7 +58,7 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
     for i,p in enumerate(points):
         if enc_type == 'goal':
             env.env.env._move_object(position=p)
-            data_set[i] = take_goal_image(env, img_size, make_table_invisible=False)
+            data_set[i] = take_goal_image(env, img_size, make_table_invisible=True)
         elif enc_type == 'obstacle':
             env.env.env._set_position(names_list=['obstacle'], position=p)
             data_set[i] = take_obstacle_image(env, img_size)
@@ -155,7 +155,7 @@ def save_corners(env, size_to_use, file_corners, img_size, enc_type):
     for i, p in enumerate(points):
         if enc_type == 'goal':
             env.env.env._move_object(position=p)
-            data_set[i] = take_goal_image(env, img_size, make_table_invisible=False)
+            data_set[i] = take_goal_image(env, img_size)
         elif enc_type == 'obstacle':
             env.env.env._set_position(names_list=['obstacle'], position=p)
             data_set[i] = take_obstacle_image(env, img_size)
@@ -300,6 +300,7 @@ if __name__ == '__main__':
     else:
         model = load_Vae(weights_path, args.imgsize, args.latent_size)
 
+
     # load environment
     env = make_env(args)
 
@@ -310,10 +311,12 @@ if __name__ == '__main__':
         size_to_use = obstacle_size
 
     if args.task == 'show_space':
+
         assert args.enc_type == 'goal' or args.enc_type == 'obstacle'
         visualization_grid_points(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
                                   enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2)
     elif args.task == 'show_size':
+
         assert args.enc_type == 'obstacle_sizes'
         visualization_sizes_obstacle(env, model, args.img_size, 5)#todo make also goal if necessary
     elif args.task == 'save_corners':

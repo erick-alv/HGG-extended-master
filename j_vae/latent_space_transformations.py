@@ -26,8 +26,7 @@ def calculate_angle(model, corners_file,  enc_type, ind_1, ind_2):
     to_rotate = to_rotate % 360
     print(np.mean(to_rotate))
 
-#angle_goal = 303.796
-angle_goal = 305.74253
+angle_goal = 279.10576
 
 
 angle_obstacle = 35.14
@@ -79,8 +78,10 @@ o_x_max = table_map_x(1.55-obstacle_size)
 o_y_min = table_map_y(0.5+obstacle_size)
 o_y_max = table_map_y(1.0-obstacle_size)
 
-goal_map_x = interval_map_function(-1.229, 1.87436, g_x_min, g_x_max)
-goal_map_y = interval_map_function(-1.9316, 0.72467, g_y_min, g_y_max)
+#goal_map_x = interval_map_function(-1.229, 1.87436, g_x_min, g_x_max)
+#goal_map_y = interval_map_function(-1.9316, 0.72467, g_y_min, g_y_max)
+goal_map_x = interval_map_function(-1.24692, 1.40665, g_x_min, g_x_max)
+goal_map_y = interval_map_function(-1.29224, 1.28134, g_y_min, g_y_max)
 
 obstacle_map_x = interval_map_function(-1.3196, 1.917, o_x_min, o_x_max)
 obstacle_map_y = interval_map_function(-1.32474, 1.308284, o_y_min, o_y_max)
