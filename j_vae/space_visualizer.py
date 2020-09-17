@@ -21,7 +21,7 @@ from j_vae.latent_space_transformations import create_rotation_matrix, rotate_li
 def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, ind_1, ind_2,
                               using_sb=True, use_d=False, fig_file_name=None):
     if use_d:
-        d = 0.32
+        d = 0.12#0.32
         points = generate_points(range_x=[range_x[0] - d, range_x[1] + d], range_y=[range_y[0] - d, range_y[1] + d],
                                  z=z_table_height, total=n,
                                  object_x_y_size=[size_to_use, size_to_use])
@@ -85,6 +85,8 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
     all_ims = Image.fromarray(all_array.astype(np.uint8))
     if fig_file_name is not None:
         all_ims.save('{}_ims.png'.format(fig_file_name))
+        from hindsight_goals_visualizer import show_points
+        show_points(points, '{}_vis'.format(fig_file_name),'real')
     else:
         all_ims.show()
     all_ims.close()

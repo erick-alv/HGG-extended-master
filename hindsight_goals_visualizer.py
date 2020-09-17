@@ -9,7 +9,7 @@ from plot import smooth_reward_curve, load_results, pad
 
 def show_points(points_list, save_file, space_of):
     if space_of == 'real':
-        support_points = np.array([[1.05, 0.5, 0.4], [1.05, 1.0, 0.4], [1.55, 0.5, 0.4], [1.55, 1.0, 0.4]])
+        support_points = np.array([[1.05, 0.5, 0.43], [1.05, 1.0, 0.43], [1.55, 0.5, 0.43], [1.55, 1.0, 0.43]])
     elif space_of == 'latent':
         support_points = np.array([[-1., -1., 0.], [-1., 1, 0.], [1, -1., 0.], [1, 1, 0.]])
     

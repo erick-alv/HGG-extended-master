@@ -191,6 +191,12 @@ class MatchSampler:
 		for i in range(len(achieved_pool)):
 			self.match_lib.add(0, graph_id['achieved'][i], 1, 0)
 		for i in range(len(achieved_pool)):
+			if self.args.vae_dist_help:
+				i1 = achieved_pool[i][:, 0] > 1.55
+				i2 = achieved_pool[i][:, 0] < 1.05
+				i3 = achieved_pool[i][:, 1] > 1.0
+				i4 = achieved_pool[i][:, 1] < 0.5
+				indices_outside = np.logical_or(np.logical_or(i1, i2), np.logical_or(i3, i4))
 			for j in range(len(desired_goals)):
 				if self.args.graph:
 					size = achieved_pool[i].shape[0]
@@ -205,14 +211,26 @@ class MatchSampler:
 											 current_pos_batch=achieved_latent_goals[i].copy(),
 											 goal_pos=desired_goals_latents[j].copy(),
 											 range_x=[-1., 1.], range_y=[-1., 1.])
-					real_distances = np.sqrt(np.sum(np.square(achieved_pool[i] - desired_goals[j]), axis=1))
+					distances = latent_distances.copy()
+					distances[indices_outside] = 10.0
+
+					#real_distances = np.sqrt(np.sum(np.square(achieved_pool[i] - desired_goals[j]), axis=1))
+					'''real_distances = np.sqrt(np.sum(np.square(achieved_pool[i][:, :2] - desired_goals[j][:2]), axis=1))
 					pr_far_points = real_distances > self.args.threshold_a
 					extradists = real_distances[pr_far_points]
 					prc = (extradists - self.args.threshold_a) / (self.args.threshold_b - self.args.threshold_a)
 					prc = np.minimum(prc, 1.0)
 					extradists = 4.*prc * extradists#multiplied with for since the scale from latent space is 4 times bigger
-					distances = latent_distances.copy()
 					distances[pr_far_points] += extradists
+
+					height_dist = np.absolute(achieved_pool[i][:, 2] - desired_goals[j][2])
+					h_p = height_dist > 0.2
+					h_extra = height_dist[h_p]
+					h_extra = h_extra*4
+					distances[h_p] += h_extra'''
+
+
+
 					res = distances - achieved_value[i] / (self.args.hgg_L / self.max_dis / (1 - self.args.gamma))
 				else:
 					#(2.22) || g^ ^i - m(s_t^i) || - (1/L) V^(pi)(s_0^i || m(s_t^i))

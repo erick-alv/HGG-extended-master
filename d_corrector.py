@@ -136,6 +136,8 @@ def add_distances(latent_distances, real_distances, threshold_a, threshold_b):
     latent_distances[pr_far_points] += extradists
     return latent_distances
 
+
+
 if __name__ == '__main__':
     latent_distances = np.random.uniform(1., 2.5, size=(5))
     print(latent_distances)
