@@ -210,7 +210,7 @@ class MatchSampler:
 					extradists = real_distances[pr_far_points]
 					prc = (extradists - self.args.threshold_a) / (self.args.threshold_b - self.args.threshold_a)
 					prc = np.minimum(prc, 1.0)
-					extradists = prc * extradists
+					extradists = 4.*prc * extradists#multiplied with for since the scale from latent space is 4 times bigger
 					distances = latent_distances.copy()
 					distances[pr_far_points] += extradists
 					res = distances - achieved_value[i] / (self.args.hgg_L / self.max_dis / (1 - self.args.gamma))
