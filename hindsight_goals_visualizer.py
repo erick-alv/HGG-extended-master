@@ -15,10 +15,10 @@ def show_points(points_list, save_file, space_of):
     
     if points_list.shape[1] == 3:
         fig = plt.figure()
-        ax = fig.add_subplot(111, projection='_3d')
+        ax = fig.add_subplot(111, projection='3d')
         ax.scatter(points_list[:, 0], points_list[:, 1], points_list[:, 2])
         ax.scatter(support_points[:, 0], support_points[:, 1], support_points[:, 2], c='red')
-        plt.savefig('{}3D'.format(save_file))
+        plt.savefig('{}_3D'.format(save_file))
         plt.close()
         show_points(points_list[:, :2], save_file+'_2D', space_of)
     elif points_list.shape[1] == 2:
