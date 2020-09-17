@@ -87,7 +87,7 @@ def get_args():
 	parser.add_argument('--corrector_batch_size', help='The batch size', type=np.int32, default=32)
 	parser.add_argument('--corrector_epochs', help='The batch size', type=np.int32, default=5)
 	parser.add_argument('--threshold_a', help='threshold to start adding to distance to latent_dist',
-						type=np.float, default=0.4)
+						type=np.float, default=0.5)
 	parser.add_argument('--threshold_b', help='max threshold for adding to distance to latent_dist',
 						type=np.float, default=0.85)
 
