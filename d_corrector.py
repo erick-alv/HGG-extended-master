@@ -26,12 +26,12 @@ class Corrector:
         tr_too_far = 0.5
         too_far = dists_between_goals[dists_between_goals>=tr_too_far]
         prc = len(too_far) / float(len(dists_between_goals))
-        tr_prc = 0.3
+        tr_prc = 0.6
         if prc >= tr_prc:
             self.surpass_counter +=1
         else:
             self.surpass_counter = 0
-        if self.surpass_counter >= 3:
+        if self.surpass_counter >= 5:
             able_to_correct = True
             self.surpass_counter = 0
         else:
@@ -130,6 +130,10 @@ class Corrector:
         temp_loss = torch.norm(delta_t, dim=1)
         temp_loss = temp_loss.pow(2).mean()
         return temp_loss
+
+
+def add_distances(distances, threshold_a, threshold_b):
+    pass
 
 '''if __name__ == '__main__':
     #temporal_coherence_loss(random_rollouts)

@@ -94,6 +94,19 @@ if __name__=='__main__':
 				agent.saver.save(agent.sess, policy_file)
 				args.logger.info("Saved as best policy to {}!".format(args.logger.my_log_dir))
 
+			# Plot current goal distribution for visualization (G-HGG only)
+			if args.learn == 'hgg' and goal_list and args.show_goals != 0 and cycle % 5 == 0:
+				name = "{}goals_{}_{}".format(args.logger.my_log_dir, epoch, cycle)
+				#if args.graph:
+				#	learner.sampler.graph.plot_graph(goals=goal_list, save_path=name)
+				#with open('{}.pkl'.format(name), 'wb') as file:
+				#	pickle.dump(goal_list, file)
+				if args.vae_dist_help:
+					# !!!!!!!!!! currently the goals are still in real space
+					show_points(np.array(goal_list), name, 'real')
+				else:
+					show_points(np.array(goal_list), name, 'real')
+
 		# Save periodic policy every epoch
 		policy_file = args.logger.my_log_dir + "saved_policy"
 		agent.saver.save(agent.sess, policy_file, global_step=epoch)
