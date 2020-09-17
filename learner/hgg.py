@@ -200,11 +200,19 @@ class MatchSampler:
 					res = res_1 - achieved_value[i]/(self.args.hgg_L/self.max_dis/(1-self.args.gamma))
 				elif self.args.vae_dist_help:
 					#!!!! For now just one obstacle since obstacles are stationary
-					distances = calculate_distance_batch(obstacle_pos=achieved_latent_obstacles[i][0].copy(),
+					latent_distances = calculate_distance_batch(obstacle_pos=achieved_latent_obstacles[i][0].copy(),
 											 obstacle_radius=achieved_latent_obstacles_sizes[i][0].copy(),
 											 current_pos_batch=achieved_latent_goals[i].copy(),
 											 goal_pos=desired_goals_latents[j].copy(),
 											 range_x=[-1., 1.], range_y=[-1., 1.])
+					real_distances = np.sqrt(np.sum(np.square(achieved_pool[i] - desired_goals[j]), axis=1))
+					pr_far_points = real_distances > self.args.threshold_a
+					extradists = real_distances[pr_far_points]
+					prc = (extradists - self.args.threshold_a) / (self.args.threshold_b - self.args.threshold_a)
+					prc = np.minimum(prc, 1.0)
+					extradists = prc * extradists
+					distances = latent_distances.copy()
+					distances[pr_far_points] += extradists
 					res = distances - achieved_value[i] / (self.args.hgg_L / self.max_dis / (1 - self.args.gamma))
 				else:
 					#(2.22) || g^ ^i - m(s_t^i) || - (1/L) V^(pi)(s_0^i || m(s_t^i))

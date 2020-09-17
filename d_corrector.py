@@ -1,13 +1,8 @@
 import torch
 import numpy as np
-from vae_env_inter import transform_image_to_latent_batch_torch
 from torch import nn, optim
-from j_vae.train_vae_sb import load_Vae as load_Vae_SB
-from j_vae.train_vae import load_Vae
-from j_vae.space_visualizer import visualization_grid_points
-from envs import make_env
-from torch.nn import functional as F
-from j_vae.latent_space_transformations import torch_goal_transformation
+#from j_vae.space_visualizer import visualization_grid_points
+#from envs import make_env
 from j_vae.train_vae_sb import loss_function
 class Corrector:
     def __init__(self, args):
@@ -132,16 +127,18 @@ class Corrector:
         return temp_loss
 
 
-def add_distances(distances, threshold_a, threshold_b):
-    pass
+def add_distances(latent_distances, real_distances, threshold_a, threshold_b):
+    pr_far_points = real_distances > threshold_a
+    extradists = real_distances[pr_far_points]
+    prc = (extradists - threshold_a)/(threshold_b-threshold_a)
+    prc = np.minimum(prc, 1.0)
+    extradists = prc*extradists
+    latent_distances[pr_far_points] += extradists
+    return latent_distances
 
-'''if __name__ == '__main__':
-    #temporal_coherence_loss(random_rollouts)
-    #dynamic_loss(random_rollouts)
-    a = np.random.rand(5,84,84,3)
-    b = np.random.rand(7,84,84,3)
-    c = np.random.rand(2,84,84,3)
-    rollouts_ims = np.array([a, b, c])
-    rollout_step_length = [len(r) for r in rollouts_ims]
-    random_rollouts = torch.rand((14, 2))
-    random_rollouts = list(torch.split(random_rollouts, rollout_step_length))'''
+if __name__ == '__main__':
+    latent_distances = np.random.uniform(1., 2.5, size=(5))
+    print(latent_distances)
+    real_distances = np.random.uniform(0.1, 1.3, size=(5))
+    print(real_distances)
+    print(add_distances(latent_distances, real_distances, 0.8, 1.5))
