@@ -19,23 +19,26 @@ from j_vae.latent_space_transformations import create_rotation_matrix, rotate_li
 
 
 def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, ind_1, ind_2,
-                              using_sb=True, ):
-    points = generate_points(range_x=range_x, range_y=range_y, z=z_table_height, total=n,
-                             object_x_y_size=[size_to_use, size_to_use])
-    '''d = 0.2
-    points = generate_points(range_x=[range_x[0]-d,range_x[1]+d], range_y=[range_y[0]-d,range_y[1]+d],
-                             z=z_table_height, total=n,
-                             object_x_y_size=[size_to_use, size_to_use])'''
+                              using_sb=True, use_d=False, fig_file_name=None):
+    if use_d:
+        d = 0.32
+        points = generate_points(range_x=[range_x[0] - d, range_x[1] + d], range_y=[range_y[0] - d, range_y[1] + d],
+                                 z=z_table_height, total=n,
+                                 object_x_y_size=[size_to_use, size_to_use])
+    else:
+        points = generate_points(range_x=range_x, range_y=range_y, z=z_table_height, total=n,
+                                 object_x_y_size=[size_to_use, size_to_use])
+
 
     n_labels = np.arange(len(points))
 
     points = np.array(points)
-    print_max_and_min(points)
+    #print_max_and_min(points)
 
     xs = points[:, 0]
     ys = points[:, 1]
     plt.figure(1)
-    plt.subplot(211)
+    plt.subplot(211, )
     plt.scatter(xs,ys)
     plt.title('real')
     for i, en in enumerate(n_labels):
@@ -80,7 +83,10 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
         else:
             all_array = np.concatenate([all_array.copy(), row], axis=0)
     all_ims = Image.fromarray(all_array.astype(np.uint8))
-    all_ims.show()
+    if fig_file_name is not None:
+        all_ims.save('{}_ims.png'.format(fig_file_name))
+    else:
+        all_ims.show()
     all_ims.close()
     data = torch.from_numpy(data_set).float().to(device)
     data /= 255
@@ -98,9 +104,6 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
 
 
     if enc_type == 'goal':
-        #from j_vae.latent_space_transformations import centering_vector_goal
-        #cv = np.array([centering_vector_goal[ind_1], centering_vector_goal[ind_2]])
-        #mu = mu + cv
         rm = create_rotation_matrix(angle_goal)
         mu = rotate_list_of_points(mu, rm)
         mu = map_points(mu, goal_map_x, goal_map_y)
@@ -114,7 +117,7 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
         pass
     else:
         raise Exception('Not supported enc type')
-    print_max_and_min(mu)
+    #print_max_and_min(mu)
 
     lxs = mu[:, 0]
     lys = mu[:, 1]
@@ -124,7 +127,10 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
     for i, en in enumerate(n_labels):
         plt.annotate(en, (lxs[i], lys[i]))
 
-    plt.show()
+    if fig_file_name is not None:
+        plt.savefig(fig_file_name)
+    else:
+        plt.show()
     plt.close()
 
 def print_max_and_min(points):
@@ -247,8 +253,11 @@ def visualization_sizes_obstacle(env, model, img_size, n):
     for i, en in enumerate(n_labels):
         plt.annotate(en, (lxs[i], lys[i]))
 
+
+
     plt.show()
     plt.close()
+
 
 
 if __name__ == '__main__':
@@ -314,7 +323,7 @@ if __name__ == '__main__':
 
         assert args.enc_type == 'goal' or args.enc_type == 'obstacle'
         visualization_grid_points(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
-                                  enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2)
+                                  enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2, use_d=True, fig_file_name='vis_grid')
     elif args.task == 'show_size':
 
         assert args.enc_type == 'obstacle_sizes'

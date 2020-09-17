@@ -82,6 +82,10 @@ def get_args():
 	parser.add_argument('--obstacle_ind_2', help='index 2 component latent vector', type=np.int32, default=None)
 	parser.add_argument('--goal_ind_1', help='index 1 component latent vector', type=np.int32, default=None)
 	parser.add_argument('--goal_ind_2', help='index 2 component latent vector', type=np.int32, default=None)
+	parser.add_argument('--use_corrector', help='use corrector for VAE yes or no', type=str2bool, default=False)
+	parser.add_argument('--corrector_beta', help='use corrector for VAE yes or no', type=np.float, default=1.8)
+	parser.add_argument('--corrector_batch_size', help='The batch size', type=np.int32, default=32)
+	parser.add_argument('--corrector_epochs', help='The batch size', type=np.int32, default=5)
 
 	#for dense reward transformation
 	parser.add_argument('--transform_dense', help='if transform to dense with VAES or not', type=str2bool, default=False)
@@ -116,11 +120,17 @@ def experiment_setup(args):
 		base_data_dir = 'data/'
 		data_dir = base_data_dir + args.env + '/'
 		weights_path_goal = data_dir + vae_sb_weights_file_name['goal']
+		args.weights_path_goal  = weights_path_goal
 		weights_path_obstacle = data_dir + vae_sb_weights_file_name['obstacle']
+		args.weights_path_obstacle = weights_path_obstacle
 		weights_path_obstacle_sizes = data_dir + vae_weights_file_name['obstacle_sizes']
+		args.weights_path_obstacle_sizes = weights_path_obstacle_sizes
 		args.vae_model_obstacle = load_Vae_SB(weights_path_obstacle, args.img_size, args.latent_size_obstacle)
+		args.vae_model_obstacle.eval()
 		args.vae_model_goal = load_Vae_SB(weights_path_goal, args.img_size, args.latent_size_goal)
+		args.vae_model_goal.eval()
 		args.vae_model_size = load_Vae(path=weights_path_obstacle_sizes, img_size=args.img_size, latent_size=1)
+		args.vae_model_size.eval()
 	if args.transform_dense:
 		args.compute_reward_dense = calculate_distance
 

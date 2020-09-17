@@ -412,7 +412,7 @@ class HGGLearner_VAEs(HGGLearner):
 		self.learn_calls = 0
 		self.success_n = 0
 
-	def learn(self, args, env, env_test, agent, buffer, write_goals=0):
+	def learn(self, args, env, env_test, agent, buffer, write_goals=0, use_corrector=False):
 		# Actual learning cycle takes place here!
 		initial_goals = []
 		desired_goals = []
@@ -449,6 +449,14 @@ class HGGLearner_VAEs(HGGLearner):
 		test_goals = []
 		inside = []
 
+		if use_corrector:
+			goal_list_z = []
+			real_goals = []
+			real_goals_z = []
+			rollout_ims = [[] for _ in range(args.episodes)]
+			rollout_rws = [[] for _ in range(args.episodes)]
+
+
 		for i in range(args.episodes):
 			obs = self.env_List[i].get_obs()
 			init_state = obs['observation'].copy()
@@ -469,17 +477,28 @@ class HGGLearner_VAEs(HGGLearner):
 
 			# Perform HER training by interacting with the environment
 			self.env_List[i].goal = explore_goal.copy()
-			if write_goals != 0 and len(goal_list)<write_goals:
-				goal_list.append(explore_goal.copy())
+
 			obs = self.env_List[i].get_obs()
+
+			if use_corrector:
+				rollout_ims[i].append(obs['achieved_goal_image'].copy())
+				goal_list.append(explore_goal.copy())
+				goal_list_z.append(obs['desired_goal_latent'].copy())
+				real_goals.append(desired_goals[i].copy())
+				real_goals_z.append(desired_goals_latents[i].copy())
+
+
+			elif write_goals != 0 and len(goal_list)<write_goals:
+				goal_list.append(explore_goal.copy())
+
 			current = Trajectory(obs)
 			trajectory = [obs['achieved_goal'].copy()]
 			trajectory_goals_latents = [obs['achieved_goal_latent'].copy()]
 			trajectory_obstacles_latents = [obs['obstacle_latent'].copy()]
 			trajectory_obstacles_latents_sizes = [obs['obstacle_size_latent'].copy()]
-			## just for video
+
 			tr_env_images = [take_env_image(self.env_List[i], args.img_size)]
-			##
+
 			for timestep in range(args.timesteps):
 				# get action from the ddpg policy
 				action = agent.step(obs, explore=True)
@@ -492,6 +511,9 @@ class HGGLearner_VAEs(HGGLearner):
 				tr_env_images.append(take_env_image(self.env_List[i], args.img_size))
 				##
 				if timestep==args.timesteps-1: done = True#this makes that the last obs is as done
+				if use_corrector:
+					rollout_ims[i].append(obs['achieved_goal_image'].copy())
+					rollout_rws[i].append(reward)
 				current.store_step(action, obs, reward, done)
 				if done: break
 			## just for video
@@ -570,7 +592,13 @@ class HGGLearner_VAEs(HGGLearner):
 
 		self.learn_calls += 1
 
-		return goal_list if len(goal_list)>0 else None
+
+
+		if use_corrector:
+			return goal_list, goal_list_z, real_goals, real_goals_z, rollout_ims, rollout_rws
+
+		else:
+			return goal_list if len(goal_list)>0 else None
 
 class NormalLearner:
 	def __init__(self, args):
@@ -642,5 +670,7 @@ class NormalLearner:
 				agent.target_update()
 
 		self.learn_calls += 1
+
+
 
 		return goal_list if len(goal_list)>0 else None

@@ -4,6 +4,7 @@ from common import get_args, experiment_setup
 from hindsight_goals_visualizer import show_points
 from copy import deepcopy
 import pickle
+from d_corrector import Corrector
 import tensorflow as tf
 
 from gym.envs.registration import register
@@ -14,6 +15,8 @@ if __name__=='__main__':
 	# Set up learning environment including, gym env, ddpg agent, hgg/normal learner, tester
 	args = get_args()
 	env, env_test, agent, buffer, learner, tester = experiment_setup(args)
+	if args.use_corrector:
+		corrector = Corrector(args)
 	args.logger.summary_init(agent.graph, agent.sess)
 
 
@@ -45,7 +48,26 @@ if __name__=='__main__':
 			start_time = time.time()
 
 			# Learn
-			goal_list = learner.learn(args, env, env_test, agent, buffer, write_goals=args.show_goals)
+			#goal_list = learner.learn(args, env, env_test, agent, buffer, write_goals=args.show_goals)
+			if args.use_corrector and not (epoch == 0 and cycle == 0):
+				goal_list, goal_list_z, real_goals, real_goals_z, \
+				rollout_ims, rollout_rws = learner.learn(args, env, env_test, agent, buffer,
+														 write_goals=args.show_goals, use_corrector=True)
+				corrector.correct(goal_list, goal_list_z, real_goals, real_goals_z, rollout_ims, rollout_rws, args)
+				'''args.logger.info('real variance {}'.format(np.var(real_goals)))
+				args.logger.info('real variance z {}'.format(np.var(real_goals_z)))
+				args.logger.info('some real z {}'.format(real_goals_z[:10]))
+				args.logger.info('real mean {}'.format(np.mean(real_goals)))
+				args.logger.info('real mean z {}'.format(np.mean(real_goals_z)))
+				args.logger.info('_____________')
+				args.logger.info('hgg variance {}'.format(np.var(goal_list)))
+				args.logger.info('hgg variance z {}'.format(np.var(goal_list_z)))
+				args.logger.info('some hgg z {}'.format(goal_list_z[:10]))
+				args.logger.info('hgg mean {}'.format(np.mean(goal_list)))
+				args.logger.info('hgg mean z {}'.format(np.mean(goal_list_z)))'''
+			else:
+				goal_list = learner.learn(args, env, env_test, agent, buffer, write_goals=args.show_goals)
+
 
 			# Log learning progresss
 			tester.cycle_summary()
