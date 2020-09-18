@@ -94,6 +94,7 @@ class Tester:
 			for i, t in enumerate(eps_idx):
 				create_rollout_video(np.array(env_images[i]), args=self.args,
 									 filename='rollout_it_{}_ep_{}_test'.format(self.calls, t))
+			del ex_logs
 			
 		else:
 			acc_sum, obs = 0.0, []

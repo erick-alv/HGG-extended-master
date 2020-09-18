@@ -138,9 +138,9 @@ def add_distances(latent_distances, real_distances, threshold_a, threshold_b):
 
 
 
-if __name__ == '__main__':
+'''if __name__ == '__main__':
     latent_distances = np.random.uniform(1., 2.5, size=(5))
     print(latent_distances)
     real_distances = np.random.uniform(0.1, 1.3, size=(5))
     print(real_distances)
-    print(add_distances(latent_distances, real_distances, 0.8, 1.5))
+    print(add_distances(latent_distances, real_distances, 0.8, 1.5))'''

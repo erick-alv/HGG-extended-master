@@ -65,7 +65,7 @@ class VanillaGoalEnv():
 			obs = self.env.env._get_obs()
 			obs['desired_goal_latent'] = self.desired_goal_latent.copy()
 			obs['achieved_goal_latent'] = self.achieved_goal_latent.copy()
-			obs['achieved_goal_image'] = self.achieved_goal_image.copy()
+			#obs['achieved_goal_image'] = self.achieved_goal_image.copy()
 			obs['obstacle_latent'] = self.obstacle_latent.copy()
 			obs['obstacle_size_latent'] = self.obstacle_size_latent.copy()
 			return obs
@@ -80,7 +80,7 @@ class VanillaGoalEnv():
 			achieved_goal_image = take_goal_image(self, self.args.img_size)
 			latents = goal_latent_from_images(np.array([achieved_goal_image]), self.args)
 			self.achieved_goal_latent = latents[0].copy()
-			self.achieved_goal_image = achieved_goal_image.copy()
+			#self.achieved_goal_image = achieved_goal_image.copy()
 
 			if hasattr(self.args, 'transform_dense') and self.args.transform_dense:
 				reward = -self.args.compute_reward_dense(self.obstacle_latent.copy(), self.obstacle_size_latent.copy(),
@@ -108,7 +108,7 @@ class VanillaGoalEnv():
 			latents = goal_latent_from_images(np.array([desired_goal_image, achieved_goal_image]), self.args)
 			self.desired_goal_latent = latents[0].copy()
 			self.achieved_goal_latent = latents[1].copy()
-			self.achieved_goal_image = achieved_goal_image.copy()
+			#self.achieved_goal_image = achieved_goal_image.copy()
 
 			obstacle_image = take_obstacle_image(self, self.args.img_size)
 			latents_obstacle, latents_o_size = obstacle_latent_from_images(np.array([obstacle_image]), self.args)
