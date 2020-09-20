@@ -9,13 +9,19 @@ from torchvision.utils import save_image
 
 doing_goal = False
 
-if doing_goal:
+enc_type = 'mixed'
+
+if enc_type == 'goal':
     train_file = '../data/FetchPushObstacleFetchEnv-v1/goal_set.npy'
     n_path = '../data/FetchPushObstacleFetchEnv-v1/vae_sb_model_goal'
 
-else:
+elif enc_type == 'obstacle':
     train_file = '../data/FetchPushObstacleFetchEnv-v1/obstacle_set.npy'
     n_path = '../data/FetchPushObstacleFetchEnv-v1/vae_sb_model_obstacle'
+
+elif enc_type == 'mixed':
+    train_file = '../data/FetchPushObstacleFetchEnv-v1/mixed.npy'
+    n_path = '../data/FetchPushObstacleFetchEnv-v1/vae_sb_model_mixed'
 
 def spatial_broadcast(z, width, height):
     z_b = np.tile(A=z, reps=(height, width, 1))
@@ -155,6 +161,10 @@ def train(epoch, model, optimizer, device, log_interval, batch_size):
 
     print('====> Epoch: {} Average loss: {:.4f}'.format(
         epoch, train_loss / data_size))
+
+
+def max_separation(epoch, model, optimizer, device, log_interval, batch_size):
+    pass
 
 
 def train_Vae(batch_size=128, epochs=100, no_cuda=False, seed=1, log_interval=100, load=False,
@@ -383,7 +393,7 @@ def show_1d_manifold(img_size, no_cuda=False, seed=1):
 
 if __name__ == '__main__':
     print('Train VAE...')
-    train_Vae(batch_size=32, epochs=15, load=False, latent_size=3)
+    train_Vae(batch_size=32, epochs=15, load=False, latent_size=4)
     # test_VAE_SB(device)
     # show_1d_manifold()
     #show_2d_manifold(84)
