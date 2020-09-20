@@ -121,10 +121,10 @@ if __name__ == "__main__":
             train_data[i] = rgb_array.copy()
             i += 1
 
-        if i % 10 == 0:
-            im = Image.fromarray(rgb_array)
-            im.show()
-            im.close()
+        #if i % 10 == 0:
+        #    im = Image.fromarray(rgb_array)
+        #    im.show()
+        #    im.close()
     #store files
     np.save(data_file, train_data)
 
