@@ -9,6 +9,7 @@ min_obstacle_size = 0.001
 max_obstacle_size = (range_x[1] - range_x[0])/2.
 puck_size = 0.045
 z_table_height=0.43
+z_table_height_obstacle = 0.435
 
 
 ### configuration information ####

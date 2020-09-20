@@ -6,12 +6,12 @@ from envs import make_env, clip_return_range, Robotics_envs_id
 from utils.os_utils import make_dir
 from vae_env_inter import take_env_image, take_obstacle_image, take_goal_image
 from PIL import Image
-from j_vae.common_data import train_file_name, puck_size, obstacle_size
+from j_vae.common_data import train_file_name, puck_size, obstacle_size, z_table_height_obstacle, min_obstacle_size,\
+    max_obstacle_size
 
 
 
-
-#make range biiger than table so there are samples falling and in other positions
+#make range bigger than table so there are samples falling and in other positions
 extend_region_parameters_goal = {'FetchPushObstacleFetchEnv-v1':
                                      {'center':np.array([1.3, 0.75, 0.425]), 'range':0.25}
                             }
@@ -19,11 +19,10 @@ extend_region_parameters_goal = {'FetchPushObstacleFetchEnv-v1':
 def extend_sample_region_goal(env, args):
     env.object_center = extend_region_parameters_goal[args.env]['center']
     if args.enc_type == 'goal' or args.enc_type == 'goal_sizes':
-        # todo see with which one it works best
-        #env.obj_range = extend_region_parameters_goal[args.env]['range']-puck_size
         env.obj_range = extend_region_parameters_goal[args.env]['range'] + 0.05
     else:
-        env.obj_range = extend_region_parameters_goal[args.env]['range']-obstacle_size
+        #todo?? is this necessary
+        env.obj_range = extend_region_parameters_goal[args.env]['range']
 
 
 def move_other_objects_away(env, args):
@@ -32,10 +31,27 @@ def move_other_objects_away(env, args):
     else:
         env.env.env._move_object(position=[2., 2., 2.])
 
-gen_setup_env_ops = {'FetchPushObstacleFetchEnv-v1':[extend_sample_region_goal, move_other_objects_away]
+def random_size_at(min_size, max_size, range_x, range_y, pos):
+    distances_to_edge = [np.abs(range_x[0] - pos[0]), np.abs(range_x[1] - pos[0]),
+                         np.abs(range_y[0] - pos[1]), np.abs(range_y[1] - pos[1])]
+    min_d = min(distances_to_edge)
+    maximum = min(max_size, min_d)
+    s = np.random.uniform(min_size, maximum)
+    return np.array([s, 0.035, 0.0])
+
+def obstacle_random_pos_and_size(env, args):
+    if args.enc_type == 'obstacle' or args.enc_type == 'obstacle':
+        pos = env.object_center + np.random.uniform(-env.target_range, env.target_range, size=3)
+        pos[2] = z_table_height_obstacle
+        env.env.env._set_position(names_list=['obstacle'], position=pos)
+        size = np.random.uniform(min_obstacle_size, max_obstacle_size)
+        size = np.array([size, 0.035, 0.0])
+        env.env.env._set_size(names_list=['obstacle'], size=size)
+
+gen_setup_env_ops = {'FetchPushObstacleFetchEnv-v1':[extend_sample_region_goal]
                      }
 
-after_env_reset_ops = {'FetchPushObstacleFetchEnv-v1':[]
+after_env_reset_ops = {'FetchPushObstacleFetchEnv-v1':[move_other_objects_away, obstacle_random_pos_and_size]
                        }
 
 if __name__ == "__main__":
@@ -59,7 +75,7 @@ if __name__ == "__main__":
                                 default=0.25)
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
-                        default='goal',choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
+                        choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
     parser.add_argument('--count', help='number of samples', type=np.int32, default=1280 * 40)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
     args = parser.parse_args()
@@ -73,7 +89,7 @@ if __name__ == "__main__":
     data_file = env_data_dir + train_file_name[args.enc_type]
 
     #load environment
-    '''env = make_env(args)
+    env = make_env(args)
     #setup env(change generation region; move other objects(just leave those we need)??)
     for func in gen_setup_env_ops[args.env]:
         func(env, args)
@@ -85,34 +101,35 @@ if __name__ == "__main__":
         env.reset()
         for func in after_env_reset_ops[args.env]:
             func(env, args)
+        # goal_loop
         if args.enc_type == 'goal' or args.enc_type == 'goal_sizes':
             rgb_array = take_goal_image(env, img_size=args.img_size)
+            i += 1
+            for _ in range(3):
+                if i < args.count:
+                    for a_t in range(25):
+                        action = env.action_space.sample()
+                        env.step(action)
+                    rgb_array = take_goal_image(env, img_size=args.img_size)
+                    train_data[i] = rgb_array.copy()
+                    i += 1
+                else:
+                    break
+        #obstacle loop
         else:
             rgb_array = take_obstacle_image(env, img_size=args.img_size)
-        train_data[i] = rgb_array.copy()
-        i +=1
-        for _ in range(3):
-            if i < args.count:
-                for a_t in range(25):
-                    action = env.action_space.sample()
-                    env.step(action)
-                if args.enc_type == 'goal' or args.enc_type == 'goal_sizes':
-                    rgb_array = take_goal_image(env, img_size=args.img_size)
-                else:
-                    rgb_array = take_obstacle_image(env, img_size=args.img_size)
-                train_data[i] = rgb_array.copy()
-                i += 1
-            else:
-                break
-            #if i % 10 == 0:
-            #    im = Image.fromarray(rgb_array)
-            #    im.show()
-            #    im.close()
+            train_data[i] = rgb_array.copy()
+            i += 1
+
+        if i % 10 == 0:
+            im = Image.fromarray(rgb_array)
+            im.show()
+            im.close()
     #store files
-    np.save(data_file, train_data)'''
+    np.save(data_file, train_data)
 
 
-    train_data = np.load(data_file)
+    '''train_data = np.load(data_file)
     all_idx = np.arange(len(train_data)).tolist()
     def show_some_sampled_images():
         n = 10
@@ -135,4 +152,4 @@ if __name__ == "__main__":
         img.show()
         img.close()
     for _ in range(5):
-        show_some_sampled_images()
+        show_some_sampled_images()'''

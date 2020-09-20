@@ -1,8 +1,5 @@
 import numpy as np
 import copy
-import warnings
-from j_vae.train_vae_sb import load_Vae as load_Vae_SB
-from j_vae.train_vae import load_Vae
 '''import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
 import torch
