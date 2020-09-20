@@ -64,6 +64,7 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
             data_set[i] = take_goal_image(env, img_size, make_table_invisible=True)
         elif enc_type == 'obstacle':
             env.env.env._set_position(names_list=['obstacle'], position=p)
+            env.env.env._set_size(names_list=['obstacle'], size=np.array([0.15, 0.035, 0.]))
             data_set[i] = take_obstacle_image(env, img_size)
         else:
             raise Exception('Not supported enc type')
@@ -303,13 +304,6 @@ if __name__ == '__main__':
     train_file = data_dir + train_file_name[args.enc_type]
     weights_path = data_dir + vae_sb_weights_file_name[args.enc_type]
 
-    # load the latent_size and model
-    cuda = torch.cuda.is_available()
-    device = torch.device("cuda" if cuda else "cpu")
-    if args.enc_type == 'goal' or args.enc_type == 'obstacle':
-        model = load_Vae_SB(weights_path, args.img_size, args.latent_size)
-    else:
-        model = load_Vae(weights_path, args.imgsize, args.latent_size)
 
 
     # load environment
@@ -321,23 +315,34 @@ if __name__ == '__main__':
     elif args.enc_type == 'obstacle':
         size_to_use = obstacle_size
 
-    if args.task == 'show_space':
+    if args.task == 'show_space' or args.task == 'show_size':
+        # load the latent_size and model
+        cuda = torch.cuda.is_available()
+        device = torch.device("cuda" if cuda else "cpu")
+        if args.enc_type == 'goal' or args.enc_type == 'obstacle':
+            model = load_Vae_SB(weights_path, args.img_size, args.latent_size)
+        else:
+            model = load_Vae(weights_path, args.imgsize, args.latent_size)
 
-        assert args.enc_type == 'goal' or args.enc_type == 'obstacle'
-        visualization_grid_points(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
-                                  enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2, use_d=True, fig_file_name='vis_grid')
-    elif args.task == 'show_size':
+        if args.task == 'show_space':
 
-        assert args.enc_type == 'obstacle_sizes'
-        visualization_sizes_obstacle(env, model, args.img_size, 5)#todo make also goal if necessary
-    elif args.task == 'save_corners':
-        assert args.enc_type == 'goal' or args.enc_type == 'obstacle'
-        file_corners = data_dir + file_corners_name[args.enc_type]
-        save_corners(env, size_to_use, file_corners, args.img_size, args.enc_type)
-    elif args.task == 'save_center':
-        assert args.enc_type == 'goal' or args.enc_type == 'obstacle'
-        file_center = data_dir + file_center_name[args.enc_type]
-        save_center(env, size_to_use, file_center, args.img_size, args.enc_type)
+            assert args.enc_type == 'goal' or args.enc_type == 'obstacle'
+            visualization_grid_points(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
+                                      enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,
+                                      fig_file_name='vis_grid')
+        elif args.task == 'show_size':
+
+            assert args.enc_type == 'obstacle_sizes'
+            visualization_sizes_obstacle(env, model, args.img_size, 5)#todo make also goal if necessary
+    else:
+        if args.task == 'save_corners':
+            assert args.enc_type == 'goal' or args.enc_type == 'obstacle'
+            file_corners = data_dir + file_corners_name[args.enc_type]
+            save_corners(env, size_to_use, file_corners, args.img_size, args.enc_type)
+        elif args.task == 'save_center':
+            assert args.enc_type == 'goal' or args.enc_type == 'obstacle'
+            file_center = data_dir + file_center_name[args.enc_type]
+            save_center(env, size_to_use, file_center, args.img_size, args.enc_type)
 
 
 
