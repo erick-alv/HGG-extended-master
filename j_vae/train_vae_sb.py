@@ -7,7 +7,7 @@ from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torchvision.utils import save_image
 
-doing_goal = True
+doing_goal = False
 
 if doing_goal:
     train_file = '../data/FetchPushObstacleFetchEnv-v1/goal_set.npy'
@@ -383,7 +383,7 @@ def show_1d_manifold(img_size, no_cuda=False, seed=1):
 
 if __name__ == '__main__':
     print('Train VAE...')
-    train_Vae(batch_size=32, epochs=15, load=False, latent_size=2)
+    train_Vae(batch_size=32, epochs=15, load=False, latent_size=3)
     # test_VAE_SB(device)
     # show_1d_manifold()
     #show_2d_manifold(84)
