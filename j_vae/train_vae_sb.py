@@ -180,7 +180,7 @@ def train_max_separation(epoch, model, optimizer, device, log_interval, batch_si
     all_idx = np.arange(data_size).tolist()
     while current_processed < total_pairs:
         current_processed += batch_size
-        idx1 = np.random.choice(all_idx, size=batch_size)
+        idx1 = np.random.choice(all_idx, size=batch_size, replace=False)
         is1 = data_set[idx1]
         for d in idx1:
             all_idx.remove(d)
@@ -188,7 +188,7 @@ def train_max_separation(epoch, model, optimizer, device, log_interval, batch_si
         is1 /= 255
         is1 = is1.permute([0, 3, 1, 2])
 
-        idx2 = np.random.choice(all_idx, size=batch_size)
+        idx2 = np.random.choice(all_idx, size=batch_size, replace=F)
         is2 = data_set[idx2]
         for d in idx2:
             all_idx.remove(d)
