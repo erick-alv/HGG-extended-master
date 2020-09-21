@@ -56,6 +56,7 @@ class VAE_SB(nn.Module):
         super(VAE_SB, self).__init__()
         self.device = device
         self.img_size = img_size
+        self.latent_size = latent_size
         self.c1 = nn.Conv2d(in_channels=input_channels, kernel_size=kernel_size,
                             stride=encoder_stride, out_channels=img_size, padding=1)
         self.c2 = nn.Conv2d(in_channels=img_size, kernel_size=kernel_size,
@@ -129,6 +130,7 @@ def loss_function(recon_x, x, mu, logvar):
 
     return BCE + 2.3*KLD
 
+
 # torch.Size([128, 1, img_size, img_size])
 def train(epoch, model, optimizer, device, log_interval, batch_size):
     model.train()
@@ -163,8 +165,61 @@ def train(epoch, model, optimizer, device, log_interval, batch_size):
         epoch, train_loss / data_size))
 
 
-def max_separation(epoch, model, optimizer, device, log_interval, batch_size):
-    pass
+def train_max_separation(epoch, model, optimizer, device, log_interval, batch_size):
+    model.train()
+    train_loss = 0
+    data_set = np.load(train_file)
+    data_size = len(data_set)
+    total_pairs = 100
+    if data_size > 2*1000:
+        '''if data_size > 2*10000:
+            total_pairs = 10000
+        else:'''
+        total_pairs = 1000
+    current_processed = 0
+    all_idx = np.arange(data_size).tolist()
+    while current_processed < total_pairs:
+        current_processed += batch_size
+        idx1 = np.random.choice(all_idx, size=batch_size)
+        is1 = data_set[idx1]
+        for d in idx1:
+            all_idx.remove(d)
+        is1 = torch.from_numpy(is1).float().to(device)
+        is1 /= 255
+        is1 = is1.permute([0, 3, 1, 2])
+
+        idx2 = np.random.choice(all_idx, size=batch_size)
+        is2 = data_set[idx2]
+        for d in idx2:
+            all_idx.remove(d)
+        is2 = torch.from_numpy(is2).float().to(device)
+        is2 /= 255
+        is2 = is2.permute([0, 3, 1, 2])
+
+        optimizer.zero_grad()
+        mu1, logvar1 = model.encode(is1)
+        mu1 = model.reparameterize(mu1, logvar1)
+        mu2, logvar2 = model.encode(is2)
+        mu2 = model.reparameterize(mu2, logvar2)
+
+        alpha = mu2 - mu1
+        cumulated_loss = 0
+        for l in range(model.latent_size):
+            v = torch.zeros_like(alpha).to(device)
+            v[:, l] = 1.0
+
+            l_alpha = alpha*v
+            mu_inter = mu1 + l_alpha
+            mu_inter_rec = model.decode(mu_inter)
+            #we want to maximize this
+            loss = - F.binary_cross_entropy(mu_inter_rec, is2, reduction='sum')
+            cumulated_loss += loss
+        cumulated_loss.backward()
+        train_loss += cumulated_loss.item()
+        optimizer.step()
+
+    print('====> Epoch: {} Average loss max_dist: {:.4f}'.format(
+        epoch, train_loss / total_pairs))
 
 
 def train_Vae(batch_size=128, epochs=100, no_cuda=False, seed=1, log_interval=100, load=False,
@@ -194,6 +249,9 @@ def train_Vae(batch_size=128, epochs=100, no_cuda=False, seed=1, log_interval=10
         #    sample = model.decode(sample).cpu()
         #    save_image(sample.view(64, 3, img_size, img_size),
         #               'results/sample.png')
+        if epoch > 5 and epoch % 2 == 0:
+            train_max_separation(epoch=epoch, model=model, optimizer=optimizer, device=device,
+                                 log_interval=load, batch_size=batch_size)
         if not (epoch % 5) or epoch == 1:
             test_on_data_set(model, device,'epoch_{}'.format(epoch), latent_size=latent_size)
             print('Saving Progress!')
