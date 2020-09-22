@@ -7,7 +7,7 @@ from utils.os_utils import make_dir
 from vae_env_inter import take_env_image, take_obstacle_image, take_goal_image
 from PIL import Image
 from j_vae.common_data import train_file_name, puck_size, obstacle_size, z_table_height_obstacle, min_obstacle_size,\
-    max_obstacle_size
+    max_obstacle_size,z_table_height_goal
 
 
 
@@ -32,6 +32,17 @@ def extend_sample_region_goal(env, args):
     else:
         #todo?? is this necessary
         env.obj_range = extend_region_parameters_goal[args.env]['range']
+
+#IMPORTANT: this is ate mporally solution. THe robot has difficultirs to reach the 'bottom' part of the table
+# the actual solution would be to change the model of the envrionment so robot can reach evry point equallt easy
+def goal_random_pos_recom(env, args):
+    if args.enc_type == 'goal' or args.enc_type == 'goal_sizes':
+        a = np.random.randint(low=0, high=43, size=1)
+        if a == 0:
+            x = np.random.uniform(1.33, 1.41, size=1)
+            y = np.random.uniform(0.7, 0.83,size=1)
+            p = np.array([x, y, z_table_height_goal])
+            env.env.env._move_object(position=p)
 
 
 def move_other_objects_away(env, args):
@@ -98,7 +109,8 @@ def obstacle_random_pos_and_size(env, args):
 gen_setup_env_ops = {'FetchPushObstacleFetchEnv-v1':[extend_sample_region_goal]
                      }
 
-after_env_reset_ops = {'FetchPushObstacleFetchEnv-v1':[move_other_objects_away, obstacle_random_pos_and_size]
+after_env_reset_ops = {'FetchPushObstacleFetchEnv-v1':[move_other_objects_away, obstacle_random_pos_and_size,
+                                                       goal_random_pos_recom]
                        }
 
 during_loop_ops =  {'FetchPushObstacleFetchEnv-v1':[obstacle_random_pos_and_size]
@@ -186,6 +198,7 @@ if __name__ == "__main__":
             # goal_loop
             if args.enc_type == 'goal' or args.enc_type == 'goal_sizes':
                 rgb_array = take_goal_image(env, img_size=args.img_size)
+                train_data[i] = rgb_array.copy()
                 i += 1
                 for _ in range(3):
                     if i < args.count:
@@ -220,7 +233,6 @@ if __name__ == "__main__":
         #store files
         np.save(data_file, train_data)
 
-
         '''train_data = np.load(data_file)
         all_idx = np.arange(len(train_data)).tolist()
         def show_some_sampled_images():
@@ -243,5 +255,5 @@ if __name__ == "__main__":
             img = Image.fromarray(a.astype(np.uint8))
             img.show()
             img.close()
-        for _ in range(5):
+        for _ in range(3):
             show_some_sampled_images()'''
