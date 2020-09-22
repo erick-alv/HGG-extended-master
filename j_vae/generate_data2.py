@@ -140,9 +140,7 @@ if __name__ == "__main__":
         data_file_2 = env_data_dir + args.file_2
 
         data_1 = np.load(data_file_1)
-        data_1 = data_1[:int(len(data_1)/2)]
         data_2 = np.load(data_file_2)
-        data_2 = data_2[:int(len(data_2)/2)]
         mixed_data = np.concatenate([data_1, data_2], axis=0)
         np.random.shuffle(mixed_data)
 
