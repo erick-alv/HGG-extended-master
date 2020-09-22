@@ -128,7 +128,7 @@ def loss_function(recon_x, x, mu, logvar):
     # Try to adjust
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-    return BCE + 1.5*KLD
+    return BCE + 5.0*KLD
 
 
 # torch.Size([128, 1, img_size, img_size])
@@ -249,9 +249,9 @@ def train_Vae(batch_size=128, epochs=100, no_cuda=False, seed=1, log_interval=10
         #    sample = model.decode(sample).cpu()
         #    save_image(sample.view(64, 3, img_size, img_size),
         #               'results/sample.png')
-        if epoch > 5 and epoch % 3 == 0:
+        '''if epoch > 5 and epoch % 3 == 0:
             train_max_separation(epoch=epoch, model=model, optimizer=optimizer, device=device,
-                                 log_interval=load, batch_size=batch_size)
+                                 log_interval=load, batch_size=batch_size)'''
         if not (epoch % 5) or epoch == 1:
             test_on_data_set(model, device,'epoch_{}'.format(epoch), latent_size=latent_size)
             print('Saving Progress!')
@@ -451,7 +451,8 @@ def show_1d_manifold(img_size, no_cuda=False, seed=1):
 
 if __name__ == '__main__':
     print('Train VAE...')
-    train_Vae(batch_size=64, epochs=25, load=False, latent_size=4)
+    #to the server beta 5 batch 96
+    train_Vae(batch_size=96, epochs=15, load=False, latent_size=4)
     # test_VAE_SB(device)
     # show_1d_manifold()
     #show_2d_manifold(84)
