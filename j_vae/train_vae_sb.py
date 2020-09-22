@@ -451,8 +451,8 @@ def show_1d_manifold(img_size, no_cuda=False, seed=1):
 
 if __name__ == '__main__':
     print('Train VAE...')
-    #to the server beta 5 batch 96
-    train_Vae(batch_size=100, epochs=15, load=False, latent_size=4)
+    #to the server beta 5 batch 100
+    train_Vae(batch_size=64, epochs=15, load=False, latent_size=4)
     # test_VAE_SB(device)
     # show_1d_manifold()
     #show_2d_manifold(84)
