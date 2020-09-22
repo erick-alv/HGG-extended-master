@@ -28,7 +28,6 @@ def take_obstacle_image(env, img_size, make_table_invisible=True):
     rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
     return rgb_array
 
-
 def take_goal_image(env, img_size, make_table_invisible=True, make_walls_invisible=True):
     env.env.env._set_arm_visible(visible=False)
     env.env.env._set_visibility(names_list=['object0'], alpha_val=1.0)
@@ -84,12 +83,19 @@ def obstacle_latent_from_images(obstacles_images, args):
     lo, lo_var = transform_image_to_latent_batch_torch(obstacles_images.copy(), args.vae_model_obstacle,
                                                        args.img_size, args.device)
     del lo_var
-    lo = torch_obstacle_transformation(lo, args.device, ind_1=args.obstacle_ind_1, ind_2=args.obstacle_ind_2)
-    lo = lo.detach().cpu().numpy()
-    lo_s, lo_s_var = transform_image_to_latent_batch_torch(obstacles_images.copy(), args.vae_model_size,
-                                                           args.img_size, args.device)
-    del lo_s_var
-    lo_s = torch_get_size_in_space(lo_s, args.device)
-    lo_s = lo_s.detach().cpu().numpy()
+    if args.use_mixed_with_size:
+        obstacle_latent = torch_obstacle_transformation(lo, args.device, ind_1=args.obstacle_ind_1, ind_2=args.obstacle_ind_2)
+        obstacle_latent = obstacle_latent.detach().cpu().numpy()
+        obstacle_size_latent = torch_get_size_in_space(lo, args.device, args.size_ind)
+        obstacle_size_latent = obstacle_size_latent.detach().cpu().numpy()
+        return obstacle_latent, obstacle_size_latent
+    else:
+        lo = torch_obstacle_transformation(lo, args.device, ind_1=args.obstacle_ind_1, ind_2=args.obstacle_ind_2)
+        lo = lo.detach().cpu().numpy()
+        lo_s, lo_s_var = transform_image_to_latent_batch_torch(obstacles_images.copy(), args.vae_model_size,
+                                                               args.img_size, args.device)
+        del lo_s_var
+        lo_s = torch_get_size_in_space(lo_s, args.device, args.size_ind)
+        lo_s = lo_s.detach().cpu().numpy()
 
-    return lo, lo_s
+        return lo, lo_s

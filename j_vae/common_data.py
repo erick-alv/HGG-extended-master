@@ -16,17 +16,20 @@ z_table_height_obstacle = 0.435
 train_file_name = {'goal': 'goal_set.npy',
                    'obstacle':'obstacle_set.npy',
                    'obstacle_sizes':'obstacle_sizes_set.npy',
-                   'goal_sizes':'goal_sizes_set.npy'
+                   'goal_sizes':'goal_sizes_set.npy',
+                   'mixed': 'mixed.npy'
                    }
 file_corners_name = {'goal': 'goal_corners.npy',
                      'obstacle':'obstacle_corners.npy',
+                     'mixed':'mixed_corners.npy'
                      }
-file_center_name = {'goal': 'goal_center.npy',
-                     'obstacle':'obstacle_center.npy',
-                     }
+
+
+
 
 vae_sb_weights_file_name = {'goal': 'vae_sb_model_goal',
                             'obstacle':'vae_sb_model_obstacle',
+                            'mixed':'vae_sb_model_mixed'
                             }
 
 vae_weights_file_name = {

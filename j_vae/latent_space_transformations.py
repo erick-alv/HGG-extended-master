@@ -1,7 +1,6 @@
 import numpy as np
 import torch
-from j_vae.common_data import obstacle_size, puck_size, train_file_name, vae_sb_weights_file_name, file_corners_name, \
-    file_center_name
+from j_vae.common_data import obstacle_size, puck_size, train_file_name, vae_sb_weights_file_name, file_corners_name
 
 def calculate_angle(model, corners_file,  enc_type, ind_1, ind_2):
     corner_imgs = np.load(corners_file)
@@ -239,7 +238,8 @@ def get_size_in_space(v, range=[-1, 1]):
     return prc*max_size
 
 
-def torch_get_size_in_space(v, device, range=[-1, 1]):
+def torch_get_size_in_space(v, device, ind, range=[-1, 1]):
+    v = v[:, ind].unsqueeze(axis=1)
     dist = torch.abs(torch.tensor(max_latent_size-min_latent_size).float()).to(device)
     prc = torch.abs(v-min_latent_size)/dist
     max_size = torch.abs(torch.tensor(range[1] - range[0]).float())
@@ -296,7 +296,7 @@ if __name__ == '__main__':
     parser.add_argument('--env', help='gym env id', type=str, default='FetchReach-v1')
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
-                        default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
+                        default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes', 'mixed'])
     parser.add_argument('--batch_size', help='size image in pixels', type=np.int32, default=16)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=5)
@@ -328,9 +328,9 @@ if __name__ == '__main__':
         ##for angle
         file_corners = data_dir + file_corners_name[args.enc_type]
         calculate_angle(model, file_corners, args.enc_type, args.ind_1, args.ind_2)
-    elif args.task == 'calc_center_vector':
-        file_center = data_dir + file_center_name[args.enc_type]
-        calculate_center_vec(model, file_center)
+    #elif args.task == 'calc_center_vector':
+    #    file_center = data_dir + file_center_name[args.enc_type]
+    #    calculate_center_vec(model, file_center)
 
 
 

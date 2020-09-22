@@ -19,7 +19,9 @@ extend_region_parameters_goal = {'FetchPushObstacleFetchEnv-v1':
 
 
 size_visible_range = {'FetchPushObstacleFetchEnv-v1':
-                                     {'x_r':np.array([1.2, 1.4]), 'y_r':np.array([0.65, 0.85])}}
+                                     {'x_r':np.array([1.25, 1.35]), 'y_r':np.array([0.7, 0.8]),
+                                      'red_prc':min_obstacle_size/max_obstacle_size}
+                      }
 
 
 
@@ -40,16 +42,17 @@ def move_other_objects_away(env, args):
 
 def random_size_at(env, min_size, max_size, pos, args):
     prc = 1.0
-    #if not visible want to have max size from 0.25 to 1 the regalar max_size
-    prc_dist = np.abs(1.0 - 0.3)
+    #if entering not visible want to have max size from 0.25 to 1 the regalar max_size
+    basic_prc_size = size_visible_range[args.env]['red_prc']
+    prc_dist = np.abs(1.0 - basic_prc_size)
 
-    #calculating distance if just at the activation region then amz size keeps the same otherwise 0.3 of it
+    #calculating distance if just at the activation region then amz size keeps the same otherwise basic_prc_size of it
     if pos[0] < size_visible_range[args.env]['x_r'][0]:
         limit = (env.object_center[0] - env.obj_range)
         base_d = np.abs(limit - size_visible_range[args.env]['x_r'][0])
         d = np.abs(limit - pos[0])
         local_prc = d / base_d
-        new_prc = 0.3 + local_prc*prc_dist
+        new_prc = basic_prc_size + local_prc*prc_dist
         if new_prc < prc:
             prc = new_prc
     if pos[0] > size_visible_range[args.env]['x_r'][1]:
@@ -57,7 +60,7 @@ def random_size_at(env, min_size, max_size, pos, args):
         base_d = np.abs(limit - size_visible_range[args.env]['x_r'][1])
         d = np.abs(limit - pos[0])
         local_prc = d / base_d
-        new_prc = 0.3 + local_prc * prc_dist
+        new_prc = basic_prc_size + local_prc * prc_dist
         if new_prc < prc:
             prc = new_prc
     if pos[1] < size_visible_range[args.env]['y_r'][0]:
@@ -65,7 +68,7 @@ def random_size_at(env, min_size, max_size, pos, args):
         base_d = np.abs(limit - size_visible_range[args.env]['y_r'][0])
         d = np.abs(limit - pos[1])
         local_prc = d / base_d
-        new_prc = 0.3 + local_prc * prc_dist
+        new_prc = basic_prc_size + local_prc * prc_dist
         if new_prc < prc:
             prc = new_prc
     if pos[1] > size_visible_range[args.env]['y_r'][1]:
@@ -73,7 +76,7 @@ def random_size_at(env, min_size, max_size, pos, args):
         base_d = np.abs(limit - size_visible_range[args.env]['y_r'][1])
         d = np.abs(limit - pos[1])
         local_prc = d / base_d
-        new_prc = 0.3 + local_prc * prc_dist
+        new_prc = basic_prc_size + local_prc * prc_dist
         if new_prc < prc:
             prc = new_prc
 
@@ -84,9 +87,11 @@ def random_size_at(env, min_size, max_size, pos, args):
 def obstacle_random_pos_and_size(env, args):
     if args.enc_type == 'obstacle' or args.enc_type == 'obstacle':
         pos = env.object_center + np.random.uniform(-env.obj_range, env.obj_range, size=3)
+        #pos = env.object_center + np.array([-env.obj_range, 0., 0.])
         pos[2] = z_table_height_obstacle
         env.env.env._set_position(names_list=['obstacle'], position=pos)
         size = random_size_at(env, min_obstacle_size, max_obstacle_size, pos, args)
+        #size = [min_obstacle_size, 0.035, 0.0]
         env.env.env._set_size(names_list=['obstacle'], size=size)
 
 
@@ -153,7 +158,7 @@ if __name__ == "__main__":
 
         parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                             choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-        parser.add_argument('--count', help='number of samples', type=np.int32, default=1280 * 40)
+        parser.add_argument('--count', help='number of samples', type=np.int32, default=1280 * 20)
         parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
         args = parser.parse_args()
 
@@ -224,7 +229,7 @@ if __name__ == "__main__":
             for i in range(n):
                 b = None
                 for j in range(n):
-                    id = np.random.choice(all_idx, size=1)[0]
+                    id = np.random.choice(all_idx, size=1, replace=False)[0]
                     all_idx.remove(id)
                     j_im = train_data[id].copy()
                     if b is None:

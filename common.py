@@ -82,14 +82,11 @@ def get_args():
 	parser.add_argument('--obstacle_ind_2', help='index 2 component latent vector', type=np.int32, default=None)
 	parser.add_argument('--goal_ind_1', help='index 1 component latent vector', type=np.int32, default=None)
 	parser.add_argument('--goal_ind_2', help='index 2 component latent vector', type=np.int32, default=None)
-	parser.add_argument('--use_corrector', help='use corrector for VAE yes or no', type=str2bool, default=False)
-	parser.add_argument('--corrector_beta', help='use corrector for VAE yes or no', type=np.float, default=1.8)
-	parser.add_argument('--corrector_batch_size', help='The batch size', type=np.int32, default=32)
-	parser.add_argument('--corrector_epochs', help='The batch size', type=np.int32, default=5)
-	parser.add_argument('--threshold_a', help='threshold to start adding to distance to latent_dist',
-						type=np.float, default=0.5)
-	parser.add_argument('--threshold_b', help='max threshold for adding to distance to latent_dist',
-						type=np.float, default=0.85)
+	parser.add_argument('--size_ind', help='index 2 component latent vector', type=np.int32, default=None)
+	parser.add_argument('--use_mixed', help='see if use the same VAE for the obstacle and goal',
+						type=str2bool, default=False)
+	parser.add_argument('--use_mixed_with_size', help='see if use the same VAE also for size',
+						type=str2bool, default=False)
 
 	#for dense reward transformation
 	parser.add_argument('--transform_dense', help='if transform to dense with VAES or not', type=str2bool, default=False)
@@ -119,22 +116,50 @@ def get_args():
 
 	return args
 
-def experiment_setup(args):
-	if args.vae_dist_help or args.transform_dense:
-		base_data_dir = 'data/'
-		data_dir = base_data_dir + args.env + '/'
+def load_vaes(args):
+	base_data_dir = 'data/'
+	data_dir = base_data_dir + args.env + '/'
+
+	#load VAES for positional data
+	if args.use_mixed:
+		assert args.goal_ind_1 == args.obstacle_ind_1 and args.goal_ind_2 == args.obstacle_ind_2
+		assert args.latent_size_obstacle == args.latent_size_goal
+		weights_path = data_dir + vae_sb_weights_file_name['mixed']
+		args.weights_path_goal = weights_path
+		args.weights_path_obstacle = weights_path
+		model = load_Vae_SB(weights_path, args.img_size, args.latent_size_obstacle)
+		model.eval()
+		args.vae_model_obstacle = model
+		args.vae_model_goal = model
+	else:
 		weights_path_goal = data_dir + vae_sb_weights_file_name['goal']
-		args.weights_path_goal  = weights_path_goal
+		args.weights_path_goal = weights_path_goal
 		weights_path_obstacle = data_dir + vae_sb_weights_file_name['obstacle']
 		args.weights_path_obstacle = weights_path_obstacle
-		weights_path_obstacle_sizes = data_dir + vae_weights_file_name['obstacle_sizes']
-		args.weights_path_obstacle_sizes = weights_path_obstacle_sizes
 		args.vae_model_obstacle = load_Vae_SB(weights_path_obstacle, args.img_size, args.latent_size_obstacle)
 		args.vae_model_obstacle.eval()
 		args.vae_model_goal = load_Vae_SB(weights_path_goal, args.img_size, args.latent_size_goal)
 		args.vae_model_goal.eval()
+
+	#load VAE for size data
+	if args.use_mixed_with_size:
+		assert args.use_mixed
+		assert args.size_ind != args.obstacle_ind_1 and args.size_ind != args.obstacle_ind_2
+		args.weights_path_obstacle_sizes = weights_path
+		args.vae_model_size = model
+	else:
+		weights_path_obstacle_sizes = data_dir + vae_weights_file_name['obstacle_sizes']
+		args.weights_path_obstacle_sizes = weights_path_obstacle_sizes
 		args.vae_model_size = load_Vae(path=weights_path_obstacle_sizes, img_size=args.img_size, latent_size=1)
 		args.vae_model_size.eval()
+
+
+
+
+def experiment_setup(args):
+	if args.vae_dist_help or args.transform_dense:
+		load_vaes(args)
+
 	if args.transform_dense:
 		args.compute_reward_dense = calculate_distance
 

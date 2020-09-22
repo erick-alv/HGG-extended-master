@@ -5,8 +5,7 @@ import numpy as np
 
 from j_vae.generate_vae_data import random_pos_inside, size_file,random_size_at,generate_points
 from j_vae.common_data import  min_obstacle_size, max_obstacle_size, range_x, range_y, obstacle_size, \
-    puck_size, z_table_height, center_obstacle, train_file_name, vae_sb_weights_file_name, file_corners_name,\
-    file_center_name
+    puck_size, z_table_height, center_obstacle, train_file_name, vae_sb_weights_file_name, file_corners_name
 import torch
 import matplotlib.pyplot as plt
 from j_vae.train_vae_sb import load_Vae as load_Vae_SB
@@ -52,19 +51,19 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
     # sample images
     data_set = np.empty([len(points), img_size, img_size, 3])
     #move other objects to plaecs they do not disturb
-    if enc_type == 'goal':
+    if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
         env.env.env._set_position(names_list=['obstacle'], position=[2., 2., 0.4])
-    elif enc_type == 'obstacle':
+    elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
         env.env.env._move_object(position=[2.,2.,0.4])
     else:
         raise Exception('Not supported enc type')
     for i,p in enumerate(points):
-        if enc_type == 'goal':
+        if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
             env.env.env._move_object(position=p)
             data_set[i] = take_goal_image(env, img_size, make_table_invisible=True)
-        elif enc_type == 'obstacle':
+        elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
             env.env.env._set_position(names_list=['obstacle'], position=p)
-            env.env.env._set_size(names_list=['obstacle'], size=np.array([0.15, 0.035, 0.]))
+            #env.env.env._set_size(names_list=['obstacle'], size=np.array([0.15, 0.035, 0.]))
             data_set[i] = take_obstacle_image(env, img_size)
         else:
             raise Exception('Not supported enc type')
@@ -106,12 +105,12 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
                          np.expand_dims(mu[:, ind_2], axis=1)], axis=1)
 
 
-    if enc_type == 'goal':
-        rm = create_rotation_matrix(angle_goal)
-        mu = rotate_list_of_points(mu, rm)
-        mu = map_points(mu, goal_map_x, goal_map_y)
+    if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
+        #rm = create_rotation_matrix(angle_goal)
+        #mu = rotate_list_of_points(mu, rm)
+        #mu = map_points(mu, goal_map_x, goal_map_y)
         pass
-    elif enc_type == 'obstacle':
+    elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
         #for i, p in enumerate(mu):
         #    mu[i] = reflect_obstacle_transformation(p)
         #rm = create_rotation_matrix(angle_obstacle)
@@ -136,6 +135,90 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
         plt.show()
     plt.close()
 
+def traversal(env, model, size_to_use, img_size,  latent_size, n, enc_type, ind_1, ind_2,
+                              using_sb=True, use_d=False, fig_file_name=None):
+    cuda = torch.cuda.is_available()
+    torch.manual_seed(1)
+    device = torch.device("cuda" if cuda else "cpu")
+    dist = 0.8
+
+    data_set = np.empty([n * latent_size, img_size, img_size, 3])
+    # move other objects to plaecs they do not disturb
+    if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
+        env.env.env._set_position(names_list=['obstacle'], position=[2., 2., 0.4])
+    elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
+        env.env.env._move_object(position=[2., 2., 0.4])
+    else:
+        raise Exception('Not supported enc type')
+
+    # sample image  central
+    if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
+        env.env.env._move_object(position=[1.3, 0.75, 0.4])
+        central_im = take_goal_image(env, img_size, make_table_invisible=True)
+    elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
+        env.env.env._set_position(names_list=['obstacle'], position=[1.3, 0.75, 0.4])
+        # env.env.env._set_size(names_list=['obstacle'], size=np.array([0.15, 0.035, 0.]))
+        central_im = take_obstacle_image(env, img_size)
+    else:
+        raise Exception('Not supported enc type')
+
+    #trasform to latent
+    data = np.expand_dims(central_im.copy(), axis=0)
+    data = torch.from_numpy(data).float().to(device)
+    data /= 255
+    data = data.permute([0, 3, 1, 2])
+    model.eval()
+    if not using_sb:
+        mu, logvar = model.encode(data.reshape(-1, img_size * img_size * 3))
+    else:
+        mu, logvar = model.encode(data)
+
+    mid = int(n / 2)
+    for l in range(latent_size):
+        for t in range(n):
+            if t == mid:
+                data_set[n*l+t] = central_im.copy()
+            else:
+                v=torch.zeros(latent_size)
+                v[l] = 1.
+                if t < mid:
+                    v = v*-(mid-t)*dist
+                else:
+                    v = v*(t-mid)*dist
+                v = v.to(device)
+                z = mu+v
+
+                im = model.decode(z)
+                im = im.view(3, img_size, img_size)
+                im = im.permute([1, 2, 0])
+                im *= 255.
+                im = im.type(torch.uint8)
+                im = im.detach().cpu().numpy()
+                data_set[n * l + t] = im.copy()
+
+    all_array = None
+    t = 0
+    for r in range(latent_size):
+        row = None
+        for c in range(n):
+            rcim = data_set[t].copy()
+            t += 1
+            if row is None:
+                row = rcim
+            else:
+                row = np.concatenate([row.copy(), rcim], axis=1)
+        if all_array is None:
+            all_array = row.copy()
+        else:
+            all_array = np.concatenate([all_array.copy(), row], axis=0)
+    all_ims = Image.fromarray(all_array.astype(np.uint8))
+    if fig_file_name is not None:
+        all_ims.save('{}_ims.png'.format(fig_file_name))
+    else:
+        all_ims.show()
+    all_ims.close()
+
+
 def print_max_and_min(points):
     assert isinstance(points, np.ndarray)
     xs = points[:, 0]
@@ -155,17 +238,17 @@ def save_corners(env, size_to_use, file_corners, img_size, enc_type):
     # sample images
     data_set = np.empty([len(points), img_size, img_size, 3])
     # move other objects to plaecs they do not disturb
-    if enc_type == 'goal':
+    if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
         env.env.env._set_position(names_list=['obstacle'], position=[2., 2., 0.4])
-    elif enc_type == 'obstacle':
+    elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
         env.env.env._move_object(position=[2., 2., 0.4])
     else:
         raise Exception('Not supported enc_type')
     for i, p in enumerate(points):
-        if enc_type == 'goal':
+        if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
             env.env.env._move_object(position=p)
             data_set[i] = take_goal_image(env, img_size)
-        elif enc_type == 'obstacle':
+        elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
             env.env.env._set_position(names_list=['obstacle'], position=p)
             data_set[i] = take_obstacle_image(env, img_size)
         else:
@@ -191,17 +274,17 @@ def save_center(env, size_to_use, file_corners, img_size, enc_type):
     # sample images
     data_set = np.empty([1, img_size, img_size, 3])
     # move other objects to plaecs they do not disturb
-    if enc_type == 'goal':
+    if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
         env.env.env._set_position(names_list=['obstacle'], position=[2., 2., 0.4])
-    elif enc_type == 'obstacle':
+    elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
         env.env.env._move_object(position=[2., 2., 0.4])
     else:
         raise Exception('Not supported enc_type')
 
-    if enc_type == 'goal':
+    if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
         env.env.env._move_object(position=points[4])
         data_set[0] = take_goal_image(env, img_size, make_table_invisible=False)
-    elif enc_type == 'obstacle':
+    elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
         env.env.env._set_position(names_list=['obstacle'], position=points[4])
         data_set[0] = take_obstacle_image(env, img_size)
     else:
@@ -270,7 +353,7 @@ if __name__ == '__main__':
     parser.add_argument('--env', help='gym env id', type=str, default='FetchReach-v1', required=True)
     parser.add_argument('--task', help='the type of attribute that we want to generate/encode', type=str,
                         default='show_space', choices=['show_space', 'save_corners', 'save_center',
-                                                       'show_size'], required=True)
+                                                       'show_size','show_traversal'], required=True)
     args, _ = parser.parse_known_args()
     if args.env == 'HandReach-v0':
         parser.add_argument('--goal', help='method of goal generation', type=str, default='reach',
@@ -285,12 +368,14 @@ if __name__ == '__main__':
             parser.add_argument('--init_rotation', help='initial rotation in hand environments', type=np.float32,
                                 default=0.25)
 
-    if args.task == 'show_space':
-        parser.add_argument('--ind_1', help='first index to extract from latent vector', type=np.int32)
-        parser.add_argument('--ind_2', help='second index to extract from latent vector', type=np.int32)
+    parser.add_argument('--ind_1', help='first index to extract from latent vector', type=np.int32)
+    parser.add_argument('--ind_2', help='second index to extract from latent vector', type=np.int32)
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
-                        default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
+                        default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes', 'mixed'])
+    parser.add_argument('--mix_h', help='if the representation should de done with goals or obstacles', type=str,
+                        default='goal', choices=['goal', 'obstacle'])
+
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=5)
 
@@ -311,38 +396,47 @@ if __name__ == '__main__':
 
     #other arguments for the algorithms
     if args.enc_type == 'goal':
-        size_to_use = puck_size #
+        size_to_use = puck_size
     elif args.enc_type == 'obstacle':
         size_to_use = obstacle_size
+    elif args.enc_type == 'mixed':
+        size_to_use = (obstacle_size + puck_size) /2
 
-    if args.task == 'show_space' or args.task == 'show_size':
+    if args.task == 'show_space' or args.task == 'show_size' or args.task == 'show_traversal':
         # load the latent_size and model
         cuda = torch.cuda.is_available()
         device = torch.device("cuda" if cuda else "cpu")
-        if args.enc_type == 'goal' or args.enc_type == 'obstacle':
+        if args.enc_type == 'goal' or args.enc_type == 'obstacle' or args.enc_type == 'mixed':
             model = load_Vae_SB(weights_path, args.img_size, args.latent_size)
         else:
             model = load_Vae(weights_path, args.imgsize, args.latent_size)
 
         if args.task == 'show_space':
 
-            assert args.enc_type == 'goal' or args.enc_type == 'obstacle'
+            if args.enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
+                fig_name = 'vis_grid_g'
+            elif args.enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
+                fig_name = 'vis_grid_o'
+
             visualization_grid_points(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
                                       enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,
-                                      fig_file_name='vis_grid')
+                                      fig_file_name=fig_name)
         elif args.task == 'show_size':
-
             assert args.enc_type == 'obstacle_sizes'
             visualization_sizes_obstacle(env, model, args.img_size, 5)#todo make also goal if necessary
+        elif args.task == 'show_traversal':
+            traversal(env, model,size_to_use, img_size=args.img_size, latent_size=args.latent_size, n=7,
+                      enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,
+                                      fig_file_name='traversal')
     else:
         if args.task == 'save_corners':
             assert args.enc_type == 'goal' or args.enc_type == 'obstacle'
             file_corners = data_dir + file_corners_name[args.enc_type]
             save_corners(env, size_to_use, file_corners, args.img_size, args.enc_type)
-        elif args.task == 'save_center':
+        '''elif args.task == 'save_center':
             assert args.enc_type == 'goal' or args.enc_type == 'obstacle'
             file_center = data_dir + file_center_name[args.enc_type]
-            save_center(env, size_to_use, file_center, args.img_size, args.enc_type)
+            save_center(env, size_to_use, file_center, args.img_size, args.enc_type)'''
 
 
 
