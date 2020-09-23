@@ -25,10 +25,11 @@ def calculate_angle(model, corners_file,  enc_type, ind_1, ind_2):
     to_rotate = to_rotate % 360
     print(np.mean(to_rotate))
 
-angle_goal = 80.7715
 
+angle_goal = 279.10576
 
-angle_obstacle = 81.7336
+angle_obstacle = 35.14
+
 
 do_center_goal = False
 centering_vector_goal = np.array([-0.67377424, 0.10919745,  3.1180222])
@@ -79,11 +80,12 @@ o_y_max = table_map_y(1.0-obstacle_size)
 
 #goal_map_x = interval_map_function(-1.229, 1.87436, g_x_min, g_x_max)
 #goal_map_y = interval_map_function(-1.9316, 0.72467, g_y_min, g_y_max)
-goal_map_x = interval_map_function(-1.144, 1.379, g_x_min, g_x_max)
-goal_map_y = interval_map_function(-1.173, 1.3965, g_y_min, g_y_max)
+goal_map_x = interval_map_function(-1.24692, 1.40665, g_x_min, g_x_max)
+goal_map_y = interval_map_function(-1.29224, 1.28134, g_y_min, g_y_max)
 
-obstacle_map_x = interval_map_function(-1.435, 1.2482, o_x_min, o_x_max)
-obstacle_map_y = interval_map_function(-1.498, 1.161, o_y_min, o_y_max)
+
+obstacle_map_x = interval_map_function(-1.3196, 1.917, o_x_min, o_x_max)
+obstacle_map_y = interval_map_function(-1.32474, 1.308284, o_y_min, o_y_max)
 
 
 def create_rotation_matrix(angle):

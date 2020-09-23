@@ -141,6 +141,13 @@ if __name__ == "__main__":
                 config = r"G-HGG ($n = 1485$)"
             elif (("graph" in clean_path) or ("mesh" in clean_path)):
                 config = r"G-HGG ($n = 10571$)"
+        elif args.naming == 6:
+            if 'hgg-vae' in clean_path:
+                config = "HGG-VAE"
+            elif 'hgg' in clean_path:
+                config = "HGG"
+            else:
+                raise Exception("Naming failed!")
 
         # Test:
         run = config
