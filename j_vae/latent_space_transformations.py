@@ -25,10 +25,10 @@ def calculate_angle(model, corners_file,  enc_type, ind_1, ind_2):
     to_rotate = to_rotate % 360
     print(np.mean(to_rotate))
 
-angle_goal = 279.10576
+angle_goal = 80.7715
 
 
-angle_obstacle = 35.14
+angle_obstacle = 81.7336
 
 do_center_goal = False
 centering_vector_goal = np.array([-0.67377424, 0.10919745,  3.1180222])
@@ -79,11 +79,11 @@ o_y_max = table_map_y(1.0-obstacle_size)
 
 #goal_map_x = interval_map_function(-1.229, 1.87436, g_x_min, g_x_max)
 #goal_map_y = interval_map_function(-1.9316, 0.72467, g_y_min, g_y_max)
-goal_map_x = interval_map_function(-1.24692, 1.40665, g_x_min, g_x_max)
-goal_map_y = interval_map_function(-1.29224, 1.28134, g_y_min, g_y_max)
+goal_map_x = interval_map_function(-1.144, 1.379, g_x_min, g_x_max)
+goal_map_y = interval_map_function(-1.173, 1.3965, g_y_min, g_y_max)
 
-obstacle_map_x = interval_map_function(-1.3196, 1.917, o_x_min, o_x_max)
-obstacle_map_y = interval_map_function(-1.32474, 1.308284, o_y_min, o_y_max)
+obstacle_map_x = interval_map_function(-1.435, 1.2482, o_x_min, o_x_max)
+obstacle_map_y = interval_map_function(-1.498, 1.161, o_y_min, o_y_max)
 
 
 def create_rotation_matrix(angle):
@@ -239,7 +239,7 @@ def get_size_in_space(v, range=[-1, 1]):
 
 
 def torch_get_size_in_space(v, device, ind, range=[-1, 1]):
-    v = v[:, ind].unsqueeze(axis=1)
+    v = v[:, ind]
     dist = torch.abs(torch.tensor(max_latent_size-min_latent_size).float()).to(device)
     prc = torch.abs(v-min_latent_size)/dist
     max_size = torch.abs(torch.tensor(range[1] - range[0]).float())
@@ -297,6 +297,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes', 'mixed'])
+    parser.add_argument('--mix_h', help='if the representation should de done with goals or obstacles', type=str,
+                        default=None, choices=['goal', 'obstacle'])
     parser.add_argument('--batch_size', help='size image in pixels', type=np.int32, default=16)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=5)
@@ -325,8 +327,14 @@ if __name__ == '__main__':
         ##print_min_and_max_from_sizes
         print_min_and_max_from_sizes(model, train_file)
     elif args.task == 'measure_degree':
-        ##for angle
-        file_corners = data_dir + file_corners_name[args.enc_type]
+        ##for
+        if args.enc_type == 'mixed':
+            if args.mix_h == 'goal':
+                file_corners = data_dir + file_corners_name['goal']
+            elif args.mix_h == 'obstacle':
+                file_corners = data_dir + file_corners_name['obstacle']
+        else:
+            file_corners = data_dir + file_corners_name[args.enc_type]
         calculate_angle(model, file_corners, args.enc_type, args.ind_1, args.ind_2)
     #elif args.task == 'calc_center_vector':
     #    file_center = data_dir + file_center_name[args.enc_type]

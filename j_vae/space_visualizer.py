@@ -63,7 +63,6 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
             data_set[i] = take_goal_image(env, img_size, make_table_invisible=True)
         elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
             env.env.env._set_position(names_list=['obstacle'], position=p)
-            env.env.env._set_size(names_list=['obstacle'], size=np.array([puck_size, 0.035, 0.]))
             data_set[i] = take_obstacle_image(env, img_size)
         else:
             raise Exception('Not supported enc type')
@@ -106,20 +105,20 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
 
 
     if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
-        #rm = create_rotation_matrix(angle_goal)
-        #mu = rotate_list_of_points(mu, rm)
-        #mu = map_points(mu, goal_map_x, goal_map_y)
+        rm = create_rotation_matrix(angle_goal)
+        mu = rotate_list_of_points(mu, rm)
+        mu = map_points(mu, goal_map_x, goal_map_y)
         pass
     elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
         #for i, p in enumerate(mu):
         #    mu[i] = reflect_obstacle_transformation(p)
-        #rm = create_rotation_matrix(angle_obstacle)
-        #mu = rotate_list_of_points(mu, rm)
-        #mu = map_points(mu, obstacle_map_x, obstacle_map_y)
+        rm = create_rotation_matrix(angle_obstacle)
+        mu = rotate_list_of_points(mu, rm)
+        mu = map_points(mu, obstacle_map_x, obstacle_map_y)
         pass
     else:
         raise Exception('Not supported enc type')
-    #print_max_and_min(mu)
+    print_max_and_min(mu)
 
     lxs = mu[:, 0]
     lys = mu[:, 1]
@@ -430,7 +429,6 @@ if __name__ == '__main__':
                                       fig_file_name='traversal')
     else:
         if args.task == 'save_corners':
-            assert args.enc_type == 'goal' or args.enc_type == 'obstacle'
             file_corners = data_dir + file_corners_name[args.enc_type]
             save_corners(env, size_to_use, file_corners, args.img_size, args.enc_type)
         '''elif args.task == 'save_center':
