@@ -142,6 +142,7 @@ if __name__ == "__main__":
             elif (("graph" in clean_path) or ("mesh" in clean_path)):
                 config = r"G-HGG ($n = 10571$)"
 
+
         # Test:
         run = config
         print('Config / run: {} / {}'.format(config, run))
