@@ -24,19 +24,19 @@ if __name__ == '__main__':
     acc_sum, obs = 0.0, []
     prev_obs = []
 
-    for assada in range(3):
-        env_images = []
-        o = env.reset()
+
+    env_images = []
+    o = env.reset()
+    obs.append(o)
+    prev_obs.append(o)
+    env_images.append(take_env_image(env, args.img_size))
+    for timestep in range(args.timesteps):
+        action = env.action_space.sample()
+        o, _, _, info = env.step(action)
         obs.append(o)
-        prev_obs.append(o)
         env_images.append(take_env_image(env, args.img_size))
-        for timestep in range(args.timesteps):
-            action = env.action_space.sample()
-            o, _, _, info = env.step(action)
-            obs.append(o)
-            env_images.append(take_env_image(env, args.img_size))
-        create_rollout_video(np.array(env_images), args=args, filename='vid_env')
-        dist_estimator.update([o['obstacle_latent'] for o in obs], [o['obstacle_size_latent'] for o in obs])
+    create_rollout_video(np.array(env_images), args=args, filename='vid_env')
+    dist_estimator.update([o['obstacle_latent'] for o in obs], [o['obstacle_size_latent'] for o in obs])
 
     '''dist_estimator.update([[-0.368, 0], [0.368, 0]],[0.192])
     goal_pos = np.array([0, -0.9])

@@ -19,7 +19,7 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.target_goal_center = np.array([1.3, 0.57, 0.425])
         self.object_center = np.array([1.3, 0.93, 0.425])
         #for moving
-        self.obstacle_vel = 0.055
+        self.obstacle_vel = 0.9
         self.initial_obstacle_direction = 1
         self.obstacle_direction = 1
         self.obstacle_upper_limit = 1.392
@@ -50,13 +50,9 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
             self.obstacle_direction = -1
         elif mov_obst_center[0] <= self.obstacle_lower_limit and self.obstacle_direction == -1:
             self.obstacle_direction = 1
-
-        # self.sim.data.set_joint_qpos('keeper0:joint', obj_qpos + 0.01 * self.obstacle_direction)
-        #for name in names_list:
-        #    id = self.sim.model.body_name2id(name)
-        #    self.sim.model.body_pos[id] = position
         #self.sim.forward()
-        self.sim.model.body_pos[body_id][0] += self.obstacle_vel * self.obstacle_direction
+        dt = self.sim.nsubsteps * self.sim.model.opt.timestep
+        self.sim.model.body_pos[body_id][0] += self.obstacle_vel * self.obstacle_direction * dt
         super(FetchPushMovingObstacleEnv, self)._step_callback()
 
     def _sample_goal(self):
@@ -78,3 +74,27 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.sim.forward()
         self.obstacle_direction = self.initial_obstacle_direction
         return True
+
+'''if __name__ == '__main__':
+    import time
+    from utils.image_util import rgb_array_to_image
+    import cv2
+    e = FetchPushMovingObstacleEnv()
+    im_size = 500
+    ims = []
+    for episode in range(5):
+        ob = e.reset()
+        for step in range(100):
+            array = e.render(mode='rgb_array')
+            image = rgb_array_to_image(array)
+            ims.append(image)
+            a = e.action_space.sample()
+            e.step(a)
+            obs = e._get_obs()
+    e.close()
+    out = cv2.VideoWriter('/home/erick/RL/HGG-extended/HGG-Extended-master/vid.avi',
+                          cv2.VideoWriter_fourcc(*'DIVX'),
+                          10, (im_size, im_size))
+    for i in range(len(ims)):
+        out.write(np.array(ims[i]))
+    out.release()'''

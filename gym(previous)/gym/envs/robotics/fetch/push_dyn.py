@@ -6,7 +6,7 @@ from gym.envs.robotics import rotations, robot_env, utils
 
 # Ensure we get the path separator correct on windows
 #MODEL_XML_PATH = os.path.join('/fetch', 'push_dyn.xml')
-MODEL_XML_PATH = os.path.join('/home/erick/RL/HGG-extended/HGG-Extended-master/gym/gym/envs/robotics/assets/fetch', 'push_dyn.xml')
+MODEL_XML_PATH = os.path.join('/home/erick/RL/HGG-extended/HGG-Extended-master/gym(previous)/gym/envs/robotics/assets/fetch', 'push_dyn.xml')
 
 
 def goal_distance(goal_a, goal_b):
@@ -115,7 +115,7 @@ class FetchPushDynEnv(robot_env.RobotEnv, gym.utils.EzPickle):
             self.direction *= -1
 
         self.sim.data.set_joint_qpos('keeper0:joint',
-                                     obj_qpos + 0.01 * self.direction)
+                                     obj_qpos + 0.05 * self.direction)
         print(self.sim.data.get_joint_qpos('keeper0:joint'))
 
     def _get_obs(self):
@@ -274,11 +274,12 @@ if __name__ == '__main__':
             image = rgb_array_to_image(array)
             ims.append(image)
             e.step(e.action_space.sample())
+            e._update_obs()
             obs = e._get_obs()
     e.close()
     out = cv2.VideoWriter('/home/erick/RL/HGG-extended/HGG-Extended-master/vid.avi',
                           cv2.VideoWriter_fourcc(*'DIVX'),
-                          20, (im_size, im_size))
+                          10, (im_size, im_size))
     for i in range(len(ims)):
         out.write(np.array(ims[i]))
     out.release()

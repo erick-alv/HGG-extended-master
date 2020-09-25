@@ -128,7 +128,7 @@ def make_video(path_to_folder, ext_end, path_to_save=None, filename_save=None):
         fname = path_to_save + filename_save + '.avi'
     else:
         fname = path_to_folder+'rollout_video.avi'
-    out = cv2.VideoWriter(fname, cv2.VideoWriter_fourcc(*'DIVX'), 4, size)
+    out = cv2.VideoWriter(fname, cv2.VideoWriter_fourcc(*'DIVX'), 3, size)
     for i in range(len(img_array)):
         out.write(img_array[i])
     out.release()
