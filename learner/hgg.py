@@ -205,12 +205,17 @@ class MatchSampler:
 						res_1[k] = self.get_graph_goal_distance(achieved_pool[i][k], desired_goals[j])
 					res = res_1 - achieved_value[i]/(self.args.hgg_L/self.max_dis/(1-self.args.gamma))
 				elif self.args.vae_dist_help:
-					#!!!! For now just one obstacle since obstacles are stationary
-					latent_distances = calculate_distance_batch(obstacle_pos=achieved_latent_obstacles[i][0].copy(),
-											 obstacle_radius=achieved_latent_obstacles_sizes[i][0].copy(),
-											 current_pos_batch=achieved_latent_goals[i].copy(),
-											 goal_pos=desired_goals_latents[j].copy(),
-											 range_x=[-1., 1.], range_y=[-1., 1.])
+					if self.args.with_dist_estimator:
+						latent_distances = \
+						self.args.dist_estimator.calculate_distance_batch(goal_pos=desired_goals_latents[j].copy(),
+																		  current_pos_batch=achieved_latent_goals[i].copy())
+					else:
+						#!!!! For now just one obstacle since obstacles are stationary
+						latent_distances = calculate_distance_batch(obstacle_pos=achieved_latent_obstacles[i][0].copy(),
+												 obstacle_radius=achieved_latent_obstacles_sizes[i][0].copy(),
+												 current_pos_batch=achieved_latent_goals[i].copy(),
+												 goal_pos=desired_goals_latents[j].copy(),
+												 range_x=[-1., 1.], range_y=[-1., 1.])
 					distances = latent_distances.copy()
 					distances[indices_outside] = 10.0
 
@@ -238,11 +243,17 @@ class MatchSampler:
 
 				#(2.22) c * || m(s^_0 ^i) - m(s_0 ^i) || + min_t(..)
 				if self.args.vae_dist_help:
-					d_i = calculate_distance(obstacle_pos=achieved_latent_obstacles[i][0].copy(),
-									   obstacle_radius=achieved_latent_obstacles_sizes[i][0].copy(),
-									   current_pos=achieved_latent_goals[i][0].copy(),
-											 goal_pos=initial_goals_latents[j].copy(),
-									   range_x=[-1., 1.], range_y=[-1., 1.])
+					if self.args.with_dist_estimator:
+						d_i = self.args.dist_estimator.calculate_distance_batch(
+							goal_pos=desired_goals_latents[j].copy(),
+							current_pos_batch=np.array([achieved_latent_goals[i][0].copy()])
+						)[0]
+					else:
+						d_i = calculate_distance(obstacle_pos=achieved_latent_obstacles[i][0].copy(),
+										   obstacle_radius=achieved_latent_obstacles_sizes[i][0].copy(),
+										   current_pos=achieved_latent_goals[i][0].copy(),
+												 goal_pos=initial_goals_latents[j].copy(),
+										   range_x=[-1., 1.], range_y=[-1., 1.])
 					match_dis = np.min(res) + d_i * self.args.hgg_c
 				else:
 					match_dis = np.min(res)+goal_distance(achieved_pool[i][0], initial_goals[j])*self.args.hgg_c # TODO: distance of initial positions: take l2 norm_as before
@@ -286,7 +297,7 @@ class HGGLearner:
 		self.learn_calls = 0
 		self.success_n = 0
 
-	def learn(self, args, env, env_test, agent, buffer, write_goals=0):
+	def learn(self, args, env, env_test, agent, buffer, write_goals=0, epoch=None):
 		# Actual learning cycle takes place here!
 		initial_goals = []
 		desired_goals = []
@@ -438,7 +449,7 @@ class HGGLearner_VAEs(HGGLearner):
 		self.learn_calls = 0
 		self.success_n = 0
 
-	def learn(self, args, env, env_test, agent, buffer, write_goals=0):
+	def learn(self, args, env, env_test, agent, buffer, write_goals=0, epoch=None):
 		# Actual learning cycle takes place here!
 		initial_goals = []
 		desired_goals = []
@@ -550,6 +561,12 @@ class HGGLearner_VAEs(HGGLearner):
 				# update target network
 				agent.target_update()
 
+		if args.with_dist_estimator and epoch==0:
+			args.dist_estimator.update(
+				np.concatenate(achieved_trajectory_obstacle_latents, axis=0),
+				np.concatenate(achieved_trajectory_obstacle_latents_sizes, axis=0)
+			)
+
 		selection_trajectory_idx = {}
 		for i in range(self.args.episodes):
 			# only add trajectories with movement to the trajectory pool --> use default (L2) distance measure!
@@ -605,7 +622,7 @@ class NormalLearner:
 		self.learn_calls = 0
 		self.success_n = 0
 
-	def learn(self, args, env, env_test, agent, buffer, write_goals=0):
+	def learn(self, args, env, env_test, agent, buffer, write_goals=0, epoch=None):
 		# Actual learning cycle takes place here!
 		goal_list = []
 

@@ -134,7 +134,8 @@ class FetchEnv(robot_env.RobotEnv):
 
     def _viewer_setup(self):
         from gym.envs.robotics.fetch.push_obstacle_fetch import FetchPushObstacleFetchEnv
-        if isinstance(self, FetchPushObstacleFetchEnv):
+        from gym.envs.robotics.fetch.push_moving_obstacle_fetch import FetchPushMovingObstacleEnv
+        if isinstance(self, FetchPushObstacleFetchEnv) or isinstance(self, FetchPushMovingObstacleEnv):
             lookat = np.array([1.3, 0.75, 0.4])
             for idx, value in enumerate(lookat):
                 self.viewer.cam.lookat[idx] = value

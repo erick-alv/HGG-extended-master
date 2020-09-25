@@ -28,7 +28,8 @@ def calculate_angle(model, corners_file,  enc_type, ind_1, ind_2):
 
 angle_goal = 279.10576
 
-angle_obstacle = 35.14
+#angle_obstacle = 35.14
+angle_obstacle = 244.25
 
 
 do_center_goal = False
@@ -84,8 +85,10 @@ goal_map_x = interval_map_function(-1.24692, 1.40665, g_x_min, g_x_max)
 goal_map_y = interval_map_function(-1.29224, 1.28134, g_y_min, g_y_max)
 
 
-obstacle_map_x = interval_map_function(-1.3196, 1.917, o_x_min, o_x_max)
-obstacle_map_y = interval_map_function(-1.32474, 1.308284, o_y_min, o_y_max)
+#obstacle_map_x = interval_map_function(-1.3196, 1.917, o_x_min, o_x_max)
+#obstacle_map_y = interval_map_function(-1.32474, 1.308284, o_y_min, o_y_max)
+obstacle_map_x = interval_map_function(-1.4778, 1.5698, o_x_min, o_x_max)
+obstacle_map_y = interval_map_function(-1.5985, 1.4524, o_y_min, o_y_max)
 
 
 def create_rotation_matrix(angle):
@@ -197,7 +200,7 @@ def torch_obstacle_transformation(batch_p, device, ind_1, ind_2):
 img_size = 84
 
 
-def print_min_and_max_from_sizes(model, train_file):
+def print_min_and_max_from_sizes(model, train_file, ind, using_sb=True):
     data_set = np.load(train_file)
     cuda = torch.cuda.is_available()
     torch.manual_seed(1)
@@ -210,10 +213,12 @@ def print_min_and_max_from_sizes(model, train_file):
         data /= 255
         data = data.unsqueeze(0)
         data = data.permute([0, 3, 1, 2])
-        data = data.reshape(-1, img_size * img_size * 3)
-        mu, logvar = model.encode(data)
+        if not using_sb:
+            mu, logvar = model.encode(data.reshape(-1, img_size * img_size * 3))
+        else:
+            mu, logvar = model.encode(data)
         mu = mu.detach().cpu().numpy()
-        mu = mu[0][0]
+        mu = mu[:, ind]
 
         if min_val is None:
             min_val = mu
@@ -226,18 +231,21 @@ def print_min_and_max_from_sizes(model, train_file):
     print('min val: {} \nmax val: {}'.format(min_val, max_val))
 
 
-min_latent_size = -4.2777#this is best for current size
-max_latent_size = 12.9686
+#min_latent_size = -4.2777#this is best for current size
+#max_latent_size = 12.9686
 
 #min_latent_size = -4.703
 #max_latent_size = 4.703
+
+min_latent_size = -2.1624#this is best for current size
+max_latent_size = 3.0823
 
 def get_size_in_space(v, range=[-1, 1]):
     dist = np.abs(max_latent_size-min_latent_size)
     prc = np.abs(v-min_latent_size)/dist
     max_size = np.abs(range[1] - range[0])
     #substracted since space encodes from biggest to smallest
-    return prc*max_size
+    return prc*max_size*0.25#why sometimes and sometimenot??
 
 
 def torch_get_size_in_space(v, device, ind, range=[-1, 1]):
@@ -246,7 +254,7 @@ def torch_get_size_in_space(v, device, ind, range=[-1, 1]):
     prc = torch.abs(v-min_latent_size)/dist
     max_size = torch.abs(torch.tensor(range[1] - range[0]).float())
     #substracted since space encodes from biggest to smallest
-    return prc*max_size
+    return prc*max_size*0.25#why sometimes and sometimenot??
 
 
 def from_real_pos_to_range(pos):
@@ -292,9 +300,8 @@ if __name__ == '__main__':
                                                                'print_min_max', 'calc_center_vector'],
                         required=True)
     args, _ = parser.parse_known_args()
-    if args.task == 'measure_degree':
-        parser.add_argument('--ind_1', help='first index to extract from latent vector', type=np.int32)
-        parser.add_argument('--ind_2', help='second index to extract from latent vector', type=np.int32)
+    parser.add_argument('--ind_1', help='first index to extract from latent vector', type=np.int32)
+    parser.add_argument('--ind_2', help='second index to extract from latent vector', type=np.int32)
     parser.add_argument('--env', help='gym env id', type=str, default='FetchReach-v1')
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
@@ -327,7 +334,7 @@ if __name__ == '__main__':
         analyze_lowest_variance_components(model, args.latent_size, train_file, args.batch_size, device)
     elif args.task == 'print_min_max':
         ##print_min_and_max_from_sizes
-        print_min_and_max_from_sizes(model, train_file)
+        print_min_and_max_from_sizes(model, train_file, ind=args.ind_1)
     elif args.task == 'measure_degree':
         ##for
         if args.enc_type == 'mixed':

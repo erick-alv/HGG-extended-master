@@ -45,24 +45,7 @@ if __name__=='__main__':
 			start_time = time.time()
 
 			# Learn
-			'''if args.use_corrector and not (epoch == 0 and cycle == 0):
-				goal_list, goal_list_z, real_goals, real_goals_z, \
-				rollout_ims, rollout_rws = learner.learn(args, env, env_test, agent, buffer,
-														 write_goals=args.show_goals, use_corrector=True)
-				corrector.correct(goal_list, goal_list_z, real_goals, real_goals_z, rollout_ims, rollout_rws, args)
-				args.logger.info('real variance {}'.format(np.var(real_goals)))
-				args.logger.info('real variance z {}'.format(np.var(real_goals_z)))
-				args.logger.info('some real z {}'.format(real_goals_z[:10]))
-				args.logger.info('real mean {}'.format(np.mean(real_goals)))
-				args.logger.info('real mean z {}'.format(np.mean(real_goals_z)))
-				args.logger.info('_____________')
-				args.logger.info('hgg variance {}'.format(np.var(goal_list)))
-				args.logger.info('hgg variance z {}'.format(np.var(goal_list_z)))
-				args.logger.info('some hgg z {}'.format(goal_list_z[:10]))
-				args.logger.info('hgg mean {}'.format(np.mean(goal_list)))
-				args.logger.info('hgg mean z {}'.format(np.mean(goal_list_z)))
-			else:'''
-			goal_list = learner.learn(args, env, env_test, agent, buffer, write_goals=args.show_goals)
+			goal_list = learner.learn(args, env, env_test, agent, buffer, write_goals=args.show_goals, epoch=epoch)
 
 
 			# Log learning progresss

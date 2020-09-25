@@ -217,6 +217,114 @@ def calculate_distance_batch(obstacle_pos, obstacle_radius, current_pos_batch, g
 
     return dist
 
+
+from scipy.stats import uniform
+class DistMovEst:
+    def __init__(self):
+        self.max_x = None
+        self.min_x = None
+        self.max_y = None
+        self.min_y = None
+        self.x_mid = None
+        self.y_mid = None
+        self.obstacle_size = None
+        #TODO
+
+    #todo use other distribution instead of uniform (for example norm), even better a more complex one
+    def update(self, obstacle_latent_list, obstacle_size_latent_list):
+        obstacle_latent_array = np.array(obstacle_latent_list)
+        obstacle_size_latent_array = np.array(obstacle_size_latent_list)
+        a_x = np.min(obstacle_latent_array[:, 0])
+        b_x = np.max(obstacle_latent_array[:, 0])
+        a_y = np.min(obstacle_latent_array[:, 1])
+        b_y = np.max(obstacle_latent_array[:, 1])
+        s = np.mean(obstacle_size_latent_array)
+        
+        if self.min_x == None:#assume everything else is
+            self.max_x = b_x + s
+            self.min_x = a_x - s
+            self.max_y = b_y + s
+            self.min_y = a_y - s
+            self.obstacle_size = s
+        else:
+            if b_x + s > self.max_x:
+                self.max_x = b_x + s
+            if a_x - s < self.min_x:
+                self.min_x = a_x - s
+            if b_y + s > self.max_y:
+                self.max_y = b_y + s
+            if a_y - s < self.min_y:
+                self.min_y = a_y - s
+
+        self.obstacle_size = s
+        self.x_mid = np.mean([self.max_x, self.min_x])
+        self.y_mid = np.mean([self.max_y, self.min_y])
+
+
+    def calculate_distance_batch(self, goal_pos, current_pos_batch):
+        #todo generalize this even more
+        # http://www.jeffreythompson.org/collision-detection/line-line.php
+        def lines_to_line_intersection(xs1, ys1, xs2, ys2, x3, y3, x4, y4):
+            prcA = ((x4 - x3) * (ys1 - y3) - (y4 - y3) * (xs1 - x3)) / ((y4 - y3) * (xs2 - xs1) - (x4 - x3) * (ys2 - ys1))
+            prcB = ((xs2 - xs1) * (ys1 - y3) - (ys2 - ys1) * (xs1 - x3)) / ((y4 - y3) * (xs2 - xs1) - (x4 - x3) * (ys2 - ys1))
+
+            bA = np.logical_and(0 <= prcA, prcA <=1)
+            bB = np.logical_and(0 <= prcB, prcB <=1)
+            return np.logical_and(bA, bB)
+
+        to_left = lines_to_line_intersection(current_pos_batch[:, 0], current_pos_batch[:, 1], goal_pos[0], goal_pos[1],
+                                             self.min_x, self.min_y, self.max_x, self.min_y)
+        to_right = lines_to_line_intersection(current_pos_batch[:, 0], current_pos_batch[:, 1], goal_pos[0], goal_pos[1],
+                                              self.min_x, self.max_y, self.max_x, self.max_y)
+        #todo should also do for top and bottom
+        inside = np.logical_or(to_left, to_right)
+        not_inside = np.logical_not(inside)
+        distances = np.zeros(shape=len(current_pos_batch))
+
+        direct_pos = current_pos_batch[not_inside]
+        direct_distances = np.linalg.norm(direct_pos - goal_pos, axis=1)
+        distances[not_inside] = direct_distances
+
+        undr_pos = current_pos_batch[inside]
+        top = np.array([self.max_x + 0.012, self.y_mid])
+        through_top = np.linalg.norm(undr_pos - top, axis=1) + np.linalg.norm(goal_pos - top)
+        bottom = np.array([self.min_x-0.012, self.y_mid])
+        through_bottom = np.linalg.norm(undr_pos - bottom, axis=1) + np.linalg.norm(goal_pos - bottom)
+        min_d = np.minimum(through_top, through_bottom)
+        distances[inside] = min_d
+        return distances
+
+
+        '''to_g_v = goal_point - points
+        distance = np.linalg.norm(to_g_v, axis=1)
+        normalized = to_g_v / distance
+        #to y
+        to_my_v = self.y_mid - points[:, 1]
+        dist_prc = to_my_v /
+
+        x_p = None
+        x_inside = self.prob_dstr_x(x_p) > 0
+        y_p = None
+        y_inside = self.prob_dstr_y(y_p) > 0
+        inside = np.logical_and(x_inside, y_inside)
+        ds = np.linalg.norm(to_g_v, axis=1)
+
+        #todo
+        ds[inside] = modified_distances
+        pass'''
+
+    def prob_dstr_x(self, x_coordinates):
+        assert self.min_x is None and self.max_x is not None
+        prs = uniform.pdf(x_coordinates, loc=self.min_x, scale=self.max_x - self.min_x)
+        return prs
+
+    def prob_dstr_y(self, y_coordinates):
+        assert self.min_y is None and self.max_y is not None
+        prs = uniform.pdf(y_coordinates, loc=self.min_y, scale=self.max_y - self.min_y)
+        return prs
+
+
+
 '''if __name__ == '__main__':
     ps = np.array([[1.3, 0.],[1., 1.], [2., 2.5]])
     center = np.array([0.0, 0.0])

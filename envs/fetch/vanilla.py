@@ -5,6 +5,7 @@ import copy
 from utils.os_utils import remove_color
 from vae_env_inter import take_goal_image, take_obstacle_image, goal_latent_from_images, obstacle_latent_from_images
 
+
 class VanillaGoalEnv():
 	def __init__(self, args):
 		self.args = args
@@ -78,8 +79,13 @@ class VanillaGoalEnv():
 		if (hasattr(self.args, 'transform_dense') and self.args.transform_dense) or \
 				(hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help):
 			achieved_goal_image = take_goal_image(self, self.args.img_size)
-			latents = goal_latent_from_images(np.array([achieved_goal_image]), self.args)
-			self.achieved_goal_latent = latents[0].copy()
+			latents_goal = goal_latent_from_images(np.array([achieved_goal_image]), self.args)
+			self.achieved_goal_latent = latents_goal[0].copy()
+
+			obstacle_image = take_obstacle_image(self, self.args.img_size)
+			latents_obstacle, latents_o_size = obstacle_latent_from_images(np.array([obstacle_image]), self.args)
+			self.obstacle_latent = latents_obstacle[0].copy()
+			self.obstacle_size_latent = latents_o_size[0].copy()
 			#self.achieved_goal_image = achieved_goal_image.copy()
 
 			if hasattr(self.args, 'transform_dense') and self.args.transform_dense:

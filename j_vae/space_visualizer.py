@@ -291,9 +291,9 @@ def save_center(env, size_to_use, file_corners, img_size, enc_type):
     np.save(file_corners, data_set)
 
 
-def visualization_sizes_obstacle(env, model, img_size, n):
-    #sizes = np.linspace(min_obstacle_size, max_obstacle_size, num=n)
-    sizes = np.linspace(obstacle_size, obstacle_size, num=n)
+def visualization_sizes_obstacle(env, model, img_size, ind, n, using_sb=True):
+    sizes = np.linspace(min_obstacle_size, max_obstacle_size, num=n)
+    #sizes = np.linspace(obstacle_size, obstacle_size, num=n)
     n_labels = np.arange(len(sizes))
 
     sizes = np.array(sizes)
@@ -321,23 +321,30 @@ def visualization_sizes_obstacle(env, model, img_size, n):
     data = torch.from_numpy(data_set).float().to(device)
     data /= 255
     data = data.permute([0, 3, 1, 2])
-    mu, logvar = model.encode(data.reshape(-1, img_size * img_size * 3))
+    if not using_sb:
+        mu, logvar = model.encode(data.reshape(-1, img_size * img_size * 3))
+    else:
+        mu, logvar = model.encode(data)
     mu = mu.detach().cpu().numpy()
+
+
+    mu = mu[:, ind]
 
     for i, p in enumerate(mu):
         mu[i] = get_size_in_space(mu[i])
     #    mu[i] = map_size_space(mu[i])
     #    mu[i] = get_size_in_space(map_size_space(mu[i]))
+        pass
 
     lxs = np.repeat(1, len(sizes))
-    lys = mu[:, 0]
+    lys = mu
 
     plt.subplot(212)
     plt.scatter(lxs, lys)
     plt.title('latent')
     for i, en in enumerate(n_labels):
         plt.annotate(en, (lxs[i], lys[i]))
-
+    print(mu)
 
 
     plt.show()
@@ -421,10 +428,9 @@ if __name__ == '__main__':
                                       enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,
                                       fig_file_name=fig_name)
         elif args.task == 'show_size':
-            assert args.enc_type == 'obstacle_sizes'
-            visualization_sizes_obstacle(env, model, args.img_size, 5)#todo make also goal if necessary
+            visualization_sizes_obstacle(env, model, args.img_size, ind=args.ind_1, n=5)#todo make also goal if necessary
         elif args.task == 'show_traversal':
-            traversal(env, model,size_to_use, img_size=args.img_size, latent_size=args.latent_size, n=7,
+            traversal(env, model, size_to_use, img_size=args.img_size, latent_size=args.latent_size, n=7,
                       enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,
                                       fig_file_name='traversal')
     else:

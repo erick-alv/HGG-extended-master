@@ -12,7 +12,7 @@ from j_vae.train_vae import load_Vae
 from j_vae.common_data import vae_sb_weights_file_name, vae_weights_file_name
 from PIL import Image
 from vae_env_inter import take_env_image
-from j_vae.distance_estimation import calculate_distance
+from j_vae.distance_estimation import calculate_distance, DistMovEst
 
 def get_args():
 	parser = get_arg_parser()
@@ -88,6 +88,9 @@ def get_args():
 	parser.add_argument('--use_mixed_with_size', help='see if use the same VAE also for size',
 						type=str2bool, default=False)
 
+	parser.add_argument('--with_dist_estimator', help='see if use the same VAE also for size',
+						type=str2bool, default=False)
+
 	#for dense reward transformation
 	parser.add_argument('--transform_dense', help='if transform to dense with VAES or not', type=str2bool, default=False)
 
@@ -143,10 +146,9 @@ def load_vaes(args):
 
 	#load VAE for size data
 	if args.use_mixed_with_size:
-		assert args.use_mixed
 		assert args.size_ind != args.obstacle_ind_1 and args.size_ind != args.obstacle_ind_2
-		args.weights_path_obstacle_sizes = weights_path
-		args.vae_model_size = model
+		args.weights_path_obstacle_sizes = data_dir + vae_sb_weights_file_name['obstacle']
+		args.vae_model_size = args.vae_model_obstacle
 	else:
 		weights_path_obstacle_sizes = data_dir + vae_weights_file_name['obstacle_sizes']
 		args.weights_path_obstacle_sizes = weights_path_obstacle_sizes
@@ -165,7 +167,8 @@ def experiment_setup(args):
 
 	env = make_env(args)
 	env_test = make_env(args)
-	#
+	if args.with_dist_estimator:
+		args.dist_estimator = DistMovEst()
 	#rgb_array = take_env_image(env, args.img_size)
 	#img = Image.fromarray(rgb_array)
 	#img.show()
