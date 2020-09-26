@@ -49,12 +49,12 @@ def take_env_image(env, img_size):
     #just to activate in case viewer is not intialized
     if not hasattr(env.env.env.viewer, 'cam'):
         np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
-    env.env.env.viewer.cam.distance += 0.3
-    env.env.env.viewer.cam.elevation += 15
+    #env.env.env.viewer.cam.distance += 0.3
+    #env.env.env.viewer.cam.elevation += 15
     #self.viewer.cam.azimuth = 180.
     rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
-    env.env.env.viewer.cam.distance -= 0.3
-    env.env.env.viewer.cam.elevation -= 15
+    #env.env.env.viewer.cam.distance -= 0.3
+    #env.env.env.viewer.cam.elevation -= 15
     return rgb_array
 
 def transform_image_to_latent_batch_torch(im_batch, vae, img_size, device):

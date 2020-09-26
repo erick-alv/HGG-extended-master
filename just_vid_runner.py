@@ -45,6 +45,7 @@ if __name__ == '__main__':
     obs_x_pos = np.array([o['obstacle_latent'][0] for o in obs])
     obs_y_pos = np.array([o['obstacle_latent'][1] for o in obs])
     obs_size_pos = np.array([o['obstacle_size_latent'] for o in obs])
+
     print(obs_x_pos)
     print(obs_y_pos)
     print(obs_size_pos)
