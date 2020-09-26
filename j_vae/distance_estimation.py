@@ -228,6 +228,8 @@ class DistMovEst:
         self.x_mid = None
         self.y_mid = None
         self.obstacle_size = None
+        self.update_calls = 0
+        self.update_complete = False
         #TODO
 
     #todo use other distribution instead of uniform (for example norm), even better a more complex one
@@ -259,14 +261,31 @@ class DistMovEst:
         self.obstacle_size = s
         self.x_mid = np.mean([self.max_x, self.min_x])
         self.y_mid = np.mean([self.max_y, self.min_y])
+        self.update_calls += 1
+        if self.update_calls == 3:
+            self.update_complete = True
 
 
     def calculate_distance_batch(self, goal_pos, current_pos_batch):
         #todo generalize this even more
         # http://www.jeffreythompson.org/collision-detection/line-line.php
-        def lines_to_line_intersection(xs1, ys1, xs2, ys2, x3, y3, x4, y4):
-            prcA = ((x4 - x3) * (ys1 - y3) - (y4 - y3) * (xs1 - x3)) / ((y4 - y3) * (xs2 - xs1) - (x4 - x3) * (ys2 - ys1))
-            prcB = ((xs2 - xs1) * (ys1 - y3) - (ys2 - ys1) * (xs1 - x3)) / ((y4 - y3) * (xs2 - xs1) - (x4 - x3) * (ys2 - ys1))
+        def lines_to_line_intersection(xs1, ys1, x2, y2, x3, y3, x4, y4):
+            #todo correct those ones that are being divided by 0 RuntimeWarning: divide by zero encountered in true_divide
+            nA = ((x4 - x3) * (ys1 - y3) - (y4 - y3) * (xs1 - x3))
+            dA = ((y4 - y3) * (x2 - xs1) - (x4 - x3) * (y2 - ys1))
+            zA = dA == 0.
+            not_zA = np.logical_not(zA)
+            prcA = np.zeros(shape=len(xs1))
+            prcA[not_zA] = nA[not_zA]/dA[not_zA]
+            prcA[zA] = 2.#just to make it false
+
+            nB = ((x2 - xs1) * (ys1 - y3) - (y2 - ys1) * (xs1 - x3))
+            dB = ((y4 - y3) * (x2 - xs1) - (x4 - x3) * (y2 - ys1))
+            zB = dB == 0.
+            not_zB = np.logical_not(zB)
+            prcB = np.zeros(shape=len(xs1))
+            prcB[not_zB] =  nB[not_zB]/dB[not_zB]
+            prcB[zB] = 2.
 
             bA = np.logical_and(0 <= prcA, prcA <=1)
             bB = np.logical_and(0 <= prcB, prcB <=1)
@@ -286,9 +305,10 @@ class DistMovEst:
         distances[not_inside] = direct_distances
 
         undr_pos = current_pos_batch[inside]
-        top = np.array([self.max_x + 0.012, self.y_mid])
+        #todo this must be more general
+        top = np.array([self.max_x + 0.001*self.obstacle_size, self.y_mid])
         through_top = np.linalg.norm(undr_pos - top, axis=1) + np.linalg.norm(goal_pos - top)
-        bottom = np.array([self.min_x-0.012, self.y_mid])
+        bottom = np.array([self.min_x - 0.001*self.obstacle_size, self.y_mid])
         through_bottom = np.linalg.norm(undr_pos - bottom, axis=1) + np.linalg.norm(goal_pos - bottom)
         min_d = np.minimum(through_top, through_bottom)
         distances[inside] = min_d

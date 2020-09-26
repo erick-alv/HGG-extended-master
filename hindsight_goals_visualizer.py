@@ -5,11 +5,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns; sns.set()
 import argparse
 from plot import smooth_reward_curve, load_results, pad
-
-from common import get_args
-from j_vae.train_vae_sb import load_Vae as load_Vae_SB
-from j_vae.train_vae import load_Vae
-from j_vae.common_data import vae_sb_weights_file_name, vae_weights_file_name
+from common import get_args, load_vaes
 from envs import make_env
 
 def show_points(points_list, save_file, space_of):
@@ -48,7 +44,7 @@ def compare_points(env, save_file, args):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.scatter(real_points[:, 0], real_points[:, 1], c='blue')
-    a_circle = plt.Circle((0., 0.), 0.52, alpha=0.3, color='blue')
+    a_circle = plt.Circle((0., 0.), 0.096, alpha=0.3, color='blue')
     ax.add_artist(a_circle)
     ax.scatter(latent_points[:, 0], latent_points[:, 1], c='green')
     b_circle = plt.Circle((obs['obstacle_latent'][0], obs['obstacle_latent'][1]), obs['obstacle_size_latent'],
@@ -60,21 +56,7 @@ def compare_points(env, save_file, args):
 
 if __name__ == '__main__':
     args = get_args()
-
-    base_data_dir = 'data/'
-    data_dir = base_data_dir + args.env + '/'
-    weights_path_goal = data_dir + vae_sb_weights_file_name['goal']
-    args.weights_path_goal = weights_path_goal
-    weights_path_obstacle = data_dir + vae_sb_weights_file_name['obstacle']
-    args.weights_path_obstacle = weights_path_obstacle
-    weights_path_obstacle_sizes = data_dir + vae_weights_file_name['obstacle_sizes']
-    args.weights_path_obstacle_sizes = weights_path_obstacle_sizes
-    args.vae_model_obstacle = load_Vae_SB(weights_path_obstacle, args.img_size, args.latent_size_obstacle)
-    args.vae_model_obstacle.eval()
-    args.vae_model_goal = load_Vae_SB(weights_path_goal, args.img_size, args.latent_size_goal)
-    args.vae_model_goal.eval()
-    args.vae_model_size = load_Vae(path=weights_path_obstacle_sizes, img_size=args.img_size, latent_size=1)
-    args.vae_model_size.eval()
+    load_vaes(args)
 
     env = make_env(args)
     compare_points(env, 'somefile.png', args)

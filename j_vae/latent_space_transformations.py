@@ -61,8 +61,25 @@ def interval_map_function(a,b,c, d):
 def interval_to_minusone_one(a, b):
     return interval_map_function(a,b, -1.0, 1.0)
 
+
+
 table_map_x = interval_to_minusone_one(1.05, 1.55)
 table_map_y = interval_to_minusone_one(0.5, 1.0)
+
+
+def table_map(a):
+    if not isinstance(a, np.ndarray):
+        a = np.array(a)
+    if len(a.shape) == 2 and a.shape[1] == 2:
+        return np.array([
+            [table_map_x(el[0]), table_map_y(el[1])]
+            for el in a])
+    elif len(a.shape) == 1 and a.shape[0] == 2:
+        return np.array([table_map_x(a[0]),
+                         table_map_y(a[1])
+                         ])
+    else:
+        raise Exception('cannot process mapping from given element, shae must be 2 or 3')
 
 '''g_x_min = table_map_x(1.05+0.015)
 g_x_max = table_map_x(1.55-0.015)
@@ -81,7 +98,7 @@ o_y_max = table_map_y(1.0-obstacle_size)
 
 #goal_map_x = interval_map_function(-1.229, 1.87436, g_x_min, g_x_max)
 #goal_map_y = interval_map_function(-1.9316, 0.72467, g_y_min, g_y_max)
-goal_map_x = interval_map_function(-1.24692, 1.40665, g_x_min, g_x_max)
+goal_map_x = interval_map_function(-1.24692, 1.40665, g_x_min, g_x_max)#TODO with object exactly at corner
 goal_map_y = interval_map_function(-1.29224, 1.28134, g_y_min, g_y_max)
 
 

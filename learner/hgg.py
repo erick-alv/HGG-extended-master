@@ -205,19 +205,23 @@ class MatchSampler:
 						res_1[k] = self.get_graph_goal_distance(achieved_pool[i][k], desired_goals[j])
 					res = res_1 - achieved_value[i]/(self.args.hgg_L/self.max_dis/(1-self.args.gamma))
 				elif self.args.vae_dist_help:
+					distances = np.zeros(shape=len(achieved_latent_goals[i]))
+					indices_inside = np.logical_not(indices_outside)
 					if self.args.with_dist_estimator:
 						latent_distances = \
 						self.args.dist_estimator.calculate_distance_batch(goal_pos=desired_goals_latents[j].copy(),
-																		  current_pos_batch=achieved_latent_goals[i].copy())
+																		  current_pos_batch=achieved_latent_goals[i][indices_inside].copy())
 					else:
 						#!!!! For now just one obstacle since obstacles are stationary
+
 						latent_distances = calculate_distance_batch(obstacle_pos=achieved_latent_obstacles[i][0].copy(),
 												 obstacle_radius=achieved_latent_obstacles_sizes[i][0].copy(),
-												 current_pos_batch=achieved_latent_goals[i].copy(),
+												 current_pos_batch=achieved_latent_goals[i][indices_inside].copy(),
 												 goal_pos=desired_goals_latents[j].copy(),
 												 range_x=[-1., 1.], range_y=[-1., 1.])
-					distances = latent_distances.copy()
-					distances[indices_outside] = 10.0
+
+					distances[indices_inside] = latent_distances.copy()
+					distances[indices_outside] = 100.0
 
 					#real_distances = np.sqrt(np.sum(np.square(achieved_pool[i] - desired_goals[j]), axis=1))
 					'''real_distances = np.sqrt(np.sum(np.square(achieved_pool[i][:, :2] - desired_goals[j][:2]), axis=1))
@@ -561,7 +565,7 @@ class HGGLearner_VAEs(HGGLearner):
 				# update target network
 				agent.target_update()
 
-		if args.with_dist_estimator and epoch==0:
+		if args.with_dist_estimator and epoch==0 and not args.dist_estimator.update_complete:
 			args.dist_estimator.update(
 				np.concatenate(achieved_trajectory_obstacle_latents, axis=0),
 				np.concatenate(achieved_trajectory_obstacle_latents_sizes, axis=0)

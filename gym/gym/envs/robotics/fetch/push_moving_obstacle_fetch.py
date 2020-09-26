@@ -77,7 +77,7 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.obstacle_direction = self.initial_obstacle_direction
         return True
 
-if __name__ == '__main__':
+'''if __name__ == '__main__':
     import time
     from utils.image_util import rgb_array_to_image
     import cv2
@@ -99,4 +99,4 @@ if __name__ == '__main__':
                           10, (im_size, im_size))
     for i in range(len(ims)):
         out.write(np.array(ims[i]))
-    out.release()
+    out.release()'''

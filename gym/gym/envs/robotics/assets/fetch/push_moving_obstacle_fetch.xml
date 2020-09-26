@@ -34,7 +34,8 @@
 			<!--geom name="obstacle" pos="-0.07 0 -0.1" size="0.18 0.04 0.1" type="box" mass="2000" material="table_mat"></geom-->
 		</body>
 		<body pos="1.3 0.75 0.435" name="obstacle">
-			<geom name="o" pos="0 0 0" size="0.075 0.02 0.035" type="box" rgba="0 0 1 1" mass="2000" material="table_mat"></geom>
+			<!--geom name="o" pos="0 0 0" size="0.075 0.02 0.035" type="box" rgba="0 0 1 1" mass="2000" material="table_mat"></geom-->
+			<geom name="o" pos="0 0 0" size="0.048 0.035" type="cylinder" rgba="0 0 1 1" mass="2000" material="table_mat"></geom>
 		</body>
 
 		<body name="object0" pos="1.3 0.925 0.425">
