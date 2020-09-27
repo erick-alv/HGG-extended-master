@@ -10,18 +10,19 @@ from torchvision.utils import save_image
 doing_goal = False
 
 enc_type = 'obstacle'
+base_data_file_name = '../data/FetchPushMovingObstacleEnv-v1/'
 
 if enc_type == 'goal':
-    train_file = '../data/FetchPushObstacleFetchEnv-v1/goal_set.npy'
-    n_path = '../data/FetchPushObstacleFetchEnv-v1/vae_sb_model_goal'
+    train_file = '{}goal_set.npy'.format(base_data_file_name)
+    n_path = '{}vae_sb_model_goal'.format(base_data_file_name)
 
 elif enc_type == 'obstacle':
-    train_file = '../data/FetchPushObstacleFetchEnv-v1/obstacle_set.npy'
-    n_path = '../data/FetchPushObstacleFetchEnv-v1/vae_sb_model_obstacle'
+    train_file = '{}obstacle_set.npy'.format(base_data_file_name)
+    n_path = '{}vae_sb_model_obstacle'.format(base_data_file_name)
 
 elif enc_type == 'mixed':
-    train_file = '../data/FetchPushObstacleFetchEnv-v1/mixed.npy'
-    n_path = '../data/FetchPushObstacleFetchEnv-v1/vae_sb_model_mixed'
+    train_file = '{}mixed.npy'.format(base_data_file_name)
+    n_path = '{}vae_sb_model_mixed'.format(base_data_file_name)
 
 def spatial_broadcast(z, width, height):
     z_b = np.tile(A=z, reps=(height, width, 1))
