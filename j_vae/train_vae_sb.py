@@ -129,7 +129,7 @@ def loss_function(recon_x, x, mu, logvar):
     # Try to adjust
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-    return BCE + 8.*KLD
+    return BCE + 5.*KLD
 
 
 # torch.Size([128, 1, img_size, img_size])
@@ -454,7 +454,7 @@ if __name__ == '__main__':
     print('Train VAE...')
     #to the server beta 5 batch 100
     #train_Vae(batch_size=128, epochs=15, load=False, latent_size=4)
-    train_Vae(batch_size=64, epochs=15, load=False, latent_size=3)
+    train_Vae(batch_size=64, epochs=15, load=False, latent_size=4)
     # test_VAE_SB(device)
     # show_1d_manifold()
     #show_2d_manifold(84)
