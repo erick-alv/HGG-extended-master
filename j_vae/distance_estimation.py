@@ -227,7 +227,8 @@ class DistMovEst:
         self.min_y = None
         self.x_mid = None
         self.y_mid = None
-        self.obstacle_size = None
+        self.s_x = None
+        self.s_y = None
         self.update_calls = 0
         self.update_complete = False
         #TODO
@@ -240,30 +241,56 @@ class DistMovEst:
         b_x = np.max(obstacle_latent_array[:, 0])
         a_y = np.min(obstacle_latent_array[:, 1])
         b_y = np.max(obstacle_latent_array[:, 1])
-        s = np.mean(obstacle_size_latent_array)
-        
+        s_x = 2.
+        s_y = 2.
         if self.min_x == None:#assume everything else is
-            self.max_x = b_x + s
-            self.min_x = a_x - s
-            self.max_y = b_y + s
-            self.min_y = a_y - s
-            self.obstacle_size = s
+            self.max_x = b_x + s_x
+            self.min_x = a_x - s_x
+            self.max_y = b_y + s_y
+            self.min_y = a_y - s_y
+            self.s_x = s_x
+            self.s_y = s_y
         else:
-            if b_x + s > self.max_x:
-                self.max_x = b_x + s
-            if a_x - s < self.min_x:
-                self.min_x = a_x - s
-            if b_y + s > self.max_y:
-                self.max_y = b_y + s
-            if a_y - s < self.min_y:
-                self.min_y = a_y - s
+            if b_x + self.s_x > self.max_x:
+                self.max_x = b_x + self.s_x
+            if a_x - self.s_x < self.min_x:
+                self.min_x = a_x - self.s_x
+            if b_y + self.s_x > self.max_y:
+                self.max_y = b_y + self.s_x
+            if a_y - self.s_x < self.min_y:
+                self.min_y = a_y - self.s_x
 
-        self.obstacle_size = s
         self.x_mid = np.mean([self.max_x, self.min_x])
         self.y_mid = np.mean([self.max_y, self.min_y])
         self.update_calls += 1
         if self.update_calls == 3:
             self.update_complete = True
+
+    def update_sizes(self, obstacle_latent_list, goal_latent_list):
+        def correct(diffs, correcting):
+            min_diff = np.min(diffs)
+            if correcting == 'x':
+                if self.s_x > min_diff:
+                    self.s_x = min_diff.copy()
+            else:
+                if self.s_y > min_diff:
+                    self.s_y = min_diff.copy()
+        obstacle_latents = np.array(obstacle_latent_list)
+        goal_latents = np.array(goal_latent_list)
+
+        diffs_x = np.linalg.norm(goal_latents[:, 0] - obstacle_latents[:, 0])
+        diffs_y = np.linalg.norm(goal_latents[:, 1] - obstacle_latents[:, 1])
+        #check for correction in x - axis
+        candidates_x  = diffs_y <= 1.5*self.s_y
+        correct(diffs_x[candidates_x], correcting='x')
+        #check for y -axis
+        candidates_y = diffs_x <= 1.5*self.s_x
+        correct(diffs_y[candidates_y], correcting='y')
+        self.max_x = b_x + self.s_x
+        self.min_x = a_x - self.s_x
+        self.max_y = b_y + self.s_y
+        self.min_y = a_y - self.s_y
+
 
 
     def calculate_distance_batch(self, goal_pos, current_pos_batch):

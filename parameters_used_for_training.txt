@@ -17,3 +17,6 @@ goal_map_y = interval_map_function(-1.173, 1.3965, g_y_min, g_y_max)
 obstacle_map_x = interval_map_function(-1.435, 1.2482, o_x_min, o_x_max)
 obstacle_map_y = interval_map_function(-1.498, 1.161, o_y_min, o_y_max)
 --tag 048 --learn hgg --env=FetchPushObstacleFetchEnv-v1 --goal interval --graph False --show_goals 40 --stop_hgg_threshold 0.65 --buffer_type normal --vae_dist_help True --use_mixed True --latent_size_obstacle 4 --latent_size_goal 4 --goal_ind_1 2 --goal_ind_2 3 --obstacle_ind_1 2 --obstacle_ind_2 3 --size_ind 0
+
+
+--tag 061 --learn hgg --env=FetchPushMovingObstacleEnv-v1  --goal interval --graph False --show_goals 40 --stop_hgg_threshold 0.5 --vae_dist_help True --latent_size_obstacle 3 --latent_size_goal 2 --goal_ind_1 0 --goal_ind_2 1 --obstacle_ind_1 1 --obstacle_ind_2 0 --size_ind 2 --use_mixed_with_size True --with_dist_estimator True

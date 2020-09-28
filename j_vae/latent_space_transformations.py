@@ -29,7 +29,9 @@ def calculate_angle(model, corners_file,  enc_type, ind_1, ind_2):
 angle_goal = 279.10576
 
 #angle_obstacle = 35.14
-angle_obstacle = 244.25
+#todo
+# angle_obstacle = 244.25
+angle_obstacle = 210.20569
 
 
 do_center_goal = False
@@ -91,10 +93,16 @@ g_x_max = table_map_x(1.55-puck_size)
 g_y_min = table_map_y(0.5+puck_size)
 g_y_max = table_map_y(1.0-puck_size)
 
-o_x_min = table_map_x(1.05+obstacle_size)
+#TODO!!
+'''o_x_min = table_map_x(1.05+obstacle_size)
 o_x_max = table_map_x(1.55-obstacle_size)
 o_y_min = table_map_y(0.5+obstacle_size)
-o_y_max = table_map_y(1.0-obstacle_size)
+o_y_max = table_map_y(1.0-obstacle_size)'''
+
+o_x_min = table_map_x(1.05)
+o_x_max = table_map_x(1.55)
+o_y_min = table_map_y(0.5)
+o_y_max = table_map_y(1.0)
 
 #goal_map_x = interval_map_function(-1.229, 1.87436, g_x_min, g_x_max)
 #goal_map_y = interval_map_function(-1.9316, 0.72467, g_y_min, g_y_max)
@@ -104,8 +112,10 @@ goal_map_y = interval_map_function(-1.29224, 1.28134, g_y_min, g_y_max)
 
 #obstacle_map_x = interval_map_function(-1.3196, 1.917, o_x_min, o_x_max)
 #obstacle_map_y = interval_map_function(-1.32474, 1.308284, o_y_min, o_y_max)
-obstacle_map_x = interval_map_function(-1.4778, 1.5698, o_x_min, o_x_max)
-obstacle_map_y = interval_map_function(-1.5985, 1.4524, o_y_min, o_y_max)
+'''obstacle_map_x = interval_map_function(-1.4778, 1.5698, o_x_min, o_x_max)
+obstacle_map_y = interval_map_function(-1.5985, 1.4524, o_y_min, o_y_max)'''
+obstacle_map_x = interval_map_function(-1.5328, 1.8265, o_x_min, o_x_max)
+obstacle_map_y = interval_map_function(-2.13779, 1.901772, o_y_min, o_y_max)
 
 
 def create_rotation_matrix(angle):

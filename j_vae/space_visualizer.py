@@ -404,7 +404,8 @@ if __name__ == '__main__':
     if args.enc_type == 'goal':
         size_to_use = puck_size
     elif args.enc_type == 'obstacle':
-        size_to_use = obstacle_size
+        #size_to_use = obstacle_size
+        size_to_use = 0
     elif args.enc_type == 'mixed':
         size_to_use = (obstacle_size + puck_size) /2
 

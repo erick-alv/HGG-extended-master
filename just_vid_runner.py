@@ -33,6 +33,8 @@ if __name__ == '__main__':
     for timestep in range(200):
         action = env.action_space.sample()
         o, _, _, info = env.step(action)
+        print(o['obstacle_latent'])
+        print(o['obstacle_size_latent'])
         obs.append(o)
         env_images.append(take_env_image(env, args.img_size))
     create_rollout_video(np.array(env_images), args=args, filename='vid_env')
@@ -83,7 +85,7 @@ if __name__ == '__main__':
     print('----')
 
     from j_vae.latent_space_transformations import table_map
-    la = table_map(a)
+    '''la = table_map(a)
     lb = table_map(b)
     l_update_points = table_map(update_points)
     dist3 = DistMovEst()
@@ -99,16 +101,16 @@ if __name__ == '__main__':
 
     i = 0
     env.env.env._move_object(position=np.array([a[0], a[1], 0.425]))
-    data_set[i] = take_goal_image(env, args.img_size, make_table_invisible=True)
+    data_set[i] = take_goal_image(env, args.img_size, make_table_invisible=False)
     i+=1
     for p in b:
         env.env.env._move_object(position=np.array([p[0], p[1], 0.425]))
-        data_set[i] = take_goal_image(env, args.img_size, make_table_invisible=True)
+        data_set[i] = take_goal_image(env, args.img_size, make_table_invisible=False)
         i+=1
     all_l = goal_latent_from_images(data_set, args)
     est_dists = dist_estimator.calculate_distance_batch(all_l[0], all_l[1:])
     print(est_dists)
     direct_all = np.linalg.norm(all_l[1:] - all_l[0], axis=1)
-    print(direct_all)
+    print(direct_all)'''
 
 
