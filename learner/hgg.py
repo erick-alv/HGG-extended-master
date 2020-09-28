@@ -301,7 +301,7 @@ class HGGLearner:
 		self.learn_calls = 0
 		self.success_n = 0
 
-	def learn(self, args, env, env_test, agent, buffer, write_goals=0, epoch=None):
+	def learn(self, args, env, env_test, agent, buffer, write_goals=0, epoch=None, cycle=None):
 		# Actual learning cycle takes place here!
 		initial_goals = []
 		desired_goals = []
@@ -453,7 +453,7 @@ class HGGLearner_VAEs(HGGLearner):
 		self.learn_calls = 0
 		self.success_n = 0
 
-	def learn(self, args, env, env_test, agent, buffer, write_goals=0, epoch=None):
+	def learn(self, args, env, env_test, agent, buffer, write_goals=0, epoch=None, cycle=None):
 		# Actual learning cycle takes place here!
 		initial_goals = []
 		desired_goals = []
@@ -570,6 +570,17 @@ class HGGLearner_VAEs(HGGLearner):
 				np.concatenate(achieved_trajectory_obstacle_latents, axis=0),
 				np.concatenate(achieved_trajectory_obstacle_latents_sizes, axis=0)
 			)
+		if args.with_dist_estimator:
+			if (epoch==0 or epoch==1) and cycle in [0, 1,2,3,4]:
+				args.dist_estimator.update_sizes(
+					np.concatenate(achieved_trajectory_obstacle_latents, axis=0),
+					np.concatenate(achieved_trajectory_goals_latents, axis=0)
+				)
+			elif cycle % 5 == 0:
+				args.dist_estimator.update_sizes(
+					np.concatenate(achieved_trajectory_obstacle_latents, axis=0),
+					np.concatenate(achieved_trajectory_goals_latents, axis=0)
+				)
 
 		selection_trajectory_idx = {}
 		for i in range(self.args.episodes):
@@ -626,7 +637,7 @@ class NormalLearner:
 		self.learn_calls = 0
 		self.success_n = 0
 
-	def learn(self, args, env, env_test, agent, buffer, write_goals=0, epoch=None):
+	def learn(self, args, env, env_test, agent, buffer, write_goals=0, epoch=None, cycle=None):
 		# Actual learning cycle takes place here!
 		goal_list = []
 

@@ -80,11 +80,11 @@ class Tester:
 						ex_logs[t].add_record('RealDirectToPrevDistance', rddpr)
 						ldd = env[i].compute_distance(ob['achieved_goal_latent'], ob['desired_goal_latent'])
 						ex_logs[t].add_record('LatentDirectDistance', ldd)
-						lpd = calculate_distance(ob['obstacle_latent'], obstacle_radius=ob['obstacle_size_latent'],
+						'''lpd = calculate_distance(ob['obstacle_latent'], obstacle_radius=ob['obstacle_size_latent'],
 												 current_pos=ob['achieved_goal_latent'],
 												 goal_pos=ob['desired_goal_latent'],
 												 range_x=[-1., 1.], range_y=[-1., 1.])
-						ex_logs[t].add_record('LatentPathDistance', lpd)
+						ex_logs[t].add_record('LatentPathDistance', lpd)'''
 						lddpr = env[i].compute_distance(ob['achieved_goal_latent'], prev_obs[i]['achieved_goal_latent'])
 						ex_logs[t].add_record('LatentDirectToPrevDistance', lddpr)
 						ex_logs[t].save_csv()

@@ -231,7 +231,6 @@ class DistMovEst:
         self.s_y = None
         self.update_calls = 0
         self.update_complete = False
-        #TODO
 
     #todo use other distribution instead of uniform (for example norm), even better a more complex one
     def update(self, obstacle_latent_list, obstacle_size_latent_list):
@@ -241,8 +240,8 @@ class DistMovEst:
         b_x = np.max(obstacle_latent_array[:, 0])
         a_y = np.min(obstacle_latent_array[:, 1])
         b_y = np.max(obstacle_latent_array[:, 1])
-        s_x = 2.
-        s_y = 2.
+        s_x = np.mean(obstacle_size_latent_array[:, 0])
+        s_y = np.mean(obstacle_size_latent_array[:, 1])
         if self.min_x == None:#assume everything else is
             self.max_x = b_x + s_x
             self.min_x = a_x - s_x
@@ -267,29 +266,30 @@ class DistMovEst:
             self.update_complete = True
 
     def update_sizes(self, obstacle_latent_list, goal_latent_list):
-        def correct(diffs, correcting):
-            min_diff = np.min(diffs)
-            if correcting == 'x':
-                if self.s_x > min_diff:
-                    self.s_x = min_diff.copy()
-            else:
-                if self.s_y > min_diff:
-                    self.s_y = min_diff.copy()
         obstacle_latents = np.array(obstacle_latent_list)
         goal_latents = np.array(goal_latent_list)
 
-        diffs_x = np.linalg.norm(goal_latents[:, 0] - obstacle_latents[:, 0])
-        diffs_y = np.linalg.norm(goal_latents[:, 1] - obstacle_latents[:, 1])
-        #check for correction in x - axis
-        candidates_x  = diffs_y <= 1.5*self.s_y
-        correct(diffs_x[candidates_x], correcting='x')
-        #check for y -axis
-        candidates_y = diffs_x <= 1.5*self.s_x
-        correct(diffs_y[candidates_y], correcting='y')
-        self.max_x = b_x + self.s_x
-        self.min_x = a_x - self.s_x
-        self.max_y = b_y + self.s_y
-        self.min_y = a_y - self.s_y
+        diffs_x = np.abs(goal_latents[:, 0] - obstacle_latents[:, 0])
+        diffs_y = np.abs(goal_latents[:, 1] - obstacle_latents[:, 1])
+        x_smaller = diffs_x < self.s_x
+        y_smaller = diffs_y < self.s_y
+        both = np.logical_and(x_smaller, y_smaller)
+        x_correction_candidates = diffs_x[both]
+        if len(x_correction_candidates) > 0:
+            s_min_x = np.min(x_correction_candidates)
+            print('updating x to: {}'.format(s_min_x))
+            self.max_x = self.max_x - self.s_x + s_min_x
+            self.min_x = self.min_x + self.s_x - s_min_x
+            self.x_mid = np.mean([self.max_x, self.min_x])
+            self.s_x = s_min_x.copy()
+        y_correction_candidates = diffs_y[both]
+        if len(y_correction_candidates) > 0:
+            s_min_y = np.min(y_correction_candidates)
+            print('updating y to: {}'.format(s_min_y))
+            self.max_y = self.max_y - self.s_y + s_min_y
+            self.min_y = self.min_y + self.s_y - s_min_y
+            self.y_mid = np.mean([self.max_y, self.min_y])
+            self.s_y = s_min_y.copy()
 
 
 
@@ -333,9 +333,9 @@ class DistMovEst:
 
         undr_pos = current_pos_batch[inside]
         #todo this must be more general
-        top = np.array([self.max_x + 0.001*self.obstacle_size, self.y_mid])
+        top = np.array([self.max_x + 0.001*self.s_x, self.y_mid])
         through_top = np.linalg.norm(undr_pos - top, axis=1) + np.linalg.norm(goal_pos - top)
-        bottom = np.array([self.min_x - 0.001*self.obstacle_size, self.y_mid])
+        bottom = np.array([self.min_x - 0.001*self.s_x, self.y_mid])
         through_bottom = np.linalg.norm(undr_pos - bottom, axis=1) + np.linalg.norm(goal_pos - bottom)
         min_d = np.minimum(through_top, through_bottom)
         distances[inside] = min_d

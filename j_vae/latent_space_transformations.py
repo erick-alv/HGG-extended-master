@@ -31,29 +31,7 @@ angle_goal = 279.10576
 #angle_obstacle = 35.14
 #todo
 # angle_obstacle = 244.25
-angle_obstacle = 210.20569
-
-
-do_center_goal = False
-centering_vector_goal = np.array([-0.67377424, 0.10919745,  3.1180222])
-
-def calculate_center_vec(model, center_file):
-    corner_imgs = np.load(center_file)
-
-    cuda = torch.cuda.is_available()
-    torch.manual_seed(1)
-    device = torch.device("cuda" if cuda else "cpu")
-
-    data = torch.from_numpy(corner_imgs).float().to(device)
-    data /= 255
-    data = data.permute([0, 3, 1, 2])
-    mu, logvar = model.encode(data)
-    mu = mu.detach().cpu().numpy()
-    # calculates angles from center of coordinate system to corners
-    centering_vector = 0 - mu
-    print(centering_vector[0])
-
-
+angle_obstacle = 210.8989
 
 def interval_map_function(a,b,c, d):
     def map(x):
@@ -114,8 +92,9 @@ goal_map_y = interval_map_function(-1.29224, 1.28134, g_y_min, g_y_max)
 #obstacle_map_y = interval_map_function(-1.32474, 1.308284, o_y_min, o_y_max)
 '''obstacle_map_x = interval_map_function(-1.4778, 1.5698, o_x_min, o_x_max)
 obstacle_map_y = interval_map_function(-1.5985, 1.4524, o_y_min, o_y_max)'''
-obstacle_map_x = interval_map_function(-1.5328, 1.8265, o_x_min, o_x_max)
-obstacle_map_y = interval_map_function(-2.13779, 1.901772, o_y_min, o_y_max)
+
+obstacle_map_x = interval_to_minusone_one(-1.455056, 1.844594)
+obstacle_map_y = interval_to_minusone_one(-2.14832, 1.9386173)
 
 
 def create_rotation_matrix(angle):
@@ -148,9 +127,6 @@ def map_points(points, mapper_x, mapper_y):
 
 
 def goal_transformation(points):
-    if do_center_goal:
-        for i, p in enumerate(points):
-            points[i] = points[i] + centering_vector_goal
     m = create_rotation_matrix(angle_goal)
     rotated = rotate_list_of_points(points, m)
     return map_points(rotated, goal_map_x, goal_map_y)
@@ -158,8 +134,6 @@ def goal_transformation(points):
 
 def torch_goal_transformation(batch_p, device, ind_1, ind_2):
     assert ind_1 != ind_2
-    if do_center_goal:
-        batch_p = batch_p + centering_vector_goal
     batch_p = torch.cat([batch_p[:, ind_1].unsqueeze(axis=1),batch_p[:, ind_2].unsqueeze(axis=1)], axis=1)
     theta = np.radians(angle_goal)
     r = np.array([[np.cos(theta), -np.sin(theta)],
@@ -227,13 +201,17 @@ def torch_obstacle_transformation(batch_p, device, ind_1, ind_2):
 img_size = 84
 
 
-def print_min_and_max_from_sizes(model, train_file, ind, using_sb=True):
+def print_min_and_max_from_sizes(model, train_file, ind_1, ind_2=None, using_sb=True):
     data_set = np.load(train_file)
     cuda = torch.cuda.is_available()
     torch.manual_seed(1)
     device = torch.device("cuda" if cuda else "cpu")
     min_val = None
     max_val = None
+    if ind_2 is not None:
+        min_val2 = None
+        max_val2 = None
+    
 
     for el in data_set:
         data = torch.from_numpy(el).float().to(device)
@@ -245,17 +223,30 @@ def print_min_and_max_from_sizes(model, train_file, ind, using_sb=True):
         else:
             mu, logvar = model.encode(data)
         mu = mu.detach().cpu().numpy()
-        mu = mu[:, ind]
+        m_val = mu[:, ind_1]
 
         if min_val is None:
-            min_val = mu
-            max_val = mu
+            min_val = m_val
+            max_val = m_val
         else:
-            if mu < min_val:
-                min_val = mu
-            if mu > max_val:
-                max_val = mu
+            if m_val < min_val:
+                min_val = m_val
+            if m_val > max_val:
+                max_val = m_val
+
+        if ind_2 is not None:
+            m_val2 = mu[:, ind_2]
+            if min_val2 is None:
+                min_val2 = m_val2
+                max_val2 = m_val2
+            else:
+                if m_val2 < min_val2:
+                    min_val2 = m_val2
+                if m_val2 > max_val2:
+                    max_val2 = m_val2
     print('min val: {} \nmax val: {}'.format(min_val, max_val))
+    if ind_2 is not None:
+        print('min val2: {} \nmax val2: {}'.format(min_val2, max_val2))
 
 
 #min_latent_size = -4.2777#this is best for current size
@@ -267,21 +258,43 @@ def print_min_and_max_from_sizes(model, train_file, ind, using_sb=True):
 min_latent_size = -2.1624#this is best for current size
 max_latent_size = 3.0823
 
-def get_size_in_space(v, range=[-1, 1]):
-    dist = np.abs(max_latent_size-min_latent_size)
-    prc = np.abs(v-min_latent_size)/dist
-    max_size = np.abs(range[1] - range[0])
+min_s_1 = -2.82904
+max_s_1 = 1.5274
+
+min_s_2 = -1.392
+max_s_2 = 2.7791
+
+def get_size_in_space(v1, v2=None, range=[-1, 1]):
+
+    range_size = np.abs(range[1] - range[0])
     #substracted since space encodes from biggest to smallest
-    return prc*max_size*0.25#why sometimes and sometimenot??
+    if v2 is not None:
+        dist1 = np.abs(max_s_1 - min_s_1)
+        prc1 = np.abs(v1 - min_s_1) / dist1
+        dist2 = np.abs(max_s_2 - min_s_2)
+        prc2 = np.abs(v2 - min_s_2) / dist2
+        return (1.-prc1)*range_size*0.5+0.1, prc2*range_size*0.5+0.1#we want it to return some type of radius
+    else:
+        dist = np.abs(max_latent_size - min_latent_size)
+        prc = np.abs(v1 - min_latent_size) / dist
+        return prc*range_size*0.25#why sometimes and sometimenot??
 
 
-def torch_get_size_in_space(v, device, ind, range=[-1, 1]):
-    v = v[:, ind]
-    dist = torch.abs(torch.tensor(max_latent_size-min_latent_size).float()).to(device)
-    prc = torch.abs(v-min_latent_size)/dist
-    max_size = torch.abs(torch.tensor(range[1] - range[0]).float())
-    #substracted since space encodes from biggest to smallest
-    return prc*max_size*0.25#why sometimes and sometimenot??
+def torch_get_size_in_space(v, device, ind_1, ind_2=None, range=[-1, 1]):
+    range_size = torch.abs(torch.tensor(range[1] - range[0]).float())
+    if ind_2 is not None:
+        dist1 = torch.abs(torch.tensor(max_s_1 - min_s_1).float()).to(device)
+        prc1 = torch.abs(v[:, ind_1] - min_s_1) / dist1
+        dist2 = torch.abs(torch.tensor(max_s_2 - min_s_2).float()).to(device)
+        prc2 = torch.abs(v[:, ind_2]- min_s_2) / dist2
+        #todo do not make manually
+        return (1.-prc1)*range_size*0.5+0.1, prc2*range_size*0.5+0.1#we want it to return some type of radius
+    else:
+        v = v[:, ind_1]
+        dist = torch.abs(torch.tensor(max_latent_size-min_latent_size).float()).to(device)
+        prc = torch.abs(v - min_latent_size) / dist
+        #substracted since space encodes from biggest to smallest
+        return prc*range_size*0.25#why sometimes and sometimenot??
 
 
 def from_real_pos_to_range(pos):
@@ -361,7 +374,11 @@ if __name__ == '__main__':
         analyze_lowest_variance_components(model, args.latent_size, train_file, args.batch_size, device)
     elif args.task == 'print_min_max':
         ##print_min_and_max_from_sizes
-        print_min_and_max_from_sizes(model, train_file, ind=args.ind_1)
+        if hasattr(args, 'ind_2'):
+            ind_2 = args.ind_2
+        else:
+            ind_2 = None
+        print_min_and_max_from_sizes(model, train_file, ind_1=args.ind_1, ind_2=ind_2)
     elif args.task == 'measure_degree':
         ##for
         if args.enc_type == 'mixed':

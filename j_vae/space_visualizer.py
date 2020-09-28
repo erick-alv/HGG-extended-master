@@ -1,5 +1,3 @@
-from envs.utils import goal_distance
-from utils.stable_baselines_plotter import plot_curves
 from PIL import Image
 import numpy as np
 
@@ -53,6 +51,7 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
     #move other objects to plaecs they do not disturb
     if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
         env.env.env._set_position(names_list=['obstacle'], position=[2., 2., 0.4])
+        pass
     elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
         env.env.env._move_object(position=[2.,2.,0.4])
     else:
@@ -134,8 +133,8 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
         plt.show()
     plt.close()
 
-def traversal(env, model, size_to_use, img_size,  latent_size, n, enc_type, ind_1, ind_2,
-                              using_sb=True, use_d=False, fig_file_name=None):
+def traversal(env, model, img_size,  latent_size, n, enc_type,
+                              using_sb=True, fig_file_name=None):
     cuda = torch.cuda.is_available()
     torch.manual_seed(1)
     device = torch.device("cuda" if cuda else "cpu")
@@ -291,60 +290,108 @@ def save_center(env, size_to_use, file_corners, img_size, enc_type):
     np.save(file_corners, data_set)
 
 
-def visualization_sizes_obstacle(env, model, img_size, ind, n, using_sb=True):
-    sizes = np.linspace(min_obstacle_size, max_obstacle_size, num=n)
-    #sizes = np.linspace(obstacle_size, obstacle_size, num=n)
-    n_labels = np.arange(len(sizes))
-
-    sizes = np.array(sizes)
-
-    xs = np.repeat(1, len(sizes))
-    ys = sizes
-    plt.figure(1)
-    plt.subplot(211)
-    plt.scatter(xs, ys)
-    plt.title('real')
-    for i, en in enumerate(n_labels):
-        plt.annotate(en, (xs[i], ys[i]))
-
+def visualization_sizes_obstacle(env, env_name, model, enc_type, img_size, n,ind_1, ind_2=None, using_sb=True):
     cuda = torch.cuda.is_available()
     torch.manual_seed(1)
     device = torch.device("cuda" if cuda else "cpu")
 
-
-    # sample images
-    data_set = np.empty([len(sizes), img_size, img_size, 3])
-    for i, p in enumerate(sizes):
-        env.env.env._set_position(names_list=['obstacle'], position=center_obstacle)
-        env.env.env._set_size(names_list=['obstacle'], size=np.array([sizes[i], 0.035, 0.0]))
-        data_set[i] = take_obstacle_image(env, img_size)
-    data = torch.from_numpy(data_set).float().to(device)
-    data /= 255
-    data = data.permute([0, 3, 1, 2])
-    if not using_sb:
-        mu, logvar = model.encode(data.reshape(-1, img_size * img_size * 3))
-    else:
-        mu, logvar = model.encode(data)
-    mu = mu.detach().cpu().numpy()
-
-
-    mu = mu[:, ind]
-
-    for i, p in enumerate(mu):
-        mu[i] = get_size_in_space(mu[i])
-    #    mu[i] = map_size_space(mu[i])
-    #    mu[i] = get_size_in_space(map_size_space(mu[i]))
+    if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
+        env.env.env._set_position(names_list=['obstacle'], position=[2., 2., 0.4])
         pass
+    elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
+        env.env.env._move_object(position=[2.,2.,0.4])
+    else:
+        raise Exception('Not supported enc type')
 
-    lxs = np.repeat(1, len(sizes))
-    lys = mu
+    if env_name =='FetchPushMovingObstacleEnv-v1':
+        assert ind_2 is not None
+        min_s = min_obstacle_size['FetchPushMovingObstacleEnv-v1']
+        max_s = max_obstacle_size['FetchPushMovingObstacleEnv-v1']
+        sizes_x = np.linspace(min_s, max_s, num=n)
+        sizes_y = np.linspace(min_s, max_s, num=n)
+        plt.figure(1)
+        plt.subplot(211)
+        data_set = np.empty([len(sizes_x) * len(sizes_x), img_size, img_size, 3])
+        for i, s_x in enumerate(sizes_x):
+            for j, s_y in enumerate(sizes_y):
+                plt.scatter(s_x, s_y)
+                plt.annotate(i * len(sizes_y) + j, (s_x, s_y))
+                #take image
+                env.env.env._set_size(names_list=['obstacle'], size=np.array([s_x, s_y, 0.035]))
+                data_set[i*len(sizes_y)+j] = take_obstacle_image(env, img_size)
 
-    plt.subplot(212)
-    plt.scatter(lxs, lys)
-    plt.title('latent')
-    for i, en in enumerate(n_labels):
-        plt.annotate(en, (lxs[i], lys[i]))
-    print(mu)
+        data = torch.from_numpy(data_set).float().to(device)
+        data /= 255
+        data = data.permute([0, 3, 1, 2])
+        if not using_sb:
+            mu, logvar = model.encode(data.reshape(-1, img_size * img_size * 3))
+        else:
+            mu, logvar = model.encode(data)
+        mu = mu.detach().cpu().numpy()
+
+
+        assert ind_1 != ind_2
+        mu = np.concatenate([np.expand_dims(mu[:, ind_1], axis=1),
+                             np.expand_dims(mu[:, ind_2], axis=1)], axis=1)
+        mtx, mty = get_size_in_space(mu[:, 0], v2=mu[:, 1])
+        mu = np.concatenate([np.expand_dims(mtx, axis=1),
+                             np.expand_dims(mty, axis=1)], axis=1)
+        plt.subplot(212)
+        plt.title('latent')
+
+        for i, m in enumerate(mu):
+            plt.scatter(m[0], m[1])
+            plt.annotate(i, (m[0], m[1]))
+
+
+    else:
+        sizes = np.linspace(min_obstacle_size, max_obstacle_size, num=n)
+        #sizes = np.linspace(obstacle_size, obstacle_size, num=n)
+        n_labels = np.arange(len(sizes))
+        sizes = np.array(sizes)
+
+        xs = np.repeat(1, len(sizes))
+        ys = sizes
+        plt.figure(1)
+        plt.subplot(211)
+        plt.scatter(xs, ys)
+        plt.title('real')
+        for i, en in enumerate(n_labels):
+            plt.annotate(en, (xs[i], ys[i]))
+
+        # sample images
+        data_set = np.empty([len(sizes), img_size, img_size, 3])
+        for i, p in enumerate(sizes):
+            env.env.env._set_position(names_list=['obstacle'], position=center_obstacle)
+            env.env.env._set_size(names_list=['obstacle'], size=np.array([sizes[i], 0.035, 0.0]))
+            data_set[i] = take_obstacle_image(env, img_size)
+        data = torch.from_numpy(data_set).float().to(device)
+        data /= 255
+        data = data.permute([0, 3, 1, 2])
+        if not using_sb:
+            mu, logvar = model.encode(data.reshape(-1, img_size * img_size * 3))
+        else:
+            mu, logvar = model.encode(data)
+        mu = mu.detach().cpu().numpy()
+
+
+        mu = mu[:, ind_1]
+
+        for i, p in enumerate(mu):
+            mu[i] = get_size_in_space(mu[i])
+        #    mu[i] = map_size_space(mu[i])
+        #    mu[i] = get_size_in_space(map_size_space(mu[i]))
+            pass
+
+        lxs = np.repeat(1, len(sizes))
+        lys = mu
+
+        plt.subplot(212)
+        plt.scatter(lxs, lys)
+        plt.title('latent')
+        for i, en in enumerate(n_labels):
+            plt.annotate(en, (lxs[i], lys[i]))
+        print(mu)
 
 
     plt.show()
@@ -429,7 +476,12 @@ if __name__ == '__main__':
                                       enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,
                                       fig_file_name=fig_name)
         elif args.task == 'show_size':
-            visualization_sizes_obstacle(env, model, args.img_size, ind=args.ind_1, n=5)#todo make also goal if necessary
+            if hasattr(args, 'ind_2'):
+                ind_2 = args.ind_2
+            else:
+                ind_2 = None
+            visualization_sizes_obstacle(env=env, env_name=args.env, model=model, enc_type=args.enc_type,
+                                         img_size=args.img_size,n=5, ind_1=args.ind_1, ind_2=ind_2)
         elif args.task == 'show_traversal':
             traversal(env, model, size_to_use, img_size=args.img_size, latent_size=args.latent_size, n=7,
                       enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,

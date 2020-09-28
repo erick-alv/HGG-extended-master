@@ -24,7 +24,6 @@ if __name__ == '__main__':
     acc_sum, obs = 0.0, []
     prev_obs = []
 
-
     env_images = []
     o = env.reset()
     obs.append(o)
@@ -33,12 +32,13 @@ if __name__ == '__main__':
     for timestep in range(200):
         action = env.action_space.sample()
         o, _, _, info = env.step(action)
-        print(o['obstacle_latent'])
-        print(o['obstacle_size_latent'])
+        print('pos: {}'.format(o['obstacle_latent']))
+        print('size: {}'.format(o['obstacle_size_latent']))
         obs.append(o)
         env_images.append(take_env_image(env, args.img_size))
     create_rollout_video(np.array(env_images), args=args, filename='vid_env')
     dist_estimator.update([o['obstacle_latent'] for o in obs], [o['obstacle_size_latent'] for o in obs])
+    dist_estimator.update_sizes([o['obstacle_latent'] for o in obs], [o['achieved_goal_latent'] for o in obs])
 
 
     obs_x_pos = np.array([o['obstacle_latent'][0] for o in obs])

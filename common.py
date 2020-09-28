@@ -83,6 +83,7 @@ def get_args():
 	parser.add_argument('--goal_ind_1', help='index 1 component latent vector', type=np.int32, default=None)
 	parser.add_argument('--goal_ind_2', help='index 2 component latent vector', type=np.int32, default=None)
 	parser.add_argument('--size_ind', help='index 2 component latent vector', type=np.int32, default=None)
+	parser.add_argument('--size_ind_2', help='index 2 component latent vector', type=np.int32, default=None)
 	parser.add_argument('--use_mixed', help='see if use the same VAE for the obstacle and goal',
 						type=str2bool, default=False)
 	parser.add_argument('--use_mixed_with_size', help='see if use the same VAE also for size',

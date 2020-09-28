@@ -86,9 +86,19 @@ def obstacle_latent_from_images(obstacles_images, args):
     if args.use_mixed_with_size:
         obstacle_latent = torch_obstacle_transformation(lo, args.device, ind_1=args.obstacle_ind_1, ind_2=args.obstacle_ind_2)
         obstacle_latent = obstacle_latent.detach().cpu().numpy()
-        obstacle_size_latent = torch_get_size_in_space(lo, args.device, args.size_ind)
-        obstacle_size_latent = obstacle_size_latent.detach().cpu().numpy()
-        return obstacle_latent, obstacle_size_latent
+        if args.size_ind_2 is not None:
+            obstacle_size_latent_1, obstacle_size_latent_2 = torch_get_size_in_space(lo, args.device, args.size_ind, ind_2=args.size_ind_2)
+            obstacle_size_latent_1 = obstacle_size_latent_1.detach().cpu().numpy()
+            obstacle_size_latent_2 = obstacle_size_latent_2.detach().cpu().numpy()
+            obstacle_size_latent = np.concatenate([
+                np.expand_dims(obstacle_size_latent_1, axis=1),
+                np.expand_dims(obstacle_size_latent_2, axis=1),
+            ], axis=1)
+            return obstacle_latent, obstacle_size_latent
+        else:
+            obstacle_size_latent = torch_get_size_in_space(lo, args.device, args.size_ind)
+            obstacle_size_latent = obstacle_size_latent.detach().cpu().numpy()
+            return obstacle_latent, obstacle_size_latent
     else:
         lo = torch_obstacle_transformation(lo, args.device, ind_1=args.obstacle_ind_1, ind_2=args.obstacle_ind_2)
         lo = lo.detach().cpu().numpy()
