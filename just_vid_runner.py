@@ -38,7 +38,7 @@ if __name__ == '__main__':
         env_images.append(take_env_image(env, args.img_size))
     create_rollout_video(np.array(env_images), args=args, filename='vid_env')
     dist_estimator.update([o['obstacle_latent'] for o in obs], [o['obstacle_size_latent'] for o in obs])
-    dist_estimator.update_sizes([o['obstacle_latent'] for o in obs], [o['achieved_goal_latent'] for o in obs])
+    #dist_estimator.update_sizes([o['obstacle_latent'] for o in obs], [o['achieved_goal_latent'] for o in obs])
 
 
     obs_x_pos = np.array([o['obstacle_latent'][0] for o in obs])
@@ -76,6 +76,23 @@ if __name__ == '__main__':
     b = np.array([[1.02, 0.6], [1.11, 0.6], [1.18, 0.6], [1.3, 0.6],
                   [1.38, 0.6], [1.49, 0.6], [1.54, 0.6]])
     update_points = [[1.18, 0.75], [1.38, 0.75]]
+    data_set = np.empty([1 + len(b), 84, 84, 3])
+    from vae_env_inter import goal_latent_from_images, take_goal_image
+
+    i = 0
+    env.env.env._move_object(position=np.array([a[0], a[1], 0.425]))
+    data_set[i] = take_goal_image(env, args.img_size, make_table_invisible=False)
+    i += 1
+    for p in b:
+        env.env.env._move_object(position=np.array([p[0], p[1], 0.425]))
+        data_set[i] = take_goal_image(env, args.img_size, make_table_invisible=False)
+        i += 1
+    all_l = goal_latent_from_images(data_set, args)
+    est_dists = dist_estimator.calculate_distance_batch(all_l[0], all_l[1:])
+    print(est_dists)
+    direct_all = np.linalg.norm(all_l[1:] - all_l[0], axis=1)
+    print(direct_all)
+
     '''dist2= DistMovEst()
     dist2.update(update_points, [0.048])
     real_ds = dist2.calculate_distance_batch(a,b)
@@ -96,21 +113,6 @@ if __name__ == '__main__':
     print(l_dists)
     print('----')
 
-    data_set = np.empty([1 + len(b), 84, 84, 3])
-    from vae_env_inter import goal_latent_from_images, take_goal_image
-
-    i = 0
-    env.env.env._move_object(position=np.array([a[0], a[1], 0.425]))
-    data_set[i] = take_goal_image(env, args.img_size, make_table_invisible=False)
-    i+=1
-    for p in b:
-        env.env.env._move_object(position=np.array([p[0], p[1], 0.425]))
-        data_set[i] = take_goal_image(env, args.img_size, make_table_invisible=False)
-        i+=1
-    all_l = goal_latent_from_images(data_set, args)
-    est_dists = dist_estimator.calculate_distance_batch(all_l[0], all_l[1:])
-    print(est_dists)
-    direct_all = np.linalg.norm(all_l[1:] - all_l[0], axis=1)
-    print(direct_all)'''
+    '''
 
 

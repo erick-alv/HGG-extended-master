@@ -19,11 +19,11 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.target_goal_center = np.array([1.3, 0.57, 0.425])
         self.object_center = np.array([1.3, 0.93, 0.425])
         #for moving
-        self.obstacle_vel = 1.79
+        self.obstacle_vel = 2.1
         self.initial_obstacle_direction = 1
         self.obstacle_direction = 1
-        self.obstacle_upper_limit = 1.37#1.4#1.425 these are the actual limits, but due to tim steo need to be set a bit before
-        self.obstacle_lower_limit = 1.23#1.18#1.175
+        self.obstacle_upper_limit = 1.35#1.4#1.425 these are the actual limits, but due to tim steo need to be set a bit before
+        self.obstacle_lower_limit = 1.25#1.18#1.175
 
 
         initial_qpos = {
@@ -51,7 +51,14 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         elif mov_obst_center[0] <= self.obstacle_lower_limit and self.obstacle_direction == -1:
             self.obstacle_direction = 1
         dt = self.sim.nsubsteps * self.sim.model.opt.timestep
-        self.sim.model.body_pos[body_id][0] += self.obstacle_vel * self.obstacle_direction * dt
+        if self.obstacle_direction == 1 and \
+                self.sim.model.body_pos[body_id][0] + self.obstacle_vel * dt > self.obstacle_upper_limit:
+            self.sim.model.body_pos[body_id][0] = self.obstacle_upper_limit
+        elif self.obstacle_direction == -1 and \
+                self.sim.model.body_pos[body_id][0] - self.obstacle_vel * dt < self.obstacle_lower_limit:
+            self.sim.model.body_pos[body_id][0] = self.obstacle_lower_limit
+        else:
+            self.sim.model.body_pos[body_id][0] += self.obstacle_vel * self.obstacle_direction * dt
         super(FetchPushMovingObstacleEnv, self)._step_callback()
 
 
