@@ -572,15 +572,17 @@ class HGGLearner_VAEs(HGGLearner):
 			)
 		if args.with_dist_estimator:
 			if (epoch==0 or epoch==1) and cycle in [0, 1,2,3,4]:
-				args.dist_estimator.update_sizes(
+				'''args.dist_estimator.update_sizes(
 					np.concatenate(achieved_trajectory_obstacle_latents, axis=0),
 					np.concatenate(achieved_trajectory_goals_latents, axis=0)
-				)
+				)'''
+				pass
 			elif cycle % 5 == 0:
-				args.dist_estimator.update_sizes(
+				'''args.dist_estimator.update_sizes(
 					np.concatenate(achieved_trajectory_obstacle_latents, axis=0),
 					np.concatenate(achieved_trajectory_goals_latents, axis=0)
-				)
+				)'''
+				pass
 
 		selection_trajectory_idx = {}
 		for i in range(self.args.episodes):

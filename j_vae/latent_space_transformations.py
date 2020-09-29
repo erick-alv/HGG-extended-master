@@ -273,7 +273,7 @@ def get_size_in_space(v1, v2=None, range=[-1, 1]):
         prc1 = np.abs(v1 - min_s_1) / dist1
         dist2 = np.abs(max_s_2 - min_s_2)
         prc2 = np.abs(v2 - min_s_2) / dist2
-        return (1.-prc1)*range_size*0.5+0.1, prc2*range_size*0.5+0.1#we want it to return some type of radius
+        return (1.-prc1)*range_size*0.351, prc2*range_size*0.3#we want it to return some type of radius
     else:
         dist = np.abs(max_latent_size - min_latent_size)
         prc = np.abs(v1 - min_latent_size) / dist
@@ -288,7 +288,7 @@ def torch_get_size_in_space(v, device, ind_1, ind_2=None, range=[-1, 1]):
         dist2 = torch.abs(torch.tensor(max_s_2 - min_s_2).float()).to(device)
         prc2 = torch.abs(v[:, ind_2]- min_s_2) / dist2
         #todo do not make manually
-        return (1.-prc1)*range_size*0.5+0.1, prc2*range_size*0.5+0.1#we want it to return some type of radius
+        return (1.-prc1)*range_size*0.351, prc2*range_size*0.3#we want it to return some type of radius
     else:
         v = v[:, ind_1]
         dist = torch.abs(torch.tensor(max_latent_size-min_latent_size).float()).to(device)

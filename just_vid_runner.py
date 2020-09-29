@@ -76,13 +76,13 @@ if __name__ == '__main__':
     b = np.array([[1.02, 0.6], [1.11, 0.6], [1.18, 0.6], [1.3, 0.6],
                   [1.38, 0.6], [1.49, 0.6], [1.54, 0.6]])
     update_points = [[1.18, 0.75], [1.38, 0.75]]
-    dist2= DistMovEst()
+    '''dist2= DistMovEst()
     dist2.update(update_points, [0.048])
     real_ds = dist2.calculate_distance_batch(a,b)
     print(real_ds)
     direct_real_ds = np.linalg.norm(b - a, axis=1)
     print(direct_real_ds)
-    print('----')
+    print('----')'''
 
     from j_vae.latent_space_transformations import table_map
     '''la = table_map(a)

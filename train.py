@@ -57,7 +57,7 @@ if __name__=='__main__':
 				obstacle_size_latents.append(obs['obstacle_size_latent'].copy())
 
 			args.dist_estimator.update(obstacle_latents, obstacle_size_latents)
-			args.dist_estimator.update_sizes(obstacle_latents, goal_latents)
+			#args.dist_estimator.update_sizes(obstacle_latents, goal_latents)
 			#since this are just randomly not increase
 			args.dist_estimator.update_calls = 0
 		del goal_latents
