@@ -5,9 +5,9 @@ import numpy as np
 
 
 # Ensure we get the path separator correct on windows
-MODEL_XML_PATH = os.path.join('fetch', 'push_moving_obstacle_fetch.xml')
+MODEL_XML_PATH = os.path.join('fetch', 'generative_fetch.xml')
 
-class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
+class FetchGenerativeEnv(fetch_env.FetchEnv, utils.EzPickle):
     def __init__(self, reward_type='sparse'):
         self.further = False
 
@@ -18,12 +18,6 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
 
         self.target_goal_center = np.array([1.3, 0.57, 0.425])
         self.object_center = np.array([1.3, 0.93, 0.425])
-        #for moving
-        self.obstacle_vel = 2.1
-        self.initial_obstacle_direction = 1
-        self.obstacle_direction = 1
-        self.obstacle_upper_limit = 1.35#1.4#1.425 these are the actual limits, but due to tim steo need to be set a bit before
-        self.obstacle_lower_limit = 1.25#1.18#1.175
 
 
         initial_qpos = {
@@ -42,28 +36,6 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
     # RobotEnv methods
     # ----------------------------
 
-    def _step_callback(self):
-        # direction is one dimensional see type = 'slide' in mujoco doc
-        body_id = self.sim.model.body_name2id('obstacle')
-        mov_obst_center = self.sim.data.body_xpos[body_id]
-        if mov_obst_center[0] >= self.obstacle_upper_limit and self.obstacle_direction == 1:
-            self.obstacle_direction = -1
-        elif mov_obst_center[0] <= self.obstacle_lower_limit and self.obstacle_direction == -1:
-            self.obstacle_direction = 1
-        dt = self.sim.nsubsteps * self.sim.model.opt.timestep
-        if self.obstacle_direction == 1 and \
-                self.sim.model.body_pos[body_id][0] + self.obstacle_vel * dt > self.obstacle_upper_limit:
-            self.sim.model.body_pos[body_id][0] = self.obstacle_upper_limit
-        elif self.obstacle_direction == -1 and \
-                self.sim.model.body_pos[body_id][0] - self.obstacle_vel * dt < self.obstacle_lower_limit:
-            self.sim.model.body_pos[body_id][0] = self.obstacle_lower_limit
-        else:
-            self.sim.model.body_pos[body_id][0] += self.obstacle_vel * self.obstacle_direction * dt
-        super(FetchPushMovingObstacleEnv, self)._step_callback()
-
-
-
-
     def _sample_goal(self):
         goal = self.target_goal_center + self.np_random.uniform(-self.target_range, self.target_range, size=3)
         goal[2] = self.height_offset
@@ -81,14 +53,7 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.sim.data.set_joint_qpos('object0:joint', object_qpos)
 
         self.sim.forward()
-        self.obstacle_direction = self.initial_obstacle_direction
         return True
-
-    def _get_obs(self):
-        obs = super(FetchPushMovingObstacleEnv, self)._get_obs()
-        body_id = self.sim.model.body_name2id('obstacle')
-        obs['real_obstacle_pos'] = self.sim.model.body_pos[body_id].copy()
-        return obs
 
 '''if __name__ == '__main__':
     import time

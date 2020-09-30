@@ -291,8 +291,6 @@ class DistMovEst:
             self.y_mid = np.mean([self.max_y, self.min_y])
             self.s_y = s_min_y.copy()
 
-
-
     def calculate_distance_batch(self, goal_pos, current_pos_batch):
         #todo generalize this even more
         # http://www.jeffreythompson.org/collision-detection/line-line.php
@@ -369,6 +367,98 @@ class DistMovEst:
         assert self.min_y is None and self.max_y is not None
         prs = uniform.pdf(y_coordinates, loc=self.min_y, scale=self.max_y - self.min_y)
         return prs
+
+class DistMovEstReal(DistMovEst):
+    def __init__(self):
+        super(DistMovEstReal, self).__init__()
+        self.real = True
+        self.s_x = 0.09
+        self.s_y = 0.03
+
+    def update(self, obstacle_real_list, obstacle_size_real_list):
+        obstacle_real_array = np.array(obstacle_real_list)
+        obstacle_size_real_array = np.array(obstacle_size_real_list)
+        a_x = np.min(obstacle_real_array[:, 0])
+        b_x = np.max(obstacle_real_array[:, 0])
+        a_y = np.min(obstacle_real_array[:, 1])
+        b_y = np.max(obstacle_real_array[:, 1])
+        if self.min_x == None:  # assume everything else is
+            self.max_x = b_x + self.s_x
+            self.min_x = a_x - self.s_x
+            self.max_y = b_y + self.s_y
+            self.min_y = a_y - self.s_y
+        else:
+            if b_x + self.s_x > self.max_x:
+                self.max_x = b_x + self.s_x
+            if a_x - self.s_x < self.min_x:
+                self.min_x = a_x - self.s_x
+            if b_y + self.s_x > self.max_y:
+                self.max_y = b_y + self.s_x
+            if a_y - self.s_x < self.min_y:
+                self.min_y = a_y - self.s_x
+
+        self.x_mid = np.mean([self.max_x, self.min_x])
+        self.y_mid = np.mean([self.max_y, self.min_y])
+        self.update_calls += 1
+        if self.update_calls == 3:
+            self.update_complete = True
+
+    def update_sizes(self, obstacle_real_list, goal_real_list):
+        pass
+
+    def calculate_distance_batch(self, goal_pos, current_pos_batch):
+        #todo generalize this even more
+        # http://www.jeffreythompson.org/collision-detection/line-line.php
+        def lines_to_line_intersection(xs1, ys1, x2, y2, x3, y3, x4, y4):
+            #todo correct those ones that are being divided by 0 RuntimeWarning: divide by zero encountered in true_divide
+            nA = ((x4 - x3) * (ys1 - y3) - (y4 - y3) * (xs1 - x3))
+            dA = ((y4 - y3) * (x2 - xs1) - (x4 - x3) * (y2 - ys1))
+            zA = dA == 0.
+            not_zA = np.logical_not(zA)
+            prcA = np.zeros(shape=len(xs1))
+            prcA[not_zA] = nA[not_zA]/dA[not_zA]
+            prcA[zA] = 2.#just to make it false
+
+            nB = ((x2 - xs1) * (ys1 - y3) - (y2 - ys1) * (xs1 - x3))
+            dB = ((y4 - y3) * (x2 - xs1) - (x4 - x3) * (y2 - ys1))
+            zB = dB == 0.
+            not_zB = np.logical_not(zB)
+            prcB = np.zeros(shape=len(xs1))
+            prcB[not_zB] =  nB[not_zB]/dB[not_zB]
+            prcB[zB] = 2.
+
+            bA = np.logical_and(0 <= prcA, prcA <=1)
+            bB = np.logical_and(0 <= prcB, prcB <=1)
+            return np.logical_and(bA, bB)
+
+        to_left = lines_to_line_intersection(current_pos_batch[:, 0], current_pos_batch[:, 1], goal_pos[0], goal_pos[1],
+                                             self.min_x, self.min_y, self.max_x, self.min_y)
+        to_right = lines_to_line_intersection(current_pos_batch[:, 0], current_pos_batch[:, 1], goal_pos[0], goal_pos[1],
+                                              self.min_x, self.max_y, self.max_x, self.max_y)
+        #todo should also do for top and bottom
+        inside = np.logical_or(to_left, to_right)
+        not_inside = np.logical_not(inside)
+        distances = np.zeros(shape=len(current_pos_batch))
+
+        direct_pos = current_pos_batch[not_inside]
+        direct_distances = np.linalg.norm(direct_pos - goal_pos, axis=1)
+        distances[not_inside] = direct_distances
+
+        undr_pos = current_pos_batch[inside]
+        #todo this must be more general
+        top = np.array([self.max_x + 0.001*self.s_x, self.y_mid])
+        through_top = np.linalg.norm(undr_pos - top, axis=1) + np.linalg.norm(goal_pos - top)
+        bottom = np.array([self.min_x - 0.001*self.s_x, self.y_mid])
+        through_bottom = np.linalg.norm(undr_pos - bottom, axis=1) + np.linalg.norm(goal_pos - bottom)
+        min_d = np.minimum(through_top, through_bottom)
+        distances[inside] = min_d
+        return distances
+
+    def prob_dstr_x(self, x_coordinates):
+        pass
+
+    def prob_dstr_y(self, y_coordinates):
+        pass
 
 
 

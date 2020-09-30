@@ -191,11 +191,12 @@ class MatchSampler:
 		for i in range(len(achieved_pool)):
 			self.match_lib.add(0, graph_id['achieved'][i], 1, 0)
 		for i in range(len(achieved_pool)):
-			if self.args.vae_dist_help:
-				i1 = achieved_pool[i][:, 0] > 1.55
-				i2 = achieved_pool[i][:, 0] < 1.05
-				i3 = achieved_pool[i][:, 1] > 1.0
-				i4 = achieved_pool[i][:, 1] < 0.5
+			if self.args.vae_dist_help or self.args.with_dist_estimator or self.args.with_dist_estimator_real:
+				#allow a bit of error??#todo see if this could be problematic
+				i1 = achieved_pool[i][:, 0] > 1.56
+				i2 = achieved_pool[i][:, 0] < 1.04
+				i3 = achieved_pool[i][:, 1] > 1.01
+				i4 = achieved_pool[i][:, 1] < 0.49
 				indices_outside = np.logical_or(np.logical_or(i1, i2), np.logical_or(i3, i4))
 			for j in range(len(desired_goals)):
 				if self.args.graph:
@@ -237,8 +238,17 @@ class MatchSampler:
 					h_extra = height_dist[h_p]
 					h_extra = h_extra*4
 					distances[h_p] += h_extra'''
+					res = distances - achieved_value[i] / (self.args.hgg_L / self.max_dis / (1 - self.args.gamma))
+				elif self.args.with_dist_estimator_real:
+					distances = np.zeros(shape=len(achieved_pool[i]))
+					indices_inside = np.logical_not(indices_outside)
+					ds = self.args.dist_estimator.calculate_distance_batch(goal_pos=desired_goals[j].copy(),
+																		  current_pos_batch=achieved_pool[i][
+																			  indices_inside].copy())
 
 
+					distances[indices_inside] = ds.copy()
+					distances[indices_outside] = 100.0
 
 					res = distances - achieved_value[i] / (self.args.hgg_L / self.max_dis / (1 - self.args.gamma))
 				else:
@@ -259,6 +269,12 @@ class MatchSampler:
 												 goal_pos=initial_goals_latents[j].copy(),
 										   range_x=[-1., 1.], range_y=[-1., 1.])
 					match_dis = np.min(res) + d_i * self.args.hgg_c
+				elif self.args.with_dist_estimator_real:
+						d_i = self.args.dist_estimator.calculate_distance_batch(
+							goal_pos=desired_goals[j].copy(),
+							current_pos_batch=np.array([achieved_pool[i][0].copy()])
+						)[0]
+						match_dis = np.min(res) + d_i * self.args.hgg_c
 				else:
 					match_dis = np.min(res)+goal_distance(achieved_pool[i][0], initial_goals[j])*self.args.hgg_c # TODO: distance of initial positions: take l2 norm_as before
 				match_idx = np.argmin(res)

@@ -37,32 +37,41 @@ if __name__=='__main__':
 	args.logger.summary_setup()
 	counter= 0
 
-	if args.with_dist_estimator:
+	if args.with_dist_estimator or args.with_dist_estimator_real:
 		for rs in range(5):
-			goal_latents = []
-			obstacle_latents = []
-			obstacle_size_latents = []
+			if args.with_dist_estimator:
+				goal_latents = []
+				obstacle_latents = []
+				obstacle_size_latents = []
+			else:
+				obstacle_real = []
 
 			env.reset()
 			obs = env.get_obs()
-			goal_latents.append(obs['achieved_goal_latent'].copy())
-			obstacle_latents.append(obs['obstacle_latent'].copy())
-			obstacle_size_latents.append(obs['obstacle_size_latent'].copy())
+			if args.with_dist_estimator:
+				goal_latents.append(obs['achieved_goal_latent'].copy())
+				obstacle_latents.append(obs['obstacle_latent'].copy())
+				obstacle_size_latents.append(obs['obstacle_size_latent'].copy())
+			else:
+				obstacle_real.append(obs['real_obstacle_pos'])
 			for timestep in range(args.timesteps):
 				# get action from the ddpg policy
 				action = env.action_space.sample()
 				obs, _, _, _ = env.step(action)
-				goal_latents.append(obs['achieved_goal_latent'].copy())
-				obstacle_latents.append(obs['obstacle_latent'].copy())
-				obstacle_size_latents.append(obs['obstacle_size_latent'].copy())
+				if args.with_dist_estimator:
+					goal_latents.append(obs['achieved_goal_latent'].copy())
+					obstacle_latents.append(obs['obstacle_latent'].copy())
+					obstacle_size_latents.append(obs['obstacle_size_latent'].copy())
+				else:
+					obstacle_real.append(obs['real_obstacle_pos'])
 
-			args.dist_estimator.update(obstacle_latents, obstacle_size_latents)
+			if args.with_dist_estimator:
+				args.dist_estimator.update(obstacle_latents, obstacle_size_latents)
+			else:
+				args.dist_estimator.update(obstacle_real, [])
 			#args.dist_estimator.update_sizes(obstacle_latents, goal_latents)
 			#since this are just randomly not increase
 			args.dist_estimator.update_calls = 0
-		del goal_latents
-		del obstacle_latents
-		del obstacle_size_latents
 
 	# Learning
 	for epoch in range(args.epoches):

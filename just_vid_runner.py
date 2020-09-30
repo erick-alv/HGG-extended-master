@@ -15,7 +15,7 @@ from j_vae.distance_estimation import DistMovEst
 if __name__ == '__main__':
     #read args and init env
     args = get_args()
-    load_vaes(args)
+    #load_vaes(args)
     env = make_env(args)
     dist_estimator = DistMovEst()
 
@@ -32,25 +32,25 @@ if __name__ == '__main__':
     for timestep in range(200):
         action = env.action_space.sample()
         o, _, _, info = env.step(action)
-        print('pos: {}'.format(o['obstacle_latent']))
-        print('size: {}'.format(o['obstacle_size_latent']))
+        #print('pos: {}'.format(o['obstacle_latent']))
+        #print('size: {}'.format(o['obstacle_size_latent']))
         obs.append(o)
         env_images.append(take_env_image(env, args.img_size))
     create_rollout_video(np.array(env_images), args=args, filename='vid_env')
-    dist_estimator.update([o['obstacle_latent'] for o in obs], [o['obstacle_size_latent'] for o in obs])
+    #dist_estimator.update([o['obstacle_latent'] for o in obs], [o['obstacle_size_latent'] for o in obs])
     #dist_estimator.update_sizes([o['obstacle_latent'] for o in obs], [o['achieved_goal_latent'] for o in obs])
 
 
-    obs_x_pos = np.array([o['obstacle_latent'][0] for o in obs])
+    '''obs_x_pos = np.array([o['obstacle_latent'][0] for o in obs])
     obs_y_pos = np.array([o['obstacle_latent'][1] for o in obs])
     obs_size_pos = np.array([o['obstacle_size_latent'] for o in obs])
 
-    '''print(obs_x_pos)
+    print(obs_x_pos)
     print(obs_y_pos)
     print(obs_size_pos)
     s = np.mean(obs_size_pos)
     print(s)
-    plt.clf()'''
+    plt.clf()
 
 
     t = np.arange(len(obs_x_pos))
@@ -64,17 +64,9 @@ if __name__ == '__main__':
     plt.savefig('measures.png')
     plt.close()
 
-    #dist_estimator.update([[-0.368, 0], [0.368, 0]],[0.192])
-    goal_pos = np.array([0, -0.9])
-    positions = np.array([[-1.,0.2],[-0.85,0.2],[-0.2,0.2],[0.2,0.2],[1,0.2]])
-    distances = dist_estimator.calculate_distance_batch(goal_pos, positions)
-    print('hi')
-    print(distances)
-    print('----')
-
-    a = np.array([1.3, 0.52])
-    b = np.array([[1.02, 0.6], [1.11, 0.6], [1.18, 0.6], [1.3, 0.6],
-                  [1.38, 0.6], [1.49, 0.6], [1.54, 0.6]])
+    a = np.array([1.3, 0.57])
+    b = np.array([[1.05, 0.78], [1.08, 0.8], [1.2, 0.8], [1.4, 0.8],
+                  [1.52, 0.8], [1.55, 0.78]])
     update_points = [[1.18, 0.75], [1.38, 0.75]]
     data_set = np.empty([1 + len(b), 84, 84, 3])
     from vae_env_inter import goal_latent_from_images, take_goal_image
@@ -91,7 +83,7 @@ if __name__ == '__main__':
     est_dists = dist_estimator.calculate_distance_batch(all_l[0], all_l[1:])
     print(est_dists)
     direct_all = np.linalg.norm(all_l[1:] - all_l[0], axis=1)
-    print(direct_all)
+    print(direct_all)'''
 
     '''dist2= DistMovEst()
     dist2.update(update_points, [0.048])
@@ -101,7 +93,6 @@ if __name__ == '__main__':
     print(direct_real_ds)
     print('----')'''
 
-    from j_vae.latent_space_transformations import table_map
     '''la = table_map(a)
     lb = table_map(b)
     l_update_points = table_map(update_points)
@@ -112,7 +103,6 @@ if __name__ == '__main__':
     l_dir_dists = np.linalg.norm(lb - la, axis=1)
     print(l_dists)
     print('----')
-
     '''
 
 

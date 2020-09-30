@@ -12,7 +12,7 @@ from j_vae.train_vae import load_Vae
 from j_vae.common_data import vae_sb_weights_file_name, vae_weights_file_name
 from PIL import Image
 from vae_env_inter import take_env_image
-from j_vae.distance_estimation import calculate_distance, DistMovEst
+from j_vae.distance_estimation import calculate_distance, DistMovEst, DistMovEstReal
 
 def get_args():
 	parser = get_arg_parser()
@@ -90,6 +90,8 @@ def get_args():
 						type=str2bool, default=False)
 
 	parser.add_argument('--with_dist_estimator', help='see if use the same VAE also for size',
+						type=str2bool, default=False)
+	parser.add_argument('--with_dist_estimator_real', help='see if use the same VAE also for size',
 						type=str2bool, default=False)
 
 	#for dense reward transformation
@@ -170,6 +172,8 @@ def experiment_setup(args):
 	env_test = make_env(args)
 	if args.with_dist_estimator:
 		args.dist_estimator = DistMovEst()
+	elif args.with_dist_estimator_real:
+		args.dist_estimator = DistMovEstReal()
 	#rgb_array = take_env_image(env, args.img_size)
 	#img = Image.fromarray(rgb_array)
 	#img.show()
