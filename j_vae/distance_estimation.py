@@ -447,6 +447,11 @@ class DistMovEstReal(DistMovEst):
         undr_pos = current_pos_batch[inside]
         #todo this must be more general
         top = np.array([self.max_x + 0.001*self.s_x, self.y_mid])
+        if goal_pos.shape[0] > 2:
+            goal_pos= goal_pos[:2]
+        if len(undr_pos) > 0 and undr_pos.shape[1] == 3:
+            undr_pos = undr_pos[:, :2]
+
         through_top = np.linalg.norm(undr_pos - top, axis=1) + np.linalg.norm(goal_pos - top)
         bottom = np.array([self.min_x - 0.001*self.s_x, self.y_mid])
         through_bottom = np.linalg.norm(undr_pos - bottom, axis=1) + np.linalg.norm(goal_pos - bottom)
