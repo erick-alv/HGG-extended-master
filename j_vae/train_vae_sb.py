@@ -10,7 +10,8 @@ from torchvision.utils import save_image
 doing_goal = False
 
 enc_type = 'all'
-base_data_file_name = '../data/FetchPushMovingObstacleEnv-v1/'
+#base_data_file_name = '../data/FetchPushMovingObstacleEnv-v1/'
+base_data_file_name = '../data/FetchGenerativeEnv-v1/'
 
 if enc_type == 'goal':
     train_file = '{}goal_set.npy'.format(base_data_file_name)
