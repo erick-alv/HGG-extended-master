@@ -9,7 +9,7 @@ from torchvision.utils import save_image
 
 doing_goal = False
 
-enc_type = 'obstacle'
+enc_type = 'all'
 base_data_file_name = '../data/FetchPushMovingObstacleEnv-v1/'
 
 if enc_type == 'goal':
@@ -23,6 +23,12 @@ elif enc_type == 'obstacle':
 elif enc_type == 'mixed':
     train_file = '{}mixed.npy'.format(base_data_file_name)
     n_path = '{}vae_sb_model_mixed'.format(base_data_file_name)
+
+elif enc_type == 'all':
+    train_file_1 = '{}all_set_1.npy'.format(base_data_file_name)
+    train_file_2 = '{}all_set_2.npy'.format(base_data_file_name)
+    train_file_3 = '{}all_set_3.npy'.format(base_data_file_name)
+    n_path = '{}all_sb_model'.format(base_data_file_name)
 
 def spatial_broadcast(z, width, height):
     z_b = np.tile(A=z, reps=(height, width, 1))
@@ -136,7 +142,16 @@ def loss_function(recon_x, x, mu, logvar):
 def train(epoch, model, optimizer, device, log_interval, batch_size):
     model.train()
     train_loss = 0
-    data_set = np.load(train_file)
+    if enc_type == 'all':
+        a = np.random.randint(0, 3)
+        if a == 0:
+            data_set = np.load(train_file_1)
+        elif a == 1:
+            data_set = np.load(train_file_2)
+        else:
+            data_set = np.load(train_file_3)
+    else:
+        data_set = np.load(train_file)
     data_size = len(data_set)
     data_set = np.split(data_set, data_size / batch_size)
 
@@ -244,17 +259,8 @@ def train_Vae(batch_size=128, epochs=100, no_cuda=False, seed=1, log_interval=10
 
     for epoch in range(start_epoch, epochs + start_epoch):
         train(epoch, model, optimizer, device, log_interval, batch_size)
-        # test(epoch, model, test_loader, batch_size, device)
-        # with torch.no_grad():
-        #    sample = torch.randn(64, 5).to(device)
-        #    sample = model.decode(sample).cpu()
-        #    save_image(sample.view(64, 3, img_size, img_size),
-        #               'results/sample.png')
-        '''if epoch > 5 and epoch % 3 == 0:
-            train_max_separation(epoch=epoch, model=model, optimizer=optimizer, device=device,
-                                 log_interval=load, batch_size=batch_size)'''
         if not (epoch % 5) or epoch == 1:
-            test_on_data_set(model, device,'epoch_{}'.format(epoch), latent_size=latent_size)
+            _test_on_data_set(model, device, 'epoch_{}'.format(epoch), latent_size=latent_size)
             print('Saving Progress!')
             torch.save({
                 'epoch': epoch,
@@ -272,18 +278,27 @@ def train_Vae(batch_size=128, epochs=100, no_cuda=False, seed=1, log_interval=10
         'optimizer_state_dict': optimizer.state_dict(),
     }, n_path)
 
-def test_Vae(no_cuda=False, seed=1):
+def _test_Vae(no_cuda=False, seed=1):
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
     device = torch.device("cuda" if cuda else "cpu")
     model = VAE_SB(device).to(device)
     checkpoint = torch.load(n_path)
     model.load_state_dict(checkpoint['model_state_dict'])
-    test_on_data_set(model, device, 'test')
+    _test_on_data_set(model, device, 'test')
 
 
-def test_on_data_set(model, device, filename_suffix, latent_size=2):
-    data_set = np.load(train_file)
+def _test_on_data_set(model, device, filename_suffix, latent_size=2):
+    if enc_type == 'all':
+        a = np.random.randint(0, 3)
+        if a == 0:
+            data_set = np.load(train_file_1)
+        elif a == 1:
+            data_set = np.load(train_file_2)
+        else:
+            data_set = np.load(train_file_3)
+    else:
+        data_set = np.load(train_file)
     data_size = len(data_set)
     idx = np.random.randint(0, data_size, size=10)
     data = data_set[idx]
@@ -454,7 +469,7 @@ if __name__ == '__main__':
     print('Train VAE...')
     #to the server beta 5 batch 100
     #train_Vae(batch_size=128, epochs=15, load=False, latent_size=4)
-    train_Vae(batch_size=64, epochs=15, load=False, latent_size=3)
+    train_Vae(batch_size=64, epochs=15, load=False, latent_size=10)
     # test_VAE_SB(device)
     # show_1d_manifold()
     #show_2d_manifold(84)
