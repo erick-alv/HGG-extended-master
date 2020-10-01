@@ -84,6 +84,8 @@ class VAE_SB(nn.Module):
         self.dc2 = nn.Conv2d(in_channels=img_size,
                              kernel_size=kernel_size, stride=decoder_stride, out_channels=img_size, padding=1)
         self.dc3 = nn.Conv2d(in_channels=img_size,
+                             kernel_size=kernel_size, stride=decoder_stride, out_channels=img_size, padding=1)
+        self.dc4 = nn.Conv2d(in_channels=img_size,
                              kernel_size=kernel_size, stride=decoder_stride, out_channels=3, padding=1)
 
     def encode(self, x):
@@ -110,7 +112,8 @@ class VAE_SB(nn.Module):
         d1 =  F.relu(self.dc1(tz))
         d2 = F.relu(self.dc2(d1))
         d3 = F.relu(self.dc3(d2))
-        return torch.sigmoid(d3)
+        d4 = F.relu(self.dc4(d3))
+        return torch.sigmoid(d4)
 
     def forward(self, x):
         mu, logvar = self.encode(x)
