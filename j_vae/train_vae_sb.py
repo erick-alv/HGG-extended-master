@@ -59,7 +59,7 @@ def torch_spatial_broadcast(z, width, height, device):
 
 
 class VAE_SB(nn.Module):
-    def __init__(self, device, img_size=84, latent_size=2,full_connected_size=320, input_channels=3,
+    def __init__(self, device, img_size=84, latent_size=2,full_connected_size=560, input_channels=3,
                  kernel_size=3, encoder_stride=2, decoder_stride=1):
         super(VAE_SB, self).__init__()
         self.device = device
@@ -473,7 +473,7 @@ if __name__ == '__main__':
     print('Train VAE...')
     #to the server beta 5 batch 100
     #train_Vae(batch_size=128, epochs=15, load=False, latent_size=4)
-    train_Vae(batch_size=64, epochs=50, load=False, latent_size=10)
+    train_Vae(batch_size=32, epochs=50, load=False, latent_size=10)
     # test_VAE_SB(device)
     # show_1d_manifold()
     #show_2d_manifold(84)
