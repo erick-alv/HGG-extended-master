@@ -57,6 +57,19 @@ def take_env_image(env, img_size):
     #env.env.env.viewer.cam.elevation -= 15
     return rgb_array
 
+def take_objects_image(env, img_size):
+    env.env.env._set_arm_visible(visible=False)
+    env.env.env._set_visibility(names_list=['rectangle'], alpha_val=1.0)
+    env.env.env._set_visibility(names_list=['cube'], alpha_val=1.0)
+    env.env.env._set_visibility(names_list=['cylinder'], alpha_val=1.0)
+    env.env.env._set_visibility(names_list=['table0'], alpha_val=0.0)
+    # just to activate in case viewer is not intialized
+    if not hasattr(env.env.env.viewer, 'cam'):
+        np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
+    rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
+    return rgb_array
+
+
 def transform_image_to_latent_batch_torch(im_batch, vae, img_size, device):
     image = torch.from_numpy(im_batch).float().to(device)
     image /= 255

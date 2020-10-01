@@ -4,7 +4,7 @@ from algorithm.replay_buffer import goal_based_process
 from utils.os_utils import make_dir, LoggerExtra
 from utils.image_util import create_rollout_video
 from j_vae.distance_estimation import calculate_distance, calculate_distance_real
-from vae_env_inter import take_env_image
+from vae_env_inter import take_env_image, take_objects_image
 from envs import make_env
 from common import get_args, load_vaes
 import copy
@@ -17,6 +17,7 @@ if __name__ == '__main__':
     args = get_args()
     #load_vaes(args)
     env = make_env(args)
+
     dist_estimator = DistMovEst()
 
     #run env
@@ -29,13 +30,22 @@ if __name__ == '__main__':
     obs.append(o)
     prev_obs.append(o)
     env_images.append(take_env_image(env, args.img_size))
+    env.env.env._rotate(["rectangle"], 0., 0., 130.)
+
     for timestep in range(200):
+
+        env.env.env._rotate(["cube"], 0., 10. * timestep, 10. * timestep)
+        env.env.env._rotate(["cylinder"], 0., 10. * timestep, 0.)
+        env.env.env._change_color(["cylinder"], 0.1, 0.1 * timestep, 0.1)
         action = env.action_space.sample()
-        o, _, _, info = env.step(action)
+        env.step([0., 0., 0., 0.])
+
+        #o, _, _, info = env.step(action)
         #print('pos: {}'.format(o['obstacle_latent']))
         #print('size: {}'.format(o['obstacle_size_latent']))
-        obs.append(o)
-        env_images.append(take_env_image(env, args.img_size))
+        #obs.append(o)
+        #env_images.append(take_env_image(env, args.img_size))
+        env_images.append(take_objects_image(env, args.img_size))
     create_rollout_video(np.array(env_images), args=args, filename='vid_env')
     #dist_estimator.update([o['obstacle_latent'] for o in obs], [o['obstacle_size_latent'] for o in obs])
     #dist_estimator.update_sizes([o['obstacle_latent'] for o in obs], [o['achieved_goal_latent'] for o in obs])

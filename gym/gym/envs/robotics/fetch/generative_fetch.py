@@ -2,6 +2,7 @@ import os
 from gym import utils
 from gym.envs.robotics import fetch_env
 import numpy as np
+from scipy.spatial.transform import Rotation as Rot
 
 
 # Ensure we get the path separator correct on windows
@@ -21,10 +22,10 @@ class FetchGenerativeEnv(fetch_env.FetchEnv, utils.EzPickle):
 
 
         initial_qpos = {
-            'robot0:slide0': 0.405,
-            'robot0:slide1': 0.48,
+            'robot0:slide0': 0.0,
+            'robot0:slide1': 0.0,
             'robot0:slide2': 0.0,
-            'object0:joint': [1.25, 0.63, 0.4, 1., 0., 0., 0.],  # origin 0.53
+            #'object0:joint': [1.25, 0.63, 0.4, 1., 0., 0., 0.],  # origin 0.53#this might be the reason for the funny (behaviour, we should wait til sim ends??#
         }
         fetch_env.FetchEnv.__init__(
             self, MODEL_XML_PATH, has_object=True, block_gripper=True, n_substeps=20,
@@ -54,6 +55,23 @@ class FetchGenerativeEnv(fetch_env.FetchEnv, utils.EzPickle):
 
         self.sim.forward()
         return True
+
+
+    def _rotate(self, names_list, rot_x, rot_y, rot_z):
+        #rot_z and rot_x changed to be congrunet wit angles used in space
+        r = Rot.from_rotvec(np.pi/180 * np.array([ rot_z, rot_y, rot_x]))
+        q = r.as_quat()
+        for name in names_list:
+            id = self.sim.model.body_name2id(name)
+            self.sim.model.body_quat[id] = q.copy()
+
+    def _change_color(self, names_list, r, g, b):
+        for name in names_list:
+            id = np.where(self.sim.model.geom_bodyid == self.sim.model.body_name2id(name))
+            id = id[0].item()
+            self.sim.model.geom_rgba[id] = np.array([r,g,b,1.])
+
+
 
 '''if __name__ == '__main__':
     import time

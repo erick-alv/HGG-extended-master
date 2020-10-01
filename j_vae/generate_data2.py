@@ -4,7 +4,7 @@ import os
 import copy
 from envs import make_env, clip_return_range, Robotics_envs_id
 from utils.os_utils import make_dir
-from vae_env_inter import take_env_image, take_obstacle_image, take_goal_image
+from vae_env_inter import take_env_image, take_obstacle_image, take_goal_image, take_objects_image
 from PIL import Image
 from j_vae.common_data import train_file_name, puck_size, obstacle_size, z_table_height_obstacle, min_obstacle_size,\
     max_obstacle_size,z_table_height_goal
@@ -16,12 +16,18 @@ extend_region_parameters_goal = {'FetchPushObstacleFetchEnv-v1':
                                      {'center':np.array([1.3, 0.75, 0.425]), 'range':0.25},
                                  'FetchPushMovingObstacleEnv-v1':
                                      {'center':np.array([1.3, 0.75, 0.425]), 'range':0.25},
+                                 'FetchGenerativeEnv-v1':
+                                     {'center':np.array([1.3, 0.75, 0.425]), 'range':0.25},
                             }
 
 
 size_visible_range = {'FetchPushObstacleFetchEnv-v1':
                                      {'x_r':np.array([1.25, 1.35]), 'y_r':np.array([0.7, 0.8]),
-                                      'red_prc':min_obstacle_size/max_obstacle_size},
+                                      'red_prc':min_obstacle_size[
+                                                    'FetchPushObstacleFetchEnv-v1']/max_obstacle_size[
+                                          'FetchPushObstacleFetchEnv-v1']
+                                      },
+
                       'FetchPushMovingObstacleEnv-v1':
                           {'end_x_r': np.array([1.05, 1.55]), 'end_y_r': np.array([0.5, 1.]),
                            'start_x_r': np.array([1.26, 1.34]), 'start_y_r': np.array([0.71, 0.79]),
@@ -156,19 +162,205 @@ def obstacle_random_pos_and_size(env, args):
         #size = [0.25, 0.25, 0.035]
         env.env.env._set_size(names_list=['obstacle'], size=size)
 
+def gen_all_data(env, args):
+    def get_current_max_size(pos, edge_max, max):
+        min_distance_to_edge = None
+        begin_distance_for_reduce = max - edge_max
+        if np.abs(1.55 - pos[0]) <= begin_distance_for_reduce:
+            min_distance_to_edge = np.abs(1.55 - pos[0])
+        if np.abs(pos[0] - 1.05) <= begin_distance_for_reduce:
+            if min_distance_to_edge is None:
+                min_distance_to_edge = np.abs(pos[0] - 1.05)
+            elif np.abs(pos[0] - 1.05) < min_distance_to_edge:
+                min_distance_to_edge = np.abs(pos[0] - 1.05)
+        if np.abs(1.0 - pos[1]) <= begin_distance_for_reduce:
+            if min_distance_to_edge is None:
+                min_distance_to_edge = (1.0 - pos[1])
+            elif np.abs(pos[0] - 1.05) < min_distance_to_edge:
+                min_distance_to_edge = (1.0 - pos[1])
+        if np.abs(pos[1] - 0.5) <= begin_distance_for_reduce:
+            if min_distance_to_edge is None:
+                min_distance_to_edge = np.abs(pos[1] - 0.5)
+            elif np.abs(pos[0] - 1.05) < min_distance_to_edge:
+                min_distance_to_edge = np.abs(pos[1] - 0.5)
+        if min_distance_to_edge is None:
+            return max
+        else:
+            prc = 1.0 - min_distance_to_edge / begin_distance_for_reduce
+            return max - prc * begin_distance_for_reduce
+    # choose and move other away
+    p1 = np.array([-20., 20., 20.])
+    p2 = np.array([-20., -20., 20.])
+    
+    obj_ind = np.random.randint(0,3)
+    if obj_ind == 0:
+        obj='cylinder'
+        env.env.env._set_position(names_list=['rectangle'], position=p1)
+        env.env.env._set_position(names_list=['cube'], position=p2)
+    elif obj_ind == 1:
+        obj = 'rectangle'
+        env.env.env._set_position(names_list=['cylinder'], position=p1)
+        env.env.env._set_position(names_list=['cube'], position=p2)
+    elif obj_ind == 2:
+        obj = 'cube'
+        env.env.env._set_position(names_list=['rectangle'], position=p1)
+        env.env.env._set_position(names_list=['cylinder'], position=p2)
+    #pos
+    pos = env.object_center + np.random.uniform(-env.obj_range, env.obj_range, size=3)
+    #pos = env.object_center
+    #pos[0] -= np.random.uniform(0.1, env.obj_range, size=1)
+    #pos[1] += np.random.uniform(0.1, env.obj_range, size=1)
+    #pos = np.array([1.5, 0.52, 0.435])
+
+    # rotation
+    if obj == 'cylinder':
+        rot_x = np.random.uniform(0., 180.)
+        rot_y = np.random.uniform(0., 180.)
+        env.env.env._rotate([obj], rot_x, rot_y, 0.)
+    elif obj == 'rectangle':
+        rot_z = np.random.uniform(0., 180.)
+        env.env.env._rotate([obj], 0., 0., rot_z)
+    elif obj == 'cube':
+        rot_x = np.random.uniform(0., 90.)
+        rot_y = np.random.uniform(0., 90.)
+        rot_z = np.random.uniform(0., 90.)
+        env.env.env._rotate([obj], rot_x, rot_y, rot_z)
+
+    # size and eventually change in height
+    if obj == 'cylinder':
+        max_r = 0.08
+        max_at_edge = 0.05
+        current_max = get_current_max_size(pos, max_at_edge, max_r)
+        r = np.random.uniform(0.025, current_max)
+        height = np.random.uniform(0.02, 0.035)
+        size = [r, height, 0.0]        
+    elif obj == 'rectangle':
+        max_l_1 = 0.25
+        max_l_2 = 0.08
+        max_at_edge = 0.035
+        begin_reduce = 0.2
+        begin_reduce_2 = 0.14
+        max_at_edge_2 = 0.04
+        dist_to_edge = None
+        base_dist_used = None
+        max_at = None
+        if 0. <= rot_z <= 45. or 135. <= rot_z <= 180.:
+            if np.abs(1.55 - pos[0]) <= begin_reduce:
+                d = np.abs(1.55 - pos[0])
+                if dist_to_edge is None or d < dist_to_edge:
+                    dist_to_edge = d.copy()
+                    base_dist_used = begin_reduce
+                    max_at = max_at_edge
+            if np.abs(pos[0] - 1.05) <= begin_reduce:
+                d = np.abs(pos[0] - 1.05)
+                if dist_to_edge is None or d < dist_to_edge:
+                    dist_to_edge = d.copy()
+                    base_dist_used = begin_reduce
+                    max_at = max_at_edge
+            #
+            if np.abs(pos[1] - 0.5) <= begin_reduce_2:
+                d = np.abs(pos[1] - 0.5)
+                if dist_to_edge is None or d < dist_to_edge:
+                    dist_to_edge = d.copy()
+                    base_dist_used = begin_reduce_2
+                    max_at = max_at_edge_2
+            if np.abs(1.0 - pos[1]) <= begin_reduce_2:
+                d = np.abs(1.0 - pos[1])
+                if dist_to_edge is None or d < dist_to_edge:
+                    dist_to_edge = d.copy()
+                    base_dist_used = begin_reduce_2
+                    max_at = max_at_edge_2
+
+        if 45. <= rot_z <= 90. or 90. <= rot_z <= 135.:
+            if np.abs(pos[1] - 0.5) <= begin_reduce:
+                d = np.abs(pos[1] - 0.5)
+                if dist_to_edge is None or d < dist_to_edge:
+                    dist_to_edge = d.copy()
+                    base_dist_used = begin_reduce
+                    max_at = max_at_edge
+            if np.abs(1.0 - pos[1]) <= begin_reduce:
+                d = np.abs(1.0 - pos[1])
+                if dist_to_edge is None or d < dist_to_edge:
+                    dist_to_edge = d.copy()
+                    base_dist_used = begin_reduce
+                    max_at = max_at_edge
+            #
+            if np.abs(1.55 - pos[0]) <= begin_reduce_2:
+                d = np.abs(1.55 - pos[0])
+                if dist_to_edge is None or d < dist_to_edge:
+                    dist_to_edge = d.copy()
+                    base_dist_used = begin_reduce_2
+                    max_at = max_at_edge_2
+            if np.abs(pos[0] - 1.05) <= begin_reduce_2:
+                d = np.abs(pos[0] - 1.05)
+                if dist_to_edge is None or d < dist_to_edge:
+                    dist_to_edge = d.copy()
+                    base_dist_used = begin_reduce_2
+                    max_at = max_at_edge_2
+
+        if dist_to_edge is None:
+            current_max = max_l_1
+        else:
+            diff_size = max_l_1 - max_at
+            prc = dist_to_edge / base_dist_used
+            current_max = max_at + prc * diff_size
+
+        assert current_max > 0.02
+        long_length = np.random.uniform(0.02, current_max)
+        if long_length > max_l_2:
+            max_s = 0.04
+        else:
+            max_s = 0.5 * long_length
+        if max_s < 0.02:
+            short_length = max_s
+        else:
+            short_length = np.random.uniform(0.02, max_s)
+        height = np.random.uniform(0.02, 0.035)
+        size = [long_length, short_length, height]
+    elif obj == 'cube':
+        max_l = 0.06
+        max_at_edge = 0.035
+        current_max = get_current_max_size(pos, max_at_edge, max_l)
+        s = np.random.uniform(0.02, current_max)
+        size = [s, s, s]
+        height = s
+    #pos after settinh height
+    env.env.env._set_size(names_list=[obj], size=size)
+    pos[2] = 0.4 + height
+    env.env.env._set_position(names_list=[obj], position=pos)
+    
+
+    
+    #color
+    r_color = np.random.randint(0, 5)
+    if r_color == 0:
+        env.env.env._change_color([obj], 1., 0., 0.)
+    elif r_color == 1:
+        env.env.env._change_color([obj], 0., 0., 1.)
+    elif r_color == 2:
+        env.env.env._change_color([obj], 0.5, 0., 0.5)
+    elif r_color == 3:
+        env.env.env._change_color([obj], 0., 0., 0.)
+    else:
+        env.env.env._change_color([obj], 0.5, 0.5, 0.)
+
 
 gen_setup_env_ops = {'FetchPushObstacleFetchEnv-v1':[extend_sample_region],
                      'FetchPushMovingObstacleEnv-v1':[extend_sample_region],
+                     'FetchGenerativeEnv-v1':[extend_sample_region]
                      }
 
 after_env_reset_ops = {'FetchPushObstacleFetchEnv-v1':[move_other_objects_away, obstacle_random_pos_and_size,
                                                        goal_random_pos_recom],
                        'FetchPushMovingObstacleEnv-v1':[move_other_objects_away, obstacle_random_pos_and_size,
                                                        goal_random_pos_recom],
+                       'FetchGenerativeEnv-v1':[]
                        }
+
 
 during_loop_ops =  {'FetchPushObstacleFetchEnv-v1':[obstacle_random_pos_and_size],
                     'FetchPushMovingObstacleEnv-v1':[obstacle_random_pos_and_size],
+                    'FetchGenerativeEnv-v1':[gen_all_data]
                     }
 
 if __name__ == "__main__":
@@ -221,8 +413,8 @@ if __name__ == "__main__":
                                     default=0.25)
 
         parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
-                            choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-        parser.add_argument('--count', help='number of samples', type=np.int32, default=1280 * 30)
+                            choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes', 'all'])
+        parser.add_argument('--count', help='number of samples', type=np.int32, default=1280*20)
         parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
         args = parser.parse_args()
 
@@ -263,7 +455,7 @@ if __name__ == "__main__":
                         else:
                             break
                 #obstacle loop
-                else:
+                elif args.enc_type == 'obstacle' or args.enc_type == 'obstacle_sizes':
                     rgb_array = take_obstacle_image(env, img_size=args.img_size)
                     train_data[i] = rgb_array.copy()
                     i += 1
@@ -276,6 +468,13 @@ if __name__ == "__main__":
                             i += 1
                         else:
                             break
+                elif args.enc_type == 'all':
+                    for func in during_loop_ops[args.env]:
+                        func(env, args)
+                    rgb_array = take_objects_image(env, img_size=args.img_size)
+                    train_data[i] = rgb_array.copy()
+                    i += 1
+
 
                 '''if i % 10 == 0:
                     im = Image.fromarray(rgb_array)
