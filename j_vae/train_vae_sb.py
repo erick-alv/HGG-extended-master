@@ -473,7 +473,7 @@ if __name__ == '__main__':
     print('Train VAE...')
     #to the server beta 5 batch 100
     #train_Vae(batch_size=128, epochs=15, load=False, latent_size=4)
-    train_Vae(batch_size=32, epochs=50, load=False, latent_size=10)
+    train_Vae(batch_size=32, epochs=30, load=False, latent_size=10)
     # test_VAE_SB(device)
     # show_1d_manifold()
     #show_2d_manifold(84)
