@@ -83,7 +83,6 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
 
     def move_obstacle(self):
         body_id = self.sim.model.body_name2id('obstacle')
-        print(self.sim.data.body_xpos[body_id][0])
         if self.sim.data.body_xpos[body_id][0] >= self.obstacle_upper_limit and self.obstacle_direction == 1:
             self.obstacle_direction = -1
         elif self.sim.data.body_xpos[body_id][0] <= self.obstacle_lower_limit and self.obstacle_direction == -1:

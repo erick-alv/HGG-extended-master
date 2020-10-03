@@ -38,9 +38,16 @@ if __name__ == '__main__':
             #env.env.env._rotate(["cylinder"], 0., 10. * timestep, 0.)
             #env.env.env._change_color(["cylinder"], 0.1, 0.1 * timestep, 0.1)
 
-            action = env.action_space.sample()
-            #env.step([0., 0., 0., 0.])
+            '''action = env.action_space.sample()
+            if timestep < 8:
+                o, _, _, info = env.step([-1., 0, 0., 0.])
+            elif timestep < 14:
+                o, _, _, info = env.step([0., 1., 0., 0.])
+            elif timestep < 40:
+                o, _, _, info = env.step([1., -0.5, 0., 0.])
+            else:'''
             o, _, _, info = env.step(action)
+            #o, _, _, info = env.step(action)
             #print('pos: {}'.format(o['obstacle_latent']))
             #print('size: {}'.format(o['obstacle_size_latent']))
             obs.append(o)
