@@ -30,23 +30,23 @@ if __name__ == '__main__':
     obs.append(o)
     prev_obs.append(o)
     env_images.append(take_env_image(env, args.img_size))
-    env.env.env._rotate(["rectangle"], 0., 0., 130.)
 
-    for timestep in range(200):
+    for vid in range(1):
+        for timestep in range(80):
 
-        env.env.env._rotate(["cube"], 0., 10. * timestep, 10. * timestep)
-        env.env.env._rotate(["cylinder"], 0., 10. * timestep, 0.)
-        env.env.env._change_color(["cylinder"], 0.1, 0.1 * timestep, 0.1)
-        action = env.action_space.sample()
-        env.step([0., 0., 0., 0.])
+            #env.env.env._rotate(["cube"], 0., 10. * timestep, 10. * timestep)
+            #env.env.env._rotate(["cylinder"], 0., 10. * timestep, 0.)
+            #env.env.env._change_color(["cylinder"], 0.1, 0.1 * timestep, 0.1)
 
-        #o, _, _, info = env.step(action)
-        #print('pos: {}'.format(o['obstacle_latent']))
-        #print('size: {}'.format(o['obstacle_size_latent']))
-        #obs.append(o)
-        #env_images.append(take_env_image(env, args.img_size))
-        env_images.append(take_objects_image(env, args.img_size))
-    create_rollout_video(np.array(env_images), args=args, filename='vid_env')
+            action = env.action_space.sample()
+            #env.step([0., 0., 0., 0.])
+            o, _, _, info = env.step(action)
+            #print('pos: {}'.format(o['obstacle_latent']))
+            #print('size: {}'.format(o['obstacle_size_latent']))
+            obs.append(o)
+            env_images.append(take_env_image(env, args.img_size))
+            #env_images.append(take_objects_image(env, args.img_size))
+        create_rollout_video(np.array(env_images), args=args, filename='vid_{}_env'.format(vid))
     #dist_estimator.update([o['obstacle_latent'] for o in obs], [o['obstacle_size_latent'] for o in obs])
     #dist_estimator.update_sizes([o['obstacle_latent'] for o in obs], [o['achieved_goal_latent'] for o in obs])
 

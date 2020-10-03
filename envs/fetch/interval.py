@@ -7,7 +7,7 @@ from .fixobj import FixedObjectGoalEnv
 
 class IntervalGoalEnv(FixedObjectGoalEnv):
 	def __init__(self, args):
-		self.img_size = 84
+		self.img_size = args.img_size
 		FixedObjectGoalEnv.__init__(self, args)
 
 	def generate_goal_old(self):

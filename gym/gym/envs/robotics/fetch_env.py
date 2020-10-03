@@ -115,9 +115,6 @@ class FetchEnv(robot_env.RobotEnv):
             achieved_goal = grip_pos.copy()
         else:
             achieved_goal = np.squeeze(object_pos.copy())
-            #self._set_arm_visible(False)
-            #achieved_goal = self._get_image('ach.png')#TODO..
-            #self._set_arm_visible()
 
         obs = np.concatenate([
             grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel(),

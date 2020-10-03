@@ -8,7 +8,7 @@ import torch
 import matplotlib.pyplot as plt
 from j_vae.train_vae_sb import load_Vae as load_Vae_SB
 from envs import make_env
-from vae_env_inter import take_goal_image, take_obstacle_image
+from vae_env_inter import take_goal_image, take_obstacle_image, take_objects_image
 from j_vae.train_vae import load_Vae
 from j_vae.latent_space_transformations import create_rotation_matrix, rotate_list_of_points, map_points, \
     goal_map_x, goal_map_y, obstacle_map_y, obstacle_map_x, angle_obstacle, angle_goal,\
@@ -106,14 +106,14 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
     if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
         rm = create_rotation_matrix(angle_goal)
         mu = rotate_list_of_points(mu, rm)
-        mu = map_points(mu, goal_map_x, goal_map_y)
+        #mu = map_points(mu, goal_map_x, goal_map_y)
         pass
     elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
         #for i, p in enumerate(mu):
         #    mu[i] = reflect_obstacle_transformation(p)
         rm = create_rotation_matrix(angle_obstacle)
         mu = rotate_list_of_points(mu, rm)
-        mu = map_points(mu, obstacle_map_x, obstacle_map_y)
+        #mu = map_points(mu, obstacle_map_x, obstacle_map_y)
         pass
     else:
         raise Exception('Not supported enc type')
@@ -133,8 +133,7 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
         plt.show()
     plt.close()
 
-def traversal(env, model, img_size,  latent_size, n, enc_type,
-                              using_sb=True, fig_file_name=None):
+def traversal(env, model, img_size,  latent_size, n, enc_type,using_sb=True, fig_file_name=None):
     cuda = torch.cuda.is_available()
     torch.manual_seed(1)
     device = torch.device("cuda" if cuda else "cpu")
@@ -146,6 +145,18 @@ def traversal(env, model, img_size,  latent_size, n, enc_type,
         env.env.env._set_position(names_list=['obstacle'], position=[2., 2., 0.4])
     elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
         env.env.env._move_object(position=[2., 2., 0.4])
+    elif enc_type == 'all':
+        env.env.env._set_position(names_list=['obstacle'], position=[10., 10., 10.])
+        env.env.env._move_object(position=[-10., -10., -10.])
+        obj = 'cube'
+        p1 = np.array([-20., 20., 20.])
+        p2 = np.array([-20., -20., 20.])
+        env.env.env._set_position(names_list=['rectangle'], position=p1)
+        env.env.env._set_position(names_list=['cylinder'], position=p2)
+        s = 0.06
+        env.env.env._set_size(names_list=['cube'], size=[s, s, s])
+        pos = [1.3, 0.75, 0.4+s]
+        env.env.env._set_position(names_list=[obj], position=pos)
     else:
         raise Exception('Not supported enc type')
 
@@ -157,6 +168,8 @@ def traversal(env, model, img_size,  latent_size, n, enc_type,
         env.env.env._set_position(names_list=['obstacle'], position=[1.3, 0.75, 0.4])
         # env.env.env._set_size(names_list=['obstacle'], size=np.array([0.15, 0.035, 0.]))
         central_im = take_obstacle_image(env, img_size)
+    elif enc_type == 'all':
+        central_im = take_objects_image(env, img_size)
     else:
         raise Exception('Not supported enc type')
 
@@ -425,7 +438,7 @@ if __name__ == '__main__':
     parser.add_argument('--ind_2', help='second index to extract from latent vector', type=np.int32)
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
-                        default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes', 'mixed'])
+                        default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes', 'mixed', 'all'])
     parser.add_argument('--mix_h', help='if the representation should de done with goals or obstacles', type=str,
                         default='goal', choices=['goal', 'obstacle'])
 
@@ -449,12 +462,15 @@ if __name__ == '__main__':
 
     #other arguments for the algorithms
     if args.enc_type == 'goal':
-        size_to_use = puck_size
+        #size_to_use = puck_size
+        size_to_use = 0
     elif args.enc_type == 'obstacle':
         #size_to_use = obstacle_size
         size_to_use = 0
     elif args.enc_type == 'mixed':
         size_to_use = (obstacle_size + puck_size) /2
+    elif args.enc_type == 'all':
+        size_to_use = 0
 
     if args.task == 'show_space' or args.task == 'show_size' or args.task == 'show_traversal':
         # load the latent_size and model
@@ -462,6 +478,9 @@ if __name__ == '__main__':
         device = torch.device("cuda" if cuda else "cpu")
         if args.enc_type == 'goal' or args.enc_type == 'obstacle' or args.enc_type == 'mixed':
             model = load_Vae_SB(weights_path, args.img_size, args.latent_size)
+        elif args.enc_type == 'all':
+            model = load_Vae_SB(weights_path, args.img_size, args.latent_size,
+                                full_connected_size=640, extra_layer=True)
         else:
             model = load_Vae(weights_path, args.imgsize, args.latent_size)
 
@@ -483,9 +502,8 @@ if __name__ == '__main__':
             visualization_sizes_obstacle(env=env, env_name=args.env, model=model, enc_type=args.enc_type,
                                          img_size=args.img_size,n=5, ind_1=args.ind_1, ind_2=ind_2)
         elif args.task == 'show_traversal':
-            traversal(env, model, size_to_use, img_size=args.img_size, latent_size=args.latent_size, n=7,
-                      enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,
-                                      fig_file_name='traversal')
+            traversal(env, model, img_size=args.img_size, latent_size=args.latent_size, n=7,
+                      enc_type=args.enc_type, fig_file_name='traversal')
     else:
         if args.task == 'save_corners':
             file_corners = data_dir + file_corners_name[args.enc_type]

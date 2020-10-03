@@ -41,10 +41,11 @@ def torch_spatial_broadcast(z, width, height, device):
 
 class VAE_SB(nn.Module):
     def __init__(self, device, img_size, latent_size, full_connected_size=320, input_channels=3,
-                 kernel_size=3, encoder_stride=2, decoder_stride=1):
+                 kernel_size=3, encoder_stride=2, decoder_stride=1, extra_layer=False):
         super(VAE_SB, self).__init__()
         self.device = device
         self.img_size = img_size
+        self.extra_layer = extra_layer
         self.c1 = nn.Conv2d(in_channels=input_channels, kernel_size=kernel_size,
                             stride=encoder_stride, out_channels=img_size, padding=1)
         self.c2 = nn.Conv2d(in_channels=img_size, kernel_size=kernel_size,
@@ -63,8 +64,15 @@ class VAE_SB(nn.Module):
                              stride=decoder_stride, out_channels=img_size, padding=1)
         self.dc2 = nn.Conv2d(in_channels=img_size,
                              kernel_size=kernel_size, stride=decoder_stride, out_channels=img_size, padding=1)
-        self.dc3 = nn.Conv2d(in_channels=img_size,
-                             kernel_size=kernel_size, stride=decoder_stride, out_channels=3, padding=1)
+        if extra_layer:
+            self.dc3 = nn.Conv2d(in_channels=img_size,
+                                 kernel_size=kernel_size, stride=decoder_stride, out_channels=img_size, padding=1)
+            self.dc4 = nn.Conv2d(in_channels=img_size,
+                                 kernel_size=kernel_size, stride=decoder_stride, out_channels=3, padding=1)
+        else:
+            self.dc3 = nn.Conv2d(in_channels=img_size,
+                                 kernel_size=kernel_size, stride=decoder_stride, out_channels=3, padding=1)
+
 
     def encode(self, x):
         #h1 = F.relu(self.fc1(x))
@@ -90,7 +98,11 @@ class VAE_SB(nn.Module):
         d1 =  F.relu(self.dc1(tz))
         d2 = F.relu(self.dc2(d1))
         d3 = F.relu(self.dc3(d2))
-        return torch.sigmoid(d3)
+        if self.extra_layer:
+            d4 = F.relu(self.dc4(d3))
+            return torch.sigmoid(d4)
+        else:
+            return torch.sigmoid(d3)
 
     def forward(self, x):
         mu, logvar = self.encode(x)
@@ -213,13 +225,16 @@ def test_on_data_set(model, device, filename_suffix, latent_size, train_file):
         save_image(comparison.cpu(), this_file_dir+'results/reconstruction_{}.png'.format(filename_suffix),
                    nrow=10)
 
-def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1):
+def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1, full_connected_size=320, input_channels=3,
+                 kernel_size=3, encoder_stride=2, decoder_stride=1, extra_layer=False):
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
     device = torch.device("cuda" if cuda else "cpu")
     kwargs = {'num_workers': 1, 'pin_memory': True} if cuda else {}
 
-    model = VAE_SB(device, img_size=img_size, latent_size=latent_size).to(device)
+    model = VAE_SB(device, img_size=img_size, latent_size=latent_size, full_connected_size=full_connected_size,
+                   input_channels=input_channels, kernel_size=kernel_size, encoder_stride=encoder_stride,
+                   decoder_stride=decoder_stride, extra_layer=extra_layer).to(device)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     checkpoint = torch.load(path)
     model.load_state_dict(checkpoint['model_state_dict'])
