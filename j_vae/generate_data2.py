@@ -344,6 +344,178 @@ def gen_all_data(env, args):
     else:
         env.env.env._change_color([obj], 0.5, 0.5, 0.)
 
+def _get_reduce_factor(distance_start_reduce, max_size, max_size_at_edge, current_size):
+    if current_size <= max_size_at_edge:
+        return 0.
+    else:
+        reduce_prc = (current_size - max_size_at_edge) / (max_size - max_size_at_edge)
+        return distance_start_reduce * reduce_prc
+
+def _get_pos(ar_x, ar_y, center, range_left, range_right, range_up, range_down, size):
+    def _gen_pos():
+        p = center
+        p[0] += np.random.uniform(range_left, range_right, size=1)
+        p[1] += np.random.uniform(range_up, range_down, size=1)
+        p[2] = 0.4 + size[2]
+        return p
+
+    def is_inside_ocuped_areas(p, s):
+        for i in range(len(ar_x)):
+            if (ar_x[i][0] <= p[0] + s[0] <= ar_x[i][1] and ar_y[i][0] <= p[1] + s[1] <= ar_y[i][1]):
+                return True
+            elif (ar_x[i][0] <= p[0] - s[0] <= ar_x[i][1] and ar_y[i][0] <= p[1] - s[1] <= ar_y[i][1]):
+                return True
+            elif (ar_x[i][0] <= p[0] <= ar_x[i][1] and ar_y[i][0] <= p[1] <= ar_y[i][1]):
+                return True
+        return False
+
+    t = 0
+    while True:
+        t += 1
+        pos = _gen_pos()
+        if not is_inside_ocuped_areas(pos, [size[0]+0.01, size[1]+0.01]):
+            return pos
+        if t >= 100:
+            print('took to much time')
+            return None
+
+def _gen_cylinder(ocuped_areas_x, ocuped_areas_y):
+    #size
+    max_r = 0.08
+    max_at_edge = 0.05
+    min_size = 0.035
+    start_reduce = 0.03
+
+    r = np.random.uniform(min_size, max_r)
+    height = np.random.uniform(0.02, 0.035)
+    size = [r, height, 0.0]
+    env.env.env._set_size(names_list=['cylinder'], size=size)
+
+    # rotation
+    rot_x = np.random.uniform(0., 180.)
+    rot_y = np.random.uniform(0., 180.)
+    env.env.env._rotate(['cylinder'], rot_x, rot_y, 0.)
+
+    #position
+    reduce_factor = _get_reduce_factor(start_reduce, max_r, max_at_edge, r)
+    assert reduce_factor >= 0.
+    assert env.obj_range - reduce_factor > 0
+    pos = _get_pos(ocuped_areas_x, ocuped_areas_y, env.object_center.copy(), -env.obj_range + reduce_factor,
+                   env.obj_range - reduce_factor, -env.obj_range + reduce_factor, env.obj_range - reduce_factor,
+                   [r, r, height])#for the cylinder emulates a square bounding box
+    if pos is None:
+        return None, None
+    else:
+        env.env.env._set_position(names_list=['cylinder'], position=pos)
+        return [pos[0] - size[0], pos[0] + size[0]], [pos[1] - size[1], pos[1] + size[1]]
+
+def _gen_cube(ocuped_areas_x, ocuped_areas_y):
+    #size
+    max_l = 0.05
+    max_at_edge = 0.035
+    min_size = 0.03
+    start_reduce = 0.015
+    s = np.random.uniform(min_size, max_l)
+    size = [s, s, s]
+    env.env.env._set_size(names_list=['cube'], size=size)
+
+    # rotation
+    rot_x = np.random.uniform(0., 90.)
+    rot_y = np.random.uniform(0., 90.)
+    rot_z = np.random.uniform(0., 90.)
+    env.env.env._rotate(['cube'], rot_x, rot_y, rot_z)
+
+    #position
+    reduce_factor = _get_reduce_factor(start_reduce, max_l, max_at_edge, s)
+    assert reduce_factor >= 0.
+    assert env.obj_range - reduce_factor > 0
+    pos = _get_pos(ocuped_areas_x, ocuped_areas_y, env.object_center.copy(), -env.obj_range + reduce_factor,
+                   env.obj_range - reduce_factor, -env.obj_range + reduce_factor, env.obj_range - reduce_factor,
+                   size)
+    if pos is None:
+        return None, None
+    else:
+        env.env.env._set_position(names_list=['cube'], position=pos)
+        return [pos[0] - size[0], pos[0] + size[0]], [pos[1] - size[1], pos[1] + size[1]]
+
+def gen_all_data_mixed(env, args):
+    env.env.env._change_color(['cylinder'], 1., 0., 0.)
+    env.env.env._change_color(['rectangle'], 0., 0., 1.)
+    env.env.env._change_color(['cube'], 0.5, 0., 0.5)
+    #size obstacle
+    max_l = 0.25
+    min_l = 0.08
+    long_length = np.random.uniform(min_l, max_l)
+    short_length = np.random.uniform(0.02, 0.04)
+    height_obstacle = np.random.uniform(0.02, 0.035)
+    size = [long_length, short_length, height_obstacle]
+    env.env.env._set_size(names_list=['rectangle'], size=size)
+
+    # rotation obstacle
+    r_case = np.random.randint(0, 2)
+    if r_case == 0:
+        rot_z = 0.
+    else:
+        rot_z = 90.
+    env.env.env._rotate(['rectangle'], 0., 0., rot_z)
+
+    #pos_obstacle
+    begin_reduce = 0.2#distance to edge when when lenght 0.25
+    reduce_prc = long_length/max_l
+    reduce_factor = begin_reduce*reduce_prc
+    pos_obstacle = env.object_center.copy()
+    if rot_z == 0.:
+        pos_obstacle[0] += np.random.uniform(-env.obj_range+reduce_factor, env.obj_range-reduce_factor, size=1)
+        pos_obstacle[1] += np.random.uniform(-env.obj_range, env.obj_range, size=1)
+        occuped_area_x = [pos_obstacle[0] - long_length, pos_obstacle[0]+long_length]
+        occuped_area_y = [pos_obstacle[1] - short_length, pos_obstacle[1]+short_length]
+    else:
+        pos_obstacle[0] += np.random.uniform(-env.obj_range, env.obj_range, size=1)
+        pos_obstacle[1] += np.random.uniform(-env.obj_range + reduce_factor, env.obj_range - reduce_factor, size=1)
+        occuped_area_x = [pos_obstacle[0] - short_length, pos_obstacle[0]+short_length]
+        occuped_area_y = [pos_obstacle[1] - long_length, pos_obstacle[1]+long_length]
+    pos_obstacle[2] = 0.4 + height_obstacle
+    env.env.env._set_position(names_list=['rectangle'], position=pos_obstacle)
+
+    #generate other objects
+    p1 = np.array([-20., 20., 20.])
+    p2 = np.array([-20., -20., 20.])
+    case = np.random.randint(0, 4)
+    if case == 0:
+        #just cylinder
+        env.env.env._set_position(names_list=['cube'], position=p2)
+        oc_x, oc_y = _gen_cylinder([occuped_area_x], [occuped_area_y])
+        if oc_x is None:
+            print('no pos created; genrating just obstacle')
+            env.env.env._set_position(names_list=['cylinder'], position=p1)
+    elif case == 1:
+        #just cube
+        env.env.env._set_position(names_list=['cylinder'], position=p1)
+        oc_x, oc_y = _gen_cube([occuped_area_x], [occuped_area_y])
+        if oc_x is None:
+            print('no pos created; genrating just obstacle')
+            env.env.env._set_position(names_list=['cube'], position=p2)
+    elif case == 2:
+        #both
+        oc_x, oc_y = _gen_cylinder([occuped_area_x], [occuped_area_y])
+        if oc_x is None:
+            print('no pos created for cyl in both; genrating just cube, perhaps')
+            env.env.env._set_position(names_list=['cylinder'], position=p1)
+            oc_x_c, oc_y_c = _gen_cube([occuped_area_x], [occuped_area_y])
+        else:
+            oc_x_c, oc_y_c = _gen_cube([occuped_area_x, oc_x], [occuped_area_y, oc_y])
+
+        if oc_x_c is None:
+            print('no pos created for cube in both; genrating just obstacle')
+            env.env.env._set_position(names_list=['cube'], position=p2)
+
+    else:
+        #no other objects
+        env.env.env._set_position(names_list=['cylinder'], position=p1)
+        env.env.env._set_position(names_list=['cube'], position=p2)
+        pass
+
+
 
 gen_setup_env_ops = {'FetchPushObstacleFetchEnv-v1':[extend_sample_region],
                      'FetchPushMovingObstacleEnv-v1':[extend_sample_region],
@@ -360,7 +532,7 @@ after_env_reset_ops = {'FetchPushObstacleFetchEnv-v1':[move_other_objects_away, 
 
 during_loop_ops =  {'FetchPushObstacleFetchEnv-v1':[obstacle_random_pos_and_size],
                     'FetchPushMovingObstacleEnv-v1':[obstacle_random_pos_and_size],
-                    'FetchGenerativeEnv-v1':[gen_all_data]
+                    'FetchGenerativeEnv-v1':[gen_all_data_mixed]
                     }
 
 if __name__ == "__main__":
@@ -415,7 +587,7 @@ if __name__ == "__main__":
         parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                             choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes', 'all'])
         parser.add_argument('--count', help='number of samples', type=np.int32, default=1280*20)
-        parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
+        parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)#84)
         args = parser.parse_args()
 
         # create data folder if it does not exist, corresponding folders, and files where to store data

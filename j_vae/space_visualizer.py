@@ -10,9 +10,11 @@ from j_vae.train_vae_sb import load_Vae as load_Vae_SB
 from envs import make_env
 from vae_env_inter import take_goal_image, take_obstacle_image, take_objects_image
 from j_vae.train_vae import load_Vae
-from j_vae.latent_space_transformations import create_rotation_matrix, rotate_list_of_points, map_points, \
-    goal_map_x, goal_map_y, obstacle_map_y, obstacle_map_x, angle_obstacle, angle_goal,\
-    get_size_in_space, torch_get_size_in_space
+from j_vae.train_monet import load_Vae as load_Monet
+import copy
+
+from j_vae.latent_space_transformations import create_rotation_matrix, rotate_list_of_points, angle_obstacle, angle_goal,\
+    get_size_in_space
 
 
 def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, ind_1, ind_2,
@@ -133,7 +135,125 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
         plt.show()
     plt.close()
 
-def traversal(env, model, img_size,  latent_size, n, enc_type,using_sb=True, fig_file_name=None):
+def visualization_grid_points_all(env, model, size_to_use, img_size, n, enc_type, ind_1, ind_2,
+                              using_sb=True, use_d=False, fig_file_name=None):
+    if use_d:
+        d = 0.12#0.32
+        points = generate_points(range_x=[range_x[0] - d, range_x[1] + d], range_y=[range_y[0] - d, range_y[1] + d],
+                                 z=z_table_height, total=n,
+                                 object_x_y_size=[size_to_use, size_to_use])
+    else:
+        points = generate_points(range_x=range_x, range_y=range_y, z=z_table_height, total=n,
+                                 object_x_y_size=[size_to_use, size_to_use])
+
+
+    n_labels = np.arange(len(points))
+
+    points = np.array(points)
+    #print_max_and_min(points)
+
+    xs = points[:, 0]
+    ys = points[:, 1]
+    plt.figure(1)
+    plt.subplot(211, )
+    plt.scatter(xs,ys)
+    plt.title('real')
+    for i, en in enumerate(n_labels):
+        plt.annotate(en, (xs[i], ys[i]))
+
+
+    cuda = torch.cuda.is_available()
+    torch.manual_seed(1)
+    device = torch.device("cuda" if cuda else "cpu")
+
+    # sample images
+    data_set = np.empty([len(points), img_size, img_size, 3])
+    #move other objects to plaecs they do not disturb
+    if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
+        env.env.env._set_position(names_list=['obstacle'], position=[2., 2., 0.4])
+        pass
+    elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
+        env.env.env._move_object(position=[2.,2.,0.4])
+    else:
+        raise Exception('Not supported enc type')
+    for i,p in enumerate(points):
+        if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
+            env.env.env._move_object(position=p)
+            data_set[i] = take_goal_image(env, img_size, make_table_invisible=True)
+        elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
+            env.env.env._set_position(names_list=['obstacle'], position=p)
+            data_set[i] = take_obstacle_image(env, img_size)
+        else:
+            raise Exception('Not supported enc type')
+    all_array = None
+    t = 0
+    for r in range(n):
+        row = None
+        for c in range(n):
+            rcim = data_set[t].copy()
+            t += 1
+            if row is None:
+                row = rcim
+            else:
+                row = np.concatenate([row.copy(), rcim], axis=1)
+        if all_array is None:
+            all_array = row.copy()
+        else:
+            all_array = np.concatenate([all_array.copy(), row], axis=0)
+    all_ims = Image.fromarray(all_array.astype(np.uint8))
+    if fig_file_name is not None:
+        all_ims.save('{}_ims.png'.format(fig_file_name))
+        from hindsight_goals_visualizer import show_points
+        show_points(points, '{}_vis'.format(fig_file_name),'real')
+    else:
+        all_ims.show()
+    all_ims.close()
+    data = torch.from_numpy(data_set).float().to(device)
+    data /= 255
+    data = data.permute([0, 3, 1, 2])
+    model.eval()
+    if not using_sb:
+        mu, logvar = model.encode(data.reshape(-1, img_size * img_size * 3))
+    else:
+        mu, logvar = model.encode(data)
+    mu = mu.detach().cpu().numpy()
+
+    assert ind_1 != ind_2
+    mu = np.concatenate([np.expand_dims(mu[:, ind_1], axis=1),
+                         np.expand_dims(mu[:, ind_2], axis=1)], axis=1)
+
+
+    if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
+        rm = create_rotation_matrix(angle_goal)
+        mu = rotate_list_of_points(mu, rm)
+        #mu = map_points(mu, goal_map_x, goal_map_y)
+        pass
+    elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
+        #for i, p in enumerate(mu):
+        #    mu[i] = reflect_obstacle_transformation(p)
+        rm = create_rotation_matrix(angle_obstacle)
+        mu = rotate_list_of_points(mu, rm)
+        #mu = map_points(mu, obstacle_map_x, obstacle_map_y)
+        pass
+    else:
+        raise Exception('Not supported enc type')
+    print_max_and_min(mu)
+
+    lxs = mu[:, 0]
+    lys = mu[:, 1]
+    plt.subplot(212)
+    plt.scatter(lxs, lys)
+    plt.title('latent')
+    for i, en in enumerate(n_labels):
+        plt.annotate(en, (lxs[i], lys[i]))
+
+    if fig_file_name is not None:
+        plt.savefig(fig_file_name)
+    else:
+        plt.show()
+    plt.close()
+
+def traversal(env, model, img_size,  latent_size, n, enc_type, using_sb=True, fig_file_name=None):
     cuda = torch.cuda.is_available()
     torch.manual_seed(1)
     device = torch.device("cuda" if cuda else "cpu")
@@ -229,6 +349,97 @@ def traversal(env, model, img_size,  latent_size, n, enc_type,using_sb=True, fig
         all_ims.show()
     all_ims.close()
 
+def traversal_all(env, model, img_size,  latent_size, n, fig_file_name):
+    cuda = torch.cuda.is_available()
+    torch.manual_seed(1)
+    device = torch.device("cuda" if cuda else "cpu")
+    dist = 2.5
+
+    # move other objects to plaecs they do not disturb
+    env.env.env._set_position(names_list=['obstacle'], position=[10., 10., 10.])
+    env.env.env._move_object(position=[-10., -10., -10.])
+    # position object
+    p1 = np.array([-20., 20., 20.])
+    p2 = np.array([-20., -20., 20.])
+    d1 = 0.12
+    d2 = 0.03
+    env.env.env._set_size(names_list=['rectangle'], size=[d1, d2, 0.035])
+    env.env.env._change_color(['rectangle'], 0., 0., 1.)
+    pos = [1.3, 0.9, 0.4 + 0.035]
+    env.env.env._set_position(names_list=['rectangle'], position=pos)
+
+    r = 0.06
+    env.env.env._set_size(names_list=['cylinder'], size=[r, 0.025, 0.])
+    env.env.env._change_color(['cylinder'], 1., 0., 0.)
+    pos = [1.15, 0.65, 0.4 + 0.025]
+    env.env.env._set_position(names_list=['cylinder'], position=pos)
+
+    s = 0.06
+    env.env.env._set_size(names_list=['cube'], size=[s, s, s])
+    env.env.env._change_color(['cube'], 0.5, 0., 0.5)
+    pos = [1.3, 0.75, 0.4+s]
+    env.env.env._set_position(names_list=['cube'], position=pos)
+
+    # sample image  central
+    central_im = take_objects_image(env, img_size)
+
+    #trasform to latent
+    data = np.expand_dims(central_im.copy(), axis=0)
+    data = torch.from_numpy(data).float().to(device)
+    data /= 255
+    data = data.permute([0, 3, 1, 2])
+    model.eval()
+    mu_s, logvar_s, masks = model.encode(data)
+
+    for slot_idx in range(len(mu_s)):
+        mu = mu_s[slot_idx]
+        data_set = np.empty([n * latent_size, img_size, img_size, 3])
+        mid = int(n / 2)
+        for l in range(latent_size):
+            for t in range(n):
+                if t == mid:
+                    data_set[n*l+t] = central_im.copy()
+                else:
+                    v=torch.zeros(latent_size)
+                    v[l] = 1.
+                    if t < mid:
+                        v = v*-(mid-t)*dist
+                    else:
+                        v = v*(t-mid)*dist
+                    v = v.to(device)
+                    z = mu+v
+
+                    #z_s = copy.copy(mu_s)
+                    #z_s[slot_idx] = z
+                    #im, _, _ = model.decode(z_s, masks)
+                    im, _ = model._decoder_step(z)
+
+                    im = im.view(3, img_size, img_size)
+                    im = im.permute([1, 2, 0])
+                    im *= 255.
+                    im = im.type(torch.uint8)
+                    im = im.detach().cpu().numpy()
+                    data_set[n * l + t] = im.copy()
+
+        all_array = None
+        t = 0
+        for r in range(latent_size):
+            row = None
+            for c in range(n):
+                rcim = data_set[t].copy()
+                t += 1
+                if row is None:
+                    row = rcim
+                else:
+                    row = np.concatenate([row.copy(), rcim], axis=1)
+            if all_array is None:
+                all_array = row.copy()
+            else:
+                all_array = np.concatenate([all_array.copy(), row], axis=0)
+        all_ims = Image.fromarray(all_array.astype(np.uint8))
+        all_ims.save('{}_ims_slot_{}.png'.format(fig_file_name, slot_idx))
+        all_ims.close()
+
 
 def print_max_and_min(points):
     assert isinstance(points, np.ndarray)
@@ -277,6 +488,7 @@ def save_corners(env, size_to_use, file_corners, img_size, enc_type):
     all_ims = Image.fromarray(all_array.astype(np.uint8))
     all_ims.show()
     all_ims.close()
+
 
 def save_center(env, size_to_use, file_corners, img_size, enc_type):
     points = generate_points(range_x=range_x, range_y=range_y, z=z_table_height, total=3,
@@ -411,7 +623,6 @@ def visualization_sizes_obstacle(env, env_name, model, enc_type, img_size, n,ind
     plt.close()
 
 
-
 if __name__ == '__main__':
     import argparse
     import os
@@ -455,8 +666,6 @@ if __name__ == '__main__':
     train_file = data_dir + train_file_name[args.enc_type]
     weights_path = data_dir + vae_sb_weights_file_name[args.enc_type]
 
-
-
     # load environment
     env = make_env(args)
 
@@ -470,7 +679,7 @@ if __name__ == '__main__':
     elif args.enc_type == 'mixed':
         size_to_use = (obstacle_size + puck_size) /2
     elif args.enc_type == 'all':
-        size_to_use = 0
+        size_to_use = 0.06
 
     if args.task == 'show_space' or args.task == 'show_size' or args.task == 'show_traversal':
         # load the latent_size and model
@@ -479,8 +688,7 @@ if __name__ == '__main__':
         if args.enc_type == 'goal' or args.enc_type == 'obstacle' or args.enc_type == 'mixed':
             model = load_Vae_SB(weights_path, args.img_size, args.latent_size)
         elif args.enc_type == 'all':
-            model = load_Vae_SB(weights_path, args.img_size, args.latent_size,
-                                full_connected_size=640, extra_layer=True)
+            model = load_Monet(weights_path, args.img_size, args.latent_size)
         else:
             model = load_Vae(weights_path, args.imgsize, args.latent_size)
 
@@ -491,9 +699,13 @@ if __name__ == '__main__':
             elif args.enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
                 fig_name = 'vis_grid_o'
 
-            visualization_grid_points(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
-                                      enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,
-                                      fig_file_name=fig_name)
+            if args.enc_type == 'all':
+                visualization_grid_points_all(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
+                                              enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2, fig_file_name='all_fig')
+            else:
+                visualization_grid_points(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
+                                          enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,
+                                          fig_file_name=fig_name)
         elif args.task == 'show_size':
             if hasattr(args, 'ind_2'):
                 ind_2 = args.ind_2
@@ -502,8 +714,14 @@ if __name__ == '__main__':
             visualization_sizes_obstacle(env=env, env_name=args.env, model=model, enc_type=args.enc_type,
                                          img_size=args.img_size,n=5, ind_1=args.ind_1, ind_2=ind_2)
         elif args.task == 'show_traversal':
-            traversal(env, model, img_size=args.img_size, latent_size=args.latent_size, n=7,
-                      enc_type=args.enc_type, fig_file_name='traversal')
+            if args.enc_type == 'all':
+                traversal_all(env=env, model=model, img_size=args.img_size, latent_size=args.latent_size, n=7,
+                              fig_file_name='traversal')
+            else:
+                traversal(env, model, img_size=args.img_size, latent_size=args.latent_size, n=7,
+                          enc_type=args.enc_type, fig_file_name='traversal')
+
+
     else:
         if args.task == 'save_corners':
             file_corners = data_dir + file_corners_name[args.enc_type]

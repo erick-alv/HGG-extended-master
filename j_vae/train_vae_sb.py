@@ -333,7 +333,6 @@ def show_2d_manifold_with_fixed_axis(img_size, latent_size, free_axis_1, free_ax
     plt.grid(color='black', linewidth='1.2')
     plt.show()
 
-
 #todo make wit list of values axes to block
 def show_1d_manifold(img_size, latent_size, vae_weights_path, no_cuda=False, seed=1):
     cuda = not no_cuda and torch.cuda.is_available()
@@ -397,11 +396,11 @@ if __name__ == '__main__':
     data_dir = base_data_dir + args.env + '/'
     train_file = data_dir + train_file_name[args.enc_type]
     weights_path = data_dir + vae_sb_weights_file_name[args.enc_type]
-    data_set = np.load(train_file)
+    '''data_set = np.load(train_file)
     from PIL import Image
     im = Image.fromarray(data_set[0].astype(np.uint8))
     im.show()
-    im.close()
+    im.close()'''
 
 
     train_Vae(batch_size=args.batch_size, img_size=args.img_size, latent_size=args.latent_size,beta=args.beta,
@@ -411,6 +410,4 @@ if __name__ == '__main__':
     '''for v in np.linspace(start=0.05, stop=0.95, num=8):
         show_2d_manifold_with_fixed_axis(img_size=args.img_size,latent_size=args.latent_size, free_axis_1=9, free_axis_2=4,
                                      vae_weights_path=weights_path, fixed_prob_val=v)'''
-    # show_1d_manifold()
-    #show_2d_manifold(84)
     print('Successfully trained VAE')
