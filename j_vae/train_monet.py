@@ -283,11 +283,15 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
     model.train()
     train_loss = 0
     data_set = np.load(train_file)
+    data_set = data_set[:20]
 
     data_size = len(data_set)
-    data_set = np.split(data_set, data_size / batch_size)
-
-    for batch_idx, data in enumerate(data_set):
+    #creates indexes and shuffles them. So it can acces the data
+    idx_set = np.arange(data_size)
+    np.random.shuffle(idx_set)
+    idx_set = np.split(idx_set, data_size / batch_size)
+    for batch_idx, idx_select in enumerate(idx_set):
+        data = data_set[idx_select]
         data = torch.from_numpy(data).float().to(device)
         data /= 255
         data = data.permute([0, 3, 1, 2])
@@ -344,7 +348,7 @@ def visualize_masks(imgs, masks, recons, file_name):
 
 def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, beta, gamma, bg_sigma, fg_sigma,
               epochs=100, no_cuda=False, seed=1, log_interval=100, load=False,
-              num_blocks=5, channel_base=64, num_slots=4,
+              num_blocks=5, channel_base=64, num_slots=6,
               full_connected_size=256, color_channels=3,kernel_size=3, encoder_stride=2,decoder_stride=1,
               conv_size1=32, conv_size2=64):
     cuda = not no_cuda and torch.cuda.is_available()
@@ -420,7 +424,7 @@ def test_on_data_set(model, device, filename_suffix, latent_size, train_file):
                         file_name=this_file_dir+'results/reconstruction_{}.png'.format(filename_suffix))
 
 
-def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1, num_blocks=5, channel_base=64, num_slots=4,
+def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1, num_blocks=5, channel_base=64, num_slots=6,
                  full_connected_size=256, color_channels=3,kernel_size=3, encoder_stride=2,decoder_stride=1,
                  conv_size1=32, conv_size2=64):
     cuda = not no_cuda and torch.cuda.is_available()
@@ -445,7 +449,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=32.)
+    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=8.)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=20)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=8)
