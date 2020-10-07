@@ -449,7 +449,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=8.)
+    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=32.)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=20)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=8)
