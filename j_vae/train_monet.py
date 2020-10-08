@@ -318,7 +318,7 @@ def numpify(tensor):
 
 def visualize_masks(imgs, masks, recons, file_name):
     recons = np.clip(recons, 0., 1.)
-    colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (0, 255, 255), (255, 0, 255), (255, 255, 0)]
+    colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (0, 255, 255), (255, 0, 255), (255, 255, 0), (0, 0, 0), (0, 127, 255)]
     colors.extend([(c[0]//2, c[1]//2, c[2]//2) for c in colors])
     colors.extend([(c[0]//4, c[1]//4, c[2]//4) for c in colors])
     seg_maps = np.zeros_like(imgs)
@@ -388,8 +388,8 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
               train_file=train_file, batch_size=batch_size, beta=beta,
               gamma=gamma, bg_sigma=bg_sigma, fg_sigma=fg_sigma)
         if not (epoch % 5) or epoch == 1:
-            test_on_data_set(model, device, filename_suffix='epoch_{}'.format(epoch), latent_size=latent_size,
-                             train_file=train_file)
+            compare_with_data_set(model, device, filename_suffix='epoch_{}'.format(epoch), latent_size=latent_size,
+                                  train_file=train_file)
             print('Saving Progress!')
             torch.save({
                 'epoch': epoch,
@@ -408,11 +408,12 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
     }, vae_weights_path)
 
 
-def test_on_data_set(model, device, filename_suffix, latent_size, train_file):
+def compare_with_data_set(model, device, filename_suffix, latent_size, train_file):
     data_set = np.load(train_file)
     data_size = len(data_set)
     idx = np.random.randint(0, data_size, size=10)
     data = data_set[idx]
+    print(data.shape)
     with torch.no_grad():
         data = torch.from_numpy(data).float().to(device)
         data /= 255
@@ -451,7 +452,8 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=32.)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=20)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
-    parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=8)
+    parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
+    parser.add_argument('--num_slots', help='number of slots', type=np.int32, default=3)
     parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=3.)
     parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=0.25)
     parser.add_argument('--bg_sigma', help='', type=np.float, default=0.09)
@@ -472,14 +474,13 @@ if __name__ == '__main__':
     train_Vae(epochs=args.train_epochs, batch_size=args.batch_size,img_size=args.img_size,latent_size=args.latent_size,
               train_file=train_file,
               vae_weights_path=weights_path, beta=args.beta, gamma=args.gamma, bg_sigma=args.bg_sigma,
-              fg_sigma=args.fg_sigma, load=False)
+              fg_sigma=args.fg_sigma, load=False, num_slots=args.num_slots)
 
 
-    '''weights_path2 = data_dir + 'sprites.ckpt'
-    device = torch.device("cuda")
+    '''device = torch.device("cuda")
 
-    model = load_Vae(path=weights_path, img_size=args.img_size, latent_size=16)
+    model = load_Vae(path=weights_path, img_size=args.img_size, latent_size=args.latent_size)
 
 
-    test_on_data_set(model=model, device=device, latent_size=16,
+    compare_with_data_set(model=model, device=device, latent_size=args.latent_size,
                      filename_suffix="test", train_file=train_file )'''

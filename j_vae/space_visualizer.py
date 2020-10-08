@@ -135,18 +135,11 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
         plt.show()
     plt.close()
 
-def visualization_grid_points_all(env, model, size_to_use, img_size, n, enc_type, ind_1, ind_2,
-                              using_sb=True, use_d=False, fig_file_name=None):
-    if use_d:
-        d = 0.12#0.32
-        points = generate_points(range_x=[range_x[0] - d, range_x[1] + d], range_y=[range_y[0] - d, range_y[1] + d],
-                                 z=z_table_height, total=n,
-                                 object_x_y_size=[size_to_use, size_to_use])
-    else:
-        points = generate_points(range_x=range_x, range_y=range_y, z=z_table_height, total=n,
-                                 object_x_y_size=[size_to_use, size_to_use])
+def visualization_grid_points_all(env, model, size_to_use, img_size, n, enc_type, ind_1, ind_2, fig_file_name):
+    points = generate_points(range_x=range_x, range_y=range_y, z=z_table_height, total=n, object_x_y_size=[size_to_use, size_to_use])
 
-
+    #points = points[:n]#just take those thar vary in y
+    points = [points[i*n+3] for i in range(n)]  # just take those thar vary in x
     n_labels = np.arange(len(points))
 
     points = np.array(points)
@@ -155,37 +148,53 @@ def visualization_grid_points_all(env, model, size_to_use, img_size, n, enc_type
     xs = points[:, 0]
     ys = points[:, 1]
     plt.figure(1)
-    plt.subplot(211, )
     plt.scatter(xs,ys)
     plt.title('real')
     for i, en in enumerate(n_labels):
         plt.annotate(en, (xs[i], ys[i]))
+    plt.savefig("{}_real".format(fig_file_name))
+    plt.close()
 
 
     cuda = torch.cuda.is_available()
     torch.manual_seed(1)
     device = torch.device("cuda" if cuda else "cpu")
 
+
+    if True:
+        # move other objects to plaecs they do not disturb
+        env.env.env._set_position(names_list=['obstacle'], position=[10., 10., 10.])
+        env.env.env._move_object(position=[-10., -10., -10.])
+        # position object
+        p1 = np.array([-20., 20., 20.])
+        p2 = np.array([-20., -20., 20.])
+        d1 = 0.12
+        d2 = 0.03
+        env.env.env._set_size(names_list=['rectangle'], size=[d1, d2, 0.035])
+        env.env.env._change_color(['rectangle'], 0., 0., 1.)
+        pos = [1.3, 1., 0.4 + 0.035]
+        env.env.env._set_position(names_list=['rectangle'], position=pos)
+
+        r = 0.04
+        env.env.env._set_size(names_list=['cylinder'], size=[r, 0.025, 0.])
+        env.env.env._change_color(['cylinder'], 1., 0., 0.)
+        pos = [1.15, 0.65, 0.4 + 0.025]
+        env.env.env._set_position(names_list=['cylinder'], position=pos)
+        # env.env.env._set_position(names_list=['cylinder'], position=p1)
+
+        s = 0.03
+        env.env.env._set_size(names_list=['cube'], size=[s, s, s])
+        env.env.env._change_color(['cube'], 0.5, 0., 0.5)
+        pos = [1.3, 0.6, 0.4 + s]
+        env.env.env._set_position(names_list=['cube'], position=pos)
+        # env.env.env._set_position(names_list=['cube'], position=p2)
+
     # sample images
     data_set = np.empty([len(points), img_size, img_size, 3])
-    #move other objects to plaecs they do not disturb
-    if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
-        env.env.env._set_position(names_list=['obstacle'], position=[2., 2., 0.4])
-        pass
-    elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
-        env.env.env._move_object(position=[2.,2.,0.4])
-    else:
-        raise Exception('Not supported enc type')
     for i,p in enumerate(points):
-        if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
-            env.env.env._move_object(position=p)
-            data_set[i] = take_goal_image(env, img_size, make_table_invisible=True)
-        elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
-            env.env.env._set_position(names_list=['obstacle'], position=p)
-            data_set[i] = take_obstacle_image(env, img_size)
-        else:
-            raise Exception('Not supported enc type')
-    all_array = None
+        env.env.env._set_position(names_list=['cylinder'], position=[p[0], p[1] , 0.4 + 0.025])
+        data_set[i]  = take_objects_image(env, img_size)
+    '''all_array = None
     t = 0
     for r in range(n):
         row = None
@@ -207,51 +216,29 @@ def visualization_grid_points_all(env, model, size_to_use, img_size, n, enc_type
         show_points(points, '{}_vis'.format(fig_file_name),'real')
     else:
         all_ims.show()
-    all_ims.close()
+    all_ims.close()'''
     data = torch.from_numpy(data_set).float().to(device)
     data /= 255
     data = data.permute([0, 3, 1, 2])
-    model.eval()
-    if not using_sb:
-        mu, logvar = model.encode(data.reshape(-1, img_size * img_size * 3))
-    else:
-        mu, logvar = model.encode(data)
-    mu = mu.detach().cpu().numpy()
+    with torch.no_grad():
+        mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
+        from j_vae.train_monet import visualize_masks, numpify
+        visualize_masks(imgs=numpify(data), masks=numpify(torch.cat(masks, dim=1)), recons=numpify(full_reconstruction),
+                        file_name=fig_file_name + "_recons.png")
+        mu_s, logvar_s, masks = model.encode(data)
+    for slot_ind, mu in enumerate(mu_s):
+        mu = mu.detach().cpu().numpy()
+        for latent_ind in range(mu.shape[1]):
+            vals = mu[:, latent_ind]
+            lys = np.zeros(len(vals))
+            plt.subplot(212)
+            plt.scatter(vals, lys)
+            plt.title('latent')
+            for i, en in enumerate(n_labels):
+                plt.annotate(en, (vals[i], lys[i]))
 
-    assert ind_1 != ind_2
-    mu = np.concatenate([np.expand_dims(mu[:, ind_1], axis=1),
-                         np.expand_dims(mu[:, ind_2], axis=1)], axis=1)
-
-
-    if enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
-        rm = create_rotation_matrix(angle_goal)
-        mu = rotate_list_of_points(mu, rm)
-        #mu = map_points(mu, goal_map_x, goal_map_y)
-        pass
-    elif enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
-        #for i, p in enumerate(mu):
-        #    mu[i] = reflect_obstacle_transformation(p)
-        rm = create_rotation_matrix(angle_obstacle)
-        mu = rotate_list_of_points(mu, rm)
-        #mu = map_points(mu, obstacle_map_x, obstacle_map_y)
-        pass
-    else:
-        raise Exception('Not supported enc type')
-    print_max_and_min(mu)
-
-    lxs = mu[:, 0]
-    lys = mu[:, 1]
-    plt.subplot(212)
-    plt.scatter(lxs, lys)
-    plt.title('latent')
-    for i, en in enumerate(n_labels):
-        plt.annotate(en, (lxs[i], lys[i]))
-
-    if fig_file_name is not None:
-        plt.savefig(fig_file_name)
-    else:
-        plt.show()
-    plt.close()
+            plt.savefig("{}_slot_{}_latent_{}".format(fig_file_name, slot_ind, latent_ind))
+            plt.close()
 
 def traversal(env, model, img_size,  latent_size, n, enc_type, using_sb=True, fig_file_name=None):
     cuda = torch.cuda.is_available()
@@ -353,7 +340,7 @@ def traversal_all(env, model, img_size,  latent_size, n, fig_file_name):
     cuda = torch.cuda.is_available()
     torch.manual_seed(1)
     device = torch.device("cuda" if cuda else "cpu")
-    dist = 2.5
+    dist = 1.
 
     # move other objects to plaecs they do not disturb
     env.env.env._set_position(names_list=['obstacle'], position=[10., 10., 10.])
@@ -365,20 +352,22 @@ def traversal_all(env, model, img_size,  latent_size, n, fig_file_name):
     d2 = 0.03
     env.env.env._set_size(names_list=['rectangle'], size=[d1, d2, 0.035])
     env.env.env._change_color(['rectangle'], 0., 0., 1.)
-    pos = [1.3, 0.9, 0.4 + 0.035]
+    pos = [1.3, 1., 0.4 + 0.035]
     env.env.env._set_position(names_list=['rectangle'], position=pos)
 
-    r = 0.06
+    r = 0.04
     env.env.env._set_size(names_list=['cylinder'], size=[r, 0.025, 0.])
     env.env.env._change_color(['cylinder'], 1., 0., 0.)
     pos = [1.15, 0.65, 0.4 + 0.025]
     env.env.env._set_position(names_list=['cylinder'], position=pos)
+    #env.env.env._set_position(names_list=['cylinder'], position=p1)
 
-    s = 0.06
+    s = 0.03
     env.env.env._set_size(names_list=['cube'], size=[s, s, s])
     env.env.env._change_color(['cube'], 0.5, 0., 0.5)
-    pos = [1.3, 0.75, 0.4+s]
+    pos = [1.3, 0.6, 0.4+s]
     env.env.env._set_position(names_list=['cube'], position=pos)
+    #env.env.env._set_position(names_list=['cube'], position=p2)
 
     # sample image  central
     central_im = take_objects_image(env, img_size)
@@ -388,7 +377,11 @@ def traversal_all(env, model, img_size,  latent_size, n, fig_file_name):
     data = torch.from_numpy(data).float().to(device)
     data /= 255
     data = data.permute([0, 3, 1, 2])
-    model.eval()
+    mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
+    #model.eval() Todo!!!!!!! WITH model eval it does not work
+    from j_vae.train_monet import visualize_masks, numpify
+    visualize_masks(imgs=numpify(data), masks=numpify(torch.cat(masks, dim=1)), recons=numpify(full_reconstruction),
+                    file_name=fig_file_name+"_recons.png")
     mu_s, logvar_s, masks = model.encode(data)
 
     for slot_idx in range(len(mu_s)):
@@ -412,7 +405,14 @@ def traversal_all(env, model, img_size,  latent_size, n, fig_file_name):
                     #z_s = copy.copy(mu_s)
                     #z_s[slot_idx] = z
                     #im, _, _ = model.decode(z_s, masks)
-                    im, _ = model._decoder_step(z)
+                    im, rec_mask = model._decoder_step(z)
+                    rec_mask_mod = torch.sigmoid(rec_mask)
+                    rec_mask_mod = torch.unsqueeze(rec_mask_mod, dim=0)
+                    z_s = copy.copy(mu_s)
+                    z_s[slot_idx] = z
+                    new_masks = copy.copy(masks)
+                    new_masks[slot_idx] = rec_mask_mod
+                    im, _, _ = model.decode(z_s, new_masks)
 
                     im = im.view(3, img_size, img_size)
                     im = im.permute([1, 2, 0])
@@ -423,6 +423,8 @@ def traversal_all(env, model, img_size,  latent_size, n, fig_file_name):
 
         all_array = None
         t = 0
+        spacer_r = np.zeros(shape=(img_size, 5, 3))
+        spacer_c = np.zeros(shape=(5, img_size*n+5*(n-1), 3))
         for r in range(latent_size):
             row = None
             for c in range(n):
@@ -431,11 +433,11 @@ def traversal_all(env, model, img_size,  latent_size, n, fig_file_name):
                 if row is None:
                     row = rcim
                 else:
-                    row = np.concatenate([row.copy(), rcim], axis=1)
+                    row = np.concatenate([row.copy(), spacer_r, rcim], axis=1)
             if all_array is None:
                 all_array = row.copy()
             else:
-                all_array = np.concatenate([all_array.copy(), row], axis=0)
+                all_array = np.concatenate([all_array.copy(), spacer_c, row], axis=0)
         all_ims = Image.fromarray(all_array.astype(np.uint8))
         all_ims.save('{}_ims_slot_{}.png'.format(fig_file_name, slot_idx))
         all_ims.close()
