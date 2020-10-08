@@ -455,8 +455,8 @@ if __name__ == '__main__':
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
     parser.add_argument('--num_slots', help='number of slots', type=np.int32, default=4)
-    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=3.)
-    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=0.25)
+    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=5.)
+    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=5.)#12
     parser.add_argument('--bg_sigma', help='', type=np.float, default=0.09)
     parser.add_argument('--fg_sigma', help='', type=np.float, default=0.11)
 
@@ -469,8 +469,6 @@ if __name__ == '__main__':
 
     train_file = data_dir + train_file_name[args.enc_type]
     weights_path = data_dir + vae_sb_weights_file_name[args.enc_type]
-
-
 
     train_Vae(epochs=args.train_epochs, batch_size=args.batch_size,img_size=args.img_size,latent_size=args.latent_size,
               train_file=train_file,

@@ -690,7 +690,7 @@ if __name__ == '__main__':
         if args.enc_type == 'goal' or args.enc_type == 'obstacle' or args.enc_type == 'mixed':
             model = load_Vae_SB(weights_path, args.img_size, args.latent_size)
         elif args.enc_type == 'all':
-            model = load_Monet(weights_path, args.img_size, args.latent_size)
+            model = load_Monet(weights_path, args.img_size, args.latent_size, num_slots=4)
         else:
             model = load_Vae(weights_path, args.imgsize, args.latent_size)
 
