@@ -139,10 +139,13 @@ def visualization_grid_points_all(env, model, size_to_use, img_size, n, enc_type
     points = generate_points(range_x=range_x, range_y=range_y, z=z_table_height, total=n, object_x_y_size=[size_to_use, size_to_use])
 
     #points = points[:n]#just take those thar vary in y
-    points = [points[i*n+3] for i in range(n)]  # just take those thar vary in x
+    #points = [points[i*n+3] for i in range(n)]  # just take those that vary in x
     n_labels = np.arange(len(points))
 
     points = np.array(points)
+    points_2 = generate_points(range_x=range_x, range_y=range_y, z=z_table_height, total=n, object_x_y_size=[size_to_use, size_to_use])
+    points_2 = np.array(points_2)
+    np.random.shuffle(points_2)
     #print_max_and_min(points)
 
     xs = points[:, 0]
@@ -192,7 +195,9 @@ def visualization_grid_points_all(env, model, size_to_use, img_size, n, enc_type
     # sample images
     data_set = np.empty([len(points), img_size, img_size, 3])
     for i,p in enumerate(points):
-        env.env.env._set_position(names_list=['cylinder'], position=[p[0], p[1] , 0.4 + 0.025])
+        env.env.env._set_position(names_list=['cylinder'], position=[p[0], p[1], 0.4 + 0.025])
+        #env.env.env._set_position(names_list=['rectangle'], position=[points_2[i][0], points_2[i][1] , 0.4 + 0.035])
+        #env.env.env._set_position(names_list=['rectangle'], position=[p[0], p[1], 0.4 + 0.035])
         data_set[i]  = take_objects_image(env, img_size)
     '''all_array = None
     t = 0
@@ -226,19 +231,24 @@ def visualization_grid_points_all(env, model, size_to_use, img_size, n, enc_type
         visualize_masks(imgs=numpify(data), masks=numpify(torch.cat(masks, dim=1)), recons=numpify(full_reconstruction),
                         file_name=fig_file_name + "_recons.png")
         mu_s, logvar_s, masks = model.encode(data)
-    for slot_ind, mu in enumerate(mu_s):
+    #for slot_ind, mu in enumerate(mu_s):
+    slot_ind = 1
+    mu = mu_s[slot_ind]
+    for _ in range(1):
         mu = mu.detach().cpu().numpy()
-        for latent_ind in range(mu.shape[1]):
-            vals = mu[:, latent_ind]
-            lys = np.zeros(len(vals))
-            plt.subplot(212)
-            plt.scatter(vals, lys)
-            plt.title('latent')
-            for i, en in enumerate(n_labels):
-                plt.annotate(en, (vals[i], lys[i]))
+        for latent_ind_1 in range(mu.shape[1]-1):
+            for latent_ind_2 in range(latent_ind_1+1, mu.shape[1]):
+                vals1 = mu[:, latent_ind_1]
+                vals2 = mu[:, latent_ind_2]
+                plt.scatter(vals1, vals2)
+                plt.title('latent')
+                for i, en in enumerate(n_labels):
+                    plt.annotate(en, (vals1[i], vals2[i]))
 
-            plt.savefig("{}_slot_{}_latent_{}".format(fig_file_name, slot_ind, latent_ind))
-            plt.close()
+                plt.savefig("{}_slot_{}_latent1_{}_latent2_{}".format(fig_file_name, slot_ind,
+                                                                      latent_ind_1, latent_ind_2))
+                plt.close()
+
 
 def traversal(env, model, img_size,  latent_size, n, enc_type, using_sb=True, fig_file_name=None):
     cuda = torch.cuda.is_available()
@@ -335,6 +345,7 @@ def traversal(env, model, img_size,  latent_size, n, enc_type, using_sb=True, fi
     else:
         all_ims.show()
     all_ims.close()
+
 
 def traversal_all(env, model, img_size,  latent_size, n, fig_file_name):
     cuda = torch.cuda.is_available()
@@ -703,7 +714,8 @@ if __name__ == '__main__':
 
             if args.enc_type == 'all':
                 visualization_grid_points_all(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
-                                              enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2, fig_file_name='all_fig')
+                                              enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,
+                                              fig_file_name='all_fig_cylinder')
             else:
                 visualization_grid_points(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
                                           enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,

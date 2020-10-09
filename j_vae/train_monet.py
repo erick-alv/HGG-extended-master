@@ -256,27 +256,49 @@ def loss_function(x, x_recon_s, masks, mask_pred_s, mu_s, logvar_s, beta, gamma,
     batch_size = x.shape[0]
     p_xs = torch.zeros(batch_size).to(device)
     kl_z = torch.zeros(batch_size).to(device)
+    p_xs_t = torch.empty(batch_size, 3,
+                           x.shape[2], x.shape[3]).to(x.device)
     for i in range(len(masks)):
         kld = -0.5 * torch.sum(1 + logvar_s[i] - mu_s[i].pow(2) - logvar_s[i].exp(), dim=1)
+        for t in kld:
+            assert not torch.isnan(t)
+            assert not torch.isinf(t)
         kl_z += kld
         if i == 0:
             sigma = bg_sigma
         else:
             sigma = fg_sigma
         dist = dists.Normal(x_recon_s[i], sigma)
+        #log(p_theta(x|z_k))
         p_x = dist.log_prob(x)
         p_x *= masks[i]
         p_x = torch.sum(p_x, [1, 2, 3])
-        p_xs += -p_x
+        for t in p_x:
+            assert not torch.isnan(t)
+            assert not torch.isinf(t)
+        p_xs += -p_x#this iterartive sum might not be correct since log(x*y) = log(x)+log(y)
+        '''# log(p_theta(x|z_k))
+        p_x = dist.log_prob(x)
+        p_x = torch.exp(p_x)
+        p_x *= masks[i]
+        #p_x = torch.sum(p_x, [1, 2, 3])
+        p_xs_t += p_x  # this iterartive sum might not be correct since log(x*y) = log(x)+log(y)'''
+    #p_xs_t = torch.log(p_xs_t)
+    #p_xs_t = torch.sum(p_xs_t, [1, 2, 3])
 
     masks = torch.cat(masks, 1)
     tr_masks = torch.transpose(masks, 1, 3)
     q_masks = dists.Categorical(probs=tr_masks)
     stacked_mask_preds = torch.stack(mask_pred_s, 3)
     q_masks_recon = dists.Categorical(logits=stacked_mask_preds)
+
     kl_masks = dists.kl_divergence(q_masks, q_masks_recon)
     kl_masks = torch.sum(kl_masks, [1, 2])
+    for t in kl_masks:
+        assert not torch.isnan(t)
+        assert not torch.isinf(t)
     loss = gamma * kl_masks + p_xs + beta* kl_z
+    #loss = gamma * kl_masks + p_xs_t + beta* kl_z
     return loss
 
 def train(epoch, model, optimizer, device, log_interval, train_file, batch_size, beta, gamma, bg_sigma, fg_sigma):
@@ -455,8 +477,8 @@ if __name__ == '__main__':
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
     parser.add_argument('--num_slots', help='number of slots', type=np.int32, default=4)
-    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=5.)
-    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=5.)#12
+    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=5.)#5#8
+    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=5.)#5
     parser.add_argument('--bg_sigma', help='', type=np.float, default=0.09)
     parser.add_argument('--fg_sigma', help='', type=np.float, default=0.11)
 
