@@ -4,7 +4,7 @@ import os
 import copy
 from envs import make_env, clip_return_range, Robotics_envs_id
 from utils.os_utils import make_dir
-from vae_env_inter import take_env_image, take_obstacle_image, take_goal_image, take_objects_image
+from vae_env_inter import take_env_image, take_obstacle_image, take_goal_image, take_objects_image_training
 from PIL import Image
 from j_vae.common_data import train_file_name, puck_size, obstacle_size, z_table_height_obstacle, min_obstacle_size,\
     max_obstacle_size,z_table_height_goal
@@ -586,7 +586,7 @@ if __name__ == "__main__":
 
         parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                             choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes', 'all'])
-        parser.add_argument('--count', help='number of samples', type=np.int32, default=1280*20)
+        parser.add_argument('--count', help='number of samples', type=np.int32, default=1280)
         parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)#84)
         args = parser.parse_args()
 
@@ -643,7 +643,7 @@ if __name__ == "__main__":
                 elif args.enc_type == 'all':
                     for func in during_loop_ops[args.env]:
                         func(env, args)
-                    rgb_array = take_objects_image(env, img_size=args.img_size)
+                    rgb_array = take_objects_image_training(env, img_size=args.img_size)
                     train_data[i] = rgb_array.copy()
                     i += 1
 

@@ -11,7 +11,7 @@ from PIL import Image
 import os
 this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
 
-def double_conv(in_channels, out_channels):
+'''def double_conv(in_channels, out_channels):
     return nn.Sequential(
         nn.Conv2d(in_channels, out_channels, 3, padding=1),
         nn.BatchNorm2d(out_channels),
@@ -59,7 +59,72 @@ class UNet(nn.Module):
             cur = torch.cat((cur, intermediates[-i -1]), 1)
             cur = self.up_convs[i](cur)
 
+        return self.final_conv(cur)'''
+
+def double_conv(in_channels, out_channels):
+    return nn.Sequential(
+        nn.Conv2d(in_channels, out_channels, 3, padding=1),
+        nn.BatchNorm2d(out_channels),
+        nn.ReLU(inplace=True)
+    )
+
+class UNet(nn.Module):
+    def __init__(self, num_blocks, in_channels, out_channels, channel_base=64):
+        super().__init__()
+        self.num_blocks = num_blocks
+        self.down_convs = nn.ModuleList()
+        cur_in_channels = in_channels
+        for i in range(num_blocks):
+            self.down_convs.append(double_conv(cur_in_channels,
+                                               channel_base * 2**i))
+            cur_in_channels = channel_base * 2**i
+
+        self.tconvs = nn.ModuleList()
+        for i in range(num_blocks-1, 0, -1):
+            self.tconvs.append(nn.ConvTranspose2d(channel_base * 2**i,
+                                                  channel_base * 2**(i-1),
+                                                  2, stride=2))
+
+        self.up_convs = nn.ModuleList()
+        for i in range(num_blocks-2, -1, -1):
+            self.up_convs.append(double_conv(channel_base * 2**(i+1), channel_base * 2**i))
+
+        self.final_conv = nn.Conv2d(channel_base, out_channels, 1)
+
+    def forward(self, x):
+        intermediates = []
+        cur = x
+        for down_conv in self.down_convs[:-1]:
+            cur = down_conv(cur)
+            intermediates.append(cur)
+            cur = nn.MaxPool2d(2)(cur)
+
+        cur = self.down_convs[-1](cur)
+
+        for i in range(self.num_blocks-1):
+            cur = self.tconvs[i](cur)
+            cur = torch.cat((cur, intermediates[-i -1]), 1)
+            cur = self.up_convs[i](cur)
+
         return self.final_conv(cur)
+
+'''class AttentionNet(nn.Module):
+    def __init__(self, num_blocks, channel_base):
+        super().__init__()
+        self.unet = UNet(num_blocks=num_blocks,
+                         in_channels=4,
+                         out_channels=2,
+                         channel_base=channel_base)
+
+    def forward(self, x, scope):
+        inp = torch.cat((x, scope), 1)
+        logits = self.unet(inp)
+        alpha = torch.softmax(logits, 1)
+        # output channel 0 represents alpha_k,
+        # channel 1 represents (1 - alpha_k).
+        mask = scope * alpha[:, 0:1]
+        new_scope = scope * alpha[:, 1:2]
+        return mask, new_scope'''
 
 class AttentionNet(nn.Module):
     def __init__(self, num_blocks, channel_base):
@@ -78,6 +143,7 @@ class AttentionNet(nn.Module):
         mask = scope * alpha[:, 0:1]
         new_scope = scope * alpha[:, 1:2]
         return mask, new_scope
+
 
 class EncoderNet(nn.Module):
     def __init__(self, width, height, device, latent_size=16, full_connected_size=256, input_channels=4,
@@ -101,7 +167,7 @@ class EncoderNet(nn.Module):
             nn.ReLU(inplace=True)
         )'''
 
-        self.convs = nn.Sequential(
+        '''self.convs = nn.Sequential(
             nn.Conv2d(in_channels=input_channels, out_channels=conv_size1,
                       kernel_size=kernel_size, stride=encoder_stride),
             nn.ReLU(inplace=True),
@@ -111,12 +177,21 @@ class EncoderNet(nn.Module):
             nn.Conv2d(in_channels=conv_size2, out_channels=conv_size2,
                       kernel_size=kernel_size, stride=encoder_stride),
             nn.ReLU(inplace=True)
+        )'''
+
+        self.convs = nn.Sequential(
+            nn.Conv2d(in_channels=input_channels, out_channels=conv_size1,
+                      kernel_size=kernel_size, stride=encoder_stride),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=conv_size1, out_channels=conv_size2,
+                      kernel_size=kernel_size, stride=encoder_stride),
+            nn.ReLU(inplace=True)
         )
 
         red_width = width
         red_height = height
         #todo is 4 since for conv layers; if less the have to reduce this as well
-        for i in range(3):#4):
+        for i in range(2):#3#4):
             red_width = (red_width - 1) // 2
             red_height = (red_height - 1) // 2
 
@@ -161,7 +236,7 @@ class DecoderNet(nn.Module):
             nn.Conv2d(in_channels=conv_size1, out_channels=output_channels, kernel_size=1),
         )'''
 
-        self.convs = nn.Sequential(
+        '''self.convs = nn.Sequential(
             nn.Conv2d(in_channels=latent_size + 2, out_channels=conv_size1,
                       kernel_size=kernel_size, stride=decoder_stride),
             nn.ReLU(inplace=True),
@@ -169,24 +244,31 @@ class DecoderNet(nn.Module):
                       kernel_size=kernel_size, stride=decoder_stride),
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=conv_size1, out_channels=output_channels, kernel_size=1),
+        )'''
+
+        self.convs = nn.Sequential(
+            nn.Conv2d(in_channels=latent_size + 2, out_channels=conv_size1,
+                      kernel_size=kernel_size, stride=decoder_stride),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=conv_size1, out_channels=output_channels, kernel_size=1),
         )
-        ys = torch.linspace(-1, 1, self.height + 4)#8
-        xs = torch.linspace(-1, 1, self.width + 4)
+        ys = torch.linspace(-1, 1, self.height + 2)#4#8
+        xs = torch.linspace(-1, 1, self.width + 2)
         ys, xs = torch.meshgrid(ys, xs)
         coord_map = torch.stack((ys, xs)).unsqueeze(0)
         self.register_buffer('coord_map_const', coord_map)
 
     def forward(self, z):
-        z_tiled = z.unsqueeze(-1).unsqueeze(-1).repeat(1, 1, self.height + 4, self.width + 4)#todo 8
+        z_tiled = z.unsqueeze(-1).unsqueeze(-1).repeat(1, 1, self.height + 2, self.width + 2)#todo 8
         coord_map = self.coord_map_const.repeat(z.shape[0], 1, 1, 1)
         inp = torch.cat((z_tiled, coord_map), 1)
         result = self.convs(inp)
         return result
 
 class Monet_VAE(nn.Module):
-    def __init__(self, height, width, device, latent_size=16, num_blocks=5, channel_base=64,num_slots=4,
-                 full_connected_size=256, color_channels=3,kernel_size=3, encoder_stride=2,decoder_stride=1,
-                 conv_size1=32, conv_size2=64):
+    def __init__(self, height, width, device, latent_size, num_blocks, channel_base, num_slots,
+                 full_connected_size, color_channels, kernel_size, encoder_stride,decoder_stride,
+                 conv_size1, conv_size2):
         super().__init__()
         self.device = device
         self.num_slots = num_slots
@@ -296,7 +378,7 @@ def loss_function(x, x_recon_s, masks, mask_pred_s, mu_s, logvar_s, beta, gamma,
     kl_masks = torch.sum(kl_masks, [1, 2])
     for t in kl_masks:
         assert not torch.isnan(t)
-        assert not torch.isinf(t)
+        assert not torch.isinf(t)#here
     loss = gamma * kl_masks + p_xs + beta* kl_z
     #loss = gamma * kl_masks + p_xs_t + beta* kl_z
     return loss
@@ -310,7 +392,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
     #creates indexes and shuffles them. So it can acces the data
     idx_set = np.arange(data_size)
     np.random.shuffle(idx_set)
-    #idx_set = idx_set[:1000]#todo delete this
+    idx_set = idx_set[:1000]#todo delete this
     idx_set = np.split(idx_set, len(idx_set) / batch_size)
     for batch_idx, idx_select in enumerate(idx_set):
         data = data_set[idx_select]
@@ -370,7 +452,7 @@ def visualize_masks(imgs, masks, recons, file_name):
 
 def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, beta, gamma, bg_sigma, fg_sigma,
               epochs=100, no_cuda=False, seed=1, log_interval=100, load=False,
-              num_blocks=5, channel_base=64, num_slots=6,
+              num_blocks=3, channel_base=64, num_slots=6,
               full_connected_size=256, color_channels=3,kernel_size=3, encoder_stride=2,decoder_stride=1,
               conv_size1=32, conv_size2=64):
     cuda = not no_cuda and torch.cuda.is_available()
@@ -447,7 +529,7 @@ def compare_with_data_set(model, device, filename_suffix, latent_size, train_fil
                         file_name=this_file_dir+'results/reconstruction_{}.png'.format(filename_suffix))
 
 
-def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1, num_blocks=5, channel_base=64, num_slots=6,
+def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1, num_blocks=3, channel_base=64, num_slots=6,
                  full_connected_size=256, color_channels=3,kernel_size=3, encoder_stride=2,decoder_stride=1,
                  conv_size1=32, conv_size2=64):
     cuda = not no_cuda and torch.cuda.is_available()
@@ -472,13 +554,13 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=32.)
+    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=16.)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=20)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
     parser.add_argument('--num_slots', help='number of slots', type=np.int32, default=4)
-    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=5.)#5#8
-    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=5.)#5
+    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=3.)#5#8
+    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=3.5)#5
     parser.add_argument('--bg_sigma', help='', type=np.float, default=0.09)
     parser.add_argument('--fg_sigma', help='', type=np.float, default=0.11)
 

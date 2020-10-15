@@ -3,7 +3,8 @@ import numpy as np
 from envs.utils import goal_distance, goal_distance_obs
 import copy
 from utils.os_utils import remove_color
-from vae_env_inter import take_goal_image, take_obstacle_image, goal_latent_from_images, obstacle_latent_from_images
+from vae_env_inter import take_goal_image, take_obstacle_image, take_image_objects, goal_latent_from_images, \
+	obstacle_latent_from_images, latents_from_images
 
 
 class VanillaGoalEnv():
@@ -78,15 +79,22 @@ class VanillaGoalEnv():
 		obs, reward, done, info = self.env.step(action)
 		if (hasattr(self.args, 'transform_dense') and self.args.transform_dense) or \
 				(hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help):
-			achieved_goal_image = take_goal_image(self, self.args.img_size)
-			latents_goal = goal_latent_from_images(np.array([achieved_goal_image]), self.args)
-			self.achieved_goal_latent = latents_goal[0].copy()
+			if self.args.vae_type == 'monet':
+				achieved_image = take_image_objects(self, self.args.img_size)
+				lg, lo, lo_s = latents_from_images(np.array([achieved_image]), self.args)
+				self.achieved_goal_latent = lg[0].copy()
+				self.obstacle_latent = lo[0].copy()
+				self.obstacle_size_latent = lo_s[0].copy()
+			else:
+				achieved_goal_image = take_goal_image(self, self.args.img_size)
+				latents_goal = goal_latent_from_images(np.array([achieved_goal_image]), self.args)
+				self.achieved_goal_latent = latents_goal[0].copy()
 
-			obstacle_image = take_obstacle_image(self, self.args.img_size)
-			latents_obstacle, latents_o_size = obstacle_latent_from_images(np.array([obstacle_image]), self.args)
-			self.obstacle_latent = latents_obstacle[0].copy()
-			self.obstacle_size_latent = latents_o_size[0].copy()
-			#self.achieved_goal_image = achieved_goal_image.copy()
+				obstacle_image = take_obstacle_image(self, self.args.img_size)
+				latents_obstacle, latents_o_size = obstacle_latent_from_images(np.array([obstacle_image]), self.args)
+				self.obstacle_latent = latents_obstacle[0].copy()
+				self.obstacle_size_latent = latents_o_size[0].copy()
+				#self.achieved_goal_image = achieved_goal_image.copy()
 
 			if hasattr(self.args, 'transform_dense') and self.args.transform_dense:
 				reward = -self.args.compute_reward_dense(self.obstacle_latent.copy(), self.obstacle_size_latent.copy(),
@@ -107,19 +115,31 @@ class VanillaGoalEnv():
 		if (hasattr(self.args, 'transform_dense') and self.args.transform_dense) or \
 				(hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help):
 			obs = self.env.env._get_obs()
-			self.env.env._move_object(position=obs['desired_goal'].copy())
-			desired_goal_image = take_goal_image(self, self.args.img_size)
-			self.env.env._move_object(position=obs['achieved_goal'].copy())
-			achieved_goal_image = take_goal_image(self, self.args.img_size)
-			latents = goal_latent_from_images(np.array([desired_goal_image, achieved_goal_image]), self.args)
-			self.desired_goal_latent = latents[0].copy()
-			self.achieved_goal_latent = latents[1].copy()
-			#self.achieved_goal_image = achieved_goal_image.copy()
+			if self.args.vae_type == 'monet':
+				self.env.env._move_object(position=obs['desired_goal'].copy())
+				desired_goal_image = take_image_objects(self, self.args.img_size)
+				self.env.env._move_object(position=obs['achieved_goal'].copy())
+				achieved_goal_image = take_image_objects(self, self.args.img_size)
+				lg, lo, lo_s = latents_from_images(np.array([desired_goal_image, achieved_goal_image]), self.args)
+				self.desired_goal_latent = lg[0].copy()
+				self.achieved_goal_latent = lg[1].copy()
+				self.obstacle_latent = lo[1].copy()
+				self.obstacle_size_latent = lo_s[1].copy()
 
-			obstacle_image = take_obstacle_image(self, self.args.img_size)
-			latents_obstacle, latents_o_size = obstacle_latent_from_images(np.array([obstacle_image]), self.args)
-			self.obstacle_latent = latents_obstacle[0].copy()
-			self.obstacle_size_latent = latents_o_size[0].copy()
+			else:
+				self.env.env._move_object(position=obs['desired_goal'].copy())
+				desired_goal_image = take_goal_image(self, self.args.img_size)
+				self.env.env._move_object(position=obs['achieved_goal'].copy())
+				achieved_goal_image = take_goal_image(self, self.args.img_size)
+				latents = goal_latent_from_images(np.array([desired_goal_image, achieved_goal_image]), self.args)
+				self.desired_goal_latent = latents[0].copy()
+				self.achieved_goal_latent = latents[1].copy()
+				#self.achieved_goal_image = achieved_goal_image.copy()
+
+				obstacle_image = take_obstacle_image(self, self.args.img_size)
+				latents_obstacle, latents_o_size = obstacle_latent_from_images(np.array([obstacle_image]), self.args)
+				self.obstacle_latent = latents_obstacle[0].copy()
+				self.obstacle_size_latent = latents_o_size[0].copy()
 
 		self.rewards = 0.0
 
@@ -153,11 +173,18 @@ class VanillaGoalEnv():
 		if (hasattr(self.args, 'transform_dense') and self.args.transform_dense) or \
 				(hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help):
 			obs = self.env.env._get_obs()
-			self.env.env._move_object(position=value.copy())
-			desired_goal_image = take_goal_image(self, self.args.img_size)
-			self.env.env._move_object(position=obs['achieved_goal'].copy())
-			latents = goal_latent_from_images(np.array([desired_goal_image]), self.args)
-			self.desired_goal_latent = latents[0].copy()
+			if self.args.vae_type == 'monet':
+				self.env.env._move_object(position=value.copy())
+				desired_goal_image = take_image_objects(self, self.args.img_size)
+				self.env.env._move_object(position=obs['achieved_goal'].copy())
+				lg, lo, lo_s = latents_from_images(np.array([desired_goal_image]), self.args)
+				self.desired_goal_latent = lg[0].copy()
+			else:
+				self.env.env._move_object(position=value.copy())
+				desired_goal_image = take_goal_image(self, self.args.img_size)
+				self.env.env._move_object(position=obs['achieved_goal'].copy())
+				latents = goal_latent_from_images(np.array([desired_goal_image]), self.args)
+				self.desired_goal_latent = latents[0].copy()
 
 	@property
 	def target_goal_center(self):

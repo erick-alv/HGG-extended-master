@@ -8,7 +8,7 @@ import torch
 import matplotlib.pyplot as plt
 from j_vae.train_vae_sb import load_Vae as load_Vae_SB
 from envs import make_env
-from vae_env_inter import take_goal_image, take_obstacle_image, take_objects_image
+from vae_env_inter import take_goal_image, take_obstacle_image, take_objects_image_training
 from j_vae.train_vae import load_Vae
 from j_vae.train_monet import load_Vae as load_Monet
 import copy
@@ -164,7 +164,7 @@ def visualization_grid_points_all(env, model, size_to_use, img_size, n, enc_type
     device = torch.device("cuda" if cuda else "cpu")
 
 
-    if True:
+    if True:#todo delete this condition
         # move other objects to plaecs they do not disturb
         env.env.env._set_position(names_list=['obstacle'], position=[10., 10., 10.])
         env.env.env._move_object(position=[-10., -10., -10.])
@@ -198,7 +198,7 @@ def visualization_grid_points_all(env, model, size_to_use, img_size, n, enc_type
         env.env.env._set_position(names_list=['cylinder'], position=[p[0], p[1], 0.4 + 0.025])
         #env.env.env._set_position(names_list=['rectangle'], position=[points_2[i][0], points_2[i][1] , 0.4 + 0.035])
         #env.env.env._set_position(names_list=['rectangle'], position=[p[0], p[1], 0.4 + 0.035])
-        data_set[i]  = take_objects_image(env, img_size)
+        data_set[i]  = take_objects_image_training(env, img_size)
     '''all_array = None
     t = 0
     for r in range(n):
@@ -226,6 +226,7 @@ def visualization_grid_points_all(env, model, size_to_use, img_size, n, enc_type
     data /= 255
     data = data.permute([0, 3, 1, 2])
     with torch.no_grad():
+        model.eval()
         mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
         from j_vae.train_monet import visualize_masks, numpify
         visualize_masks(imgs=numpify(data), masks=numpify(torch.cat(masks, dim=1)), recons=numpify(full_reconstruction),
@@ -286,7 +287,7 @@ def traversal(env, model, img_size,  latent_size, n, enc_type, using_sb=True, fi
         # env.env.env._set_size(names_list=['obstacle'], size=np.array([0.15, 0.035, 0.]))
         central_im = take_obstacle_image(env, img_size)
     elif enc_type == 'all':
-        central_im = take_objects_image(env, img_size)
+        central_im = take_objects_image_training(env, img_size)
     else:
         raise Exception('Not supported enc type')
 
@@ -381,7 +382,7 @@ def traversal_all(env, model, img_size,  latent_size, n, fig_file_name):
     #env.env.env._set_position(names_list=['cube'], position=p2)
 
     # sample image  central
-    central_im = take_objects_image(env, img_size)
+    central_im = take_objects_image_training(env, img_size)
 
     #trasform to latent
     data = np.expand_dims(central_im.copy(), axis=0)

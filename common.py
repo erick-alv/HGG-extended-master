@@ -9,9 +9,10 @@ from algorithm.replay_buffer import ReplayBuffer_Episodic, goal_based_process
 import torch
 from j_vae.train_vae_sb import load_Vae as load_Vae_SB
 from j_vae.train_vae import load_Vae
+from j_vae.train_monet import load_Vae as load_Monet
 from j_vae.common_data import vae_sb_weights_file_name, vae_weights_file_name
 from PIL import Image
-from vae_env_inter import take_env_image
+from vae_env_inter import take_env_image, take_image_objects
 from j_vae.distance_estimation import calculate_distance, DistMovEst, DistMovEstReal
 
 def get_args():
@@ -76,24 +77,31 @@ def get_args():
 	#arguments for VAEs and images
 	parser.add_argument('--vae_dist_help', help='using vaes yes or no', type=str2bool, default=False)
 	parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
+	#type of VAE
+	parser.add_argument('--vae_type', help='', type=str,
+						default=None, choices=['sb', 'mixed', 'monet'])
+	#type VAE for size
+	parser.add_argument('--vae_size_type', help='', type=str,
+						default='all', choices=['normal', 'sb', 'mixed', 'monet'])#if mixed or monet then representation is shared
+
+	#parameters for VAE
 	parser.add_argument('--latent_size_obstacle', help='size latent space obstacle', type=np.int32, default=None)
 	parser.add_argument('--latent_size_goal', help='size latent space goal', type=np.int32, default=None)
 	parser.add_argument('--obstacle_ind_1', help='index 1 component latent vector', type=np.int32, default=None)
 	parser.add_argument('--obstacle_ind_2', help='index 2 component latent vector', type=np.int32, default=None)
 	parser.add_argument('--goal_ind_1', help='index 1 component latent vector', type=np.int32, default=None)
 	parser.add_argument('--goal_ind_2', help='index 2 component latent vector', type=np.int32, default=None)
+	parser.add_argument('--goal_slot', help='', type=np.int32, default=None)
+	parser.add_argument('--obstacle_slot', help='', type=np.int32, default=None)
+
+	#parameter for size VAE
 	parser.add_argument('--size_ind', help='index 2 component latent vector', type=np.int32, default=None)
 	parser.add_argument('--size_ind_2', help='index 2 component latent vector', type=np.int32, default=None)
-	parser.add_argument('--use_mixed', help='see if use the same VAE for the obstacle and goal',
-						type=str2bool, default=False)
-	parser.add_argument('--use_mixed_with_size', help='see if use the same VAE also for size',
-						type=str2bool, default=False)
 
 	parser.add_argument('--with_dist_estimator', help='see if use the same VAE also for size',
 						type=str2bool, default=False)
 	parser.add_argument('--with_dist_estimator_real', help='see if use the same VAE also for size',
 						type=str2bool, default=False)
-
 	#for dense reward transformation
 	parser.add_argument('--transform_dense', help='if transform to dense with VAES or not', type=str2bool, default=False)
 
@@ -119,7 +127,6 @@ def get_args():
 	torch.manual_seed(1)
 	device = torch.device("cuda" if cuda else "cpu")
 	args.device = device
-
 	return args
 
 def load_vaes(args):
@@ -127,7 +134,17 @@ def load_vaes(args):
 	data_dir = base_data_dir + args.env + '/'
 
 	#load VAES for positional data
-	if args.use_mixed:
+
+	if args.vae_type == 'sb':
+		weights_path_goal = data_dir + vae_sb_weights_file_name['goal']
+		args.weights_path_goal = weights_path_goal
+		weights_path_obstacle = data_dir + vae_sb_weights_file_name['obstacle']
+		args.weights_path_obstacle = weights_path_obstacle
+		args.vae_model_obstacle = load_Vae_SB(weights_path_obstacle, args.img_size, args.latent_size_obstacle)
+		args.vae_model_obstacle.eval()
+		args.vae_model_goal = load_Vae_SB(weights_path_goal, args.img_size, args.latent_size_goal)
+		args.vae_model_goal.eval()
+	elif args.vae_type == 'mixed':
 		assert args.goal_ind_1 == args.obstacle_ind_1 and args.goal_ind_2 == args.obstacle_ind_2
 		assert args.latent_size_obstacle == args.latent_size_goal
 		weights_path = data_dir + vae_sb_weights_file_name['mixed']
@@ -137,26 +154,32 @@ def load_vaes(args):
 		model.eval()
 		args.vae_model_obstacle = model
 		args.vae_model_goal = model
+	elif args.vae_type == 'monet':
+		assert args.goal_ind_1 == args.obstacle_ind_1 and args.goal_ind_2 == args.obstacle_ind_2
+		assert args.latent_size_obstacle == args.latent_size_goal
+		assert args.goal_slot is not  None
+		assert args.obstacle_slot is not  None
+		weights_path = data_dir + vae_sb_weights_file_name['all']
+		args.weights_path_goal = weights_path
+		args.weights_path_obstacle = weights_path
+		model = load_Monet(path=weights_path, img_size=args.img_size, latent_size=args.latent_size_obstacle)
+		#model.eval()TODO with eval it does not work, is there a solution??
+		args.vae_model_obstacle = model
+		args.vae_model_goal = model
 	else:
-		weights_path_goal = data_dir + vae_sb_weights_file_name['goal']
-		args.weights_path_goal = weights_path_goal
-		weights_path_obstacle = data_dir + vae_sb_weights_file_name['obstacle']
-		args.weights_path_obstacle = weights_path_obstacle
-		args.vae_model_obstacle = load_Vae_SB(weights_path_obstacle, args.img_size, args.latent_size_obstacle)
-		args.vae_model_obstacle.eval()
-		args.vae_model_goal = load_Vae_SB(weights_path_goal, args.img_size, args.latent_size_goal)
-		args.vae_model_goal.eval()
+		raise Exception("VAE type invalid or not given")
 
-	#load VAE for size data
-	if args.use_mixed_with_size:
-		assert args.size_ind != args.obstacle_ind_1 and args.size_ind != args.obstacle_ind_2
-		args.weights_path_obstacle_sizes = data_dir + vae_sb_weights_file_name['obstacle']
-		args.vae_model_size = args.vae_model_obstacle
-	else:
+	if args.vae_size_type == 'normal':
 		weights_path_obstacle_sizes = data_dir + vae_weights_file_name['obstacle_sizes']
 		args.weights_path_obstacle_sizes = weights_path_obstacle_sizes
 		args.vae_model_size = load_Vae(path=weights_path_obstacle_sizes, img_size=args.img_size, latent_size=1)
 		args.vae_model_size.eval()
+	elif args.vae_size_type == 'mixed' or args.vae_size_type == 'monet':
+		assert args.size_ind != args.obstacle_ind_1 and args.size_ind != args.obstacle_ind_2
+		args.weights_path_obstacle_sizes = data_dir + vae_sb_weights_file_name['obstacle']
+		args.vae_model_size = args.vae_model_obstacle
+	else:
+		raise Exception("VAE type of size invalid or not given")
 
 
 
