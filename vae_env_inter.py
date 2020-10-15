@@ -143,14 +143,72 @@ def obstacle_latent_from_images(obstacles_images, args):
 
 def latents_from_images(images, args):
     assert images.ndim == 4
-    # first transform them in latent_representation
-    mu_s, logvar_s, masks = transform_image_to_latent_batch_torch(images.copy(), args.vae_model_goal,
-                                                       args.img_size, args.device)
-    del logvar_s
-    del masks
-    #with monet no transformation required + indices of postion and size should be same
-    lg = mu_s[args.goal_slot][:, [args.goal_ind_1,args.goal_ind_2]]
-    lo = mu_s[args.obstacle_slot][:, [args.goal_ind_1,args.goal_ind_2]]
-    lo_s = mu_s[args.obstacle_slot][:, args.size_ind]
 
-    return lg.detach().cpu().numpy(), lo.detach().cpu().numpy(), lo_s.detach().cpu().numpy()
+
+    if args.vae_type == 'space':
+        with torch.no_grad():
+            args.vae_model.eval()
+            images = torch.from_numpy(images).float().to(args.device)
+            images /= 255.
+            images = images.permute([0, 3, 1, 2])
+
+            z_pres, z_depth, z_scale, z_shift, z_where, z_pres_logits, z_depth_post, \
+            z_scale_post, z_shift_post, z_what, z_what_post = args.vae_model.encode(images)
+            z_p = z_pres.detach().cpu().numpy()
+            z_sc = z_scale.detach().cpu().numpy()
+            z_sh = z_shift.detach().cpu().numpy()
+            z_wh = z_what.detach().cpu().numpy()
+            indices = z_p > 0.98
+            # coordinates = z_sh[indices]
+            # sizes = z_sc[indices]
+        goal_pos = []
+        goal_size = []
+        obstacles_pos = []
+        obstacles_size = []
+        for i in range(len(images)):
+            this_im_indices = np.squeeze(indices[i])
+            im_coord = z_sh[i][this_im_indices]
+            im_desc = z_wh[i][this_im_indices]
+            im_scale = z_sc[i][this_im_indices]
+            g_idx, o_idx = get_indices_goal_obstacle(im_desc)
+            if len(g_idx) == 0:
+                #the goal is not visible must be outside
+                goal_pos.append(np.array([5., 5.]))
+                goal_size.append(np.array([0., 0.]))
+            else:
+                goal_pos.append(im_coord[g_idx[0]])
+                goal_size.append(im_scale[g_idx[0]])
+
+            if len(o_idx) == 0:
+                obstacles_pos.append([])
+                obstacles_size.append([])
+            else:
+                obstacles_pos.append(im_coord[o_idx])
+                obstacles_size.append(im_scale[o_idx])
+
+        return np.array(goal_pos), np.array(goal_size), np.array(obstacles_pos), np.array(obstacles_size)
+    else:
+        # first transform them in latent_representation
+        mu_s, logvar_s, masks = transform_image_to_latent_batch_torch(images.copy(), args.vae_model_goal,
+                                                           args.img_size, args.device)
+        del logvar_s
+        del masks
+        #with monet no transformation required + indices of postion and size should be same
+        lg = mu_s[args.goal_slot][:, [args.goal_ind_1,args.goal_ind_2]]
+        lo = mu_s[args.obstacle_slot][:, [args.goal_ind_1,args.goal_ind_2]]
+        lo_s = mu_s[args.obstacle_slot][:, args.size_ind]
+
+        return lg.detach().cpu().numpy(), lo.detach().cpu().numpy(), lo_s.detach().cpu().numpy()
+
+
+#todo this must be inferred
+def get_indices_goal_obstacle(z_char, goal_val=-1.19, goal_val2=3.8, obstacle_val=1.3, obstacle_val2=3.2):
+    goal_indices = z_char[:, 8] <= goal_val
+    obstacle_indices = np.logical_not(goal_indices)
+    #goal_indices = z_char[:, 9] <= goal_val
+    #goal_indices_2 = z_char[:, 9] >= goal_val2
+    #goal_indices = np.logical_or(goal_indices, goal_indices_2)
+    #obstacle_indices = z_char[:, 9] >= obstacle_val
+    #obstacle_indices2 = z_char[:, 9] <= obstacle_val2
+    #obstacle_indices = np.logical_and(obstacle_indices, obstacle_indices2)
+    return np.squeeze(np.argwhere(goal_indices), axis=1), np.squeeze(np.argwhere(obstacle_indices), axis=1)

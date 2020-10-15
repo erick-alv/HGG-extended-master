@@ -15,6 +15,8 @@ import copy
 
 from j_vae.latent_space_transformations import create_rotation_matrix, rotate_list_of_points, angle_obstacle, angle_goal,\
     get_size_in_space
+from vae_env_inter import get_indices_goal_obstacle
+from SPACE.main_space import load_space_model
 
 
 def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, ind_1, ind_2,
@@ -151,7 +153,7 @@ def visualization_grid_points_all(env, model, size_to_use, img_size, n, enc_type
     xs = points[:, 0]
     ys = points[:, 1]
     plt.figure(1)
-    plt.scatter(xs,ys)
+    plt.scatter(xs, ys)
     plt.title('real')
     for i, en in enumerate(n_labels):
         plt.annotate(en, (xs[i], ys[i]))
@@ -249,6 +251,116 @@ def visualization_grid_points_all(env, model, size_to_use, img_size, n, enc_type
                 plt.savefig("{}_slot_{}_latent1_{}_latent2_{}".format(fig_file_name, slot_ind,
                                                                       latent_ind_1, latent_ind_2))
                 plt.close()
+
+def visualization_grid_points_space(env, model, size_to_use, img_size, n, enc_type, ind_1, ind_2, fig_file_name):
+    points = generate_points(range_x=[range_x[0], range_x[1]], range_y=[range_y[0],range_y[1]], z=z_table_height, total=n, object_x_y_size=[size_to_use, size_to_use])
+    n_labels = np.arange(len(points))
+
+    points = np.array(points)
+    points_2 = generate_points(range_x=range_x, range_y=range_y, z=z_table_height, total=n, object_x_y_size=[size_to_use, size_to_use])
+    points_2 = np.array(points_2)
+    np.random.shuffle(points_2)
+    #print_max_and_min(points)
+
+    xs = points[:, 0]
+    ys = points[:, 1]
+    plt.figure(1)
+    plt.scatter(xs, ys)
+    plt.title('real')
+    for i, en in enumerate(n_labels):
+        plt.annotate(en, (xs[i], ys[i]))
+    plt.savefig("{}_real".format(fig_file_name))
+    plt.close()
+
+    cuda = torch.cuda.is_available()
+    torch.manual_seed(1)
+    device = torch.device("cuda" if cuda else "cpu")
+    if True:#todo delete this condition
+        # move other objects to plaecs they do not disturb
+        env.env.env._set_position(names_list=['obstacle'], position=[10., 10., 10.])
+        env.env.env._move_object(position=[-10., -10., -10.])
+        # position object
+        p1 = np.array([-20., 20., 20.])
+        p2 = np.array([-20., -20., 20.])
+        d1 = 0.12
+        d2 = 0.03
+        #env.env.env._set_size(names_list=['rectangle'], size=[d1, d2, 0.035])
+        env.env.env._set_size(names_list=['rectangle'], size=[0.09, 0.03, 0.035])
+        env.env.env._change_color(['rectangle'], 0., 0., 1.)
+        #pos = [1.3, 1., 0.4 + 0.035]
+        pos = [1.3, 0.75, 0.4 + 0.035]
+        env.env.env._set_position(names_list=['rectangle'], position=pos)
+
+        r = 0.04
+        env.env.env._set_size(names_list=['cylinder'], size=[r, 0.025, 0.])
+        env.env.env._change_color(['cylinder'], 1., 0., 0.)
+        pos = [1.15, 0.65, 0.4 + 0.025]
+        env.env.env._set_position(names_list=['cylinder'], position=pos)
+        #env.env.env._change_color(['cylinder'], 0., 0., 1.)
+        # env.env.env._set_position(names_list=['cylinder'], position=p1)
+
+        s = 0.03
+        env.env.env._set_size(names_list=['cube'], size=[s, s, s])
+        env.env.env._change_color(['cube'], 0.5, 0., 0.5)
+        pos = [1.3, 0.6, 0.4 + s]
+        env.env.env._set_position(names_list=['cube'], position=p2)
+        # env.env.env._set_position(names_list=['cube'], position=p2)
+
+    # sample images
+    data_set = np.empty([len(points), img_size, img_size, 3])
+    for i,p in enumerate(points):
+        env.env.env._set_position(names_list=['cylinder'], position=[p[0], p[1], 0.4 + 0.025])
+        #env.env.env._set_position(names_list=['rectangle'], position=[points_2[i][0], points_2[i][1] , 0.4 + 0.035])
+        #env.env.env._set_position(names_list=['rectangle'], position=[p[0], p[1], 0.4 + 0.035])
+        data_set[i]  = take_objects_image_training(env, img_size)
+    data = torch.from_numpy(data_set).float().to(device)
+    data /= 255
+    data = data.permute([0, 3, 1, 2])
+    char = []
+    with torch.no_grad():
+        model.eval()
+
+        z_pres, z_depth, z_scale, z_shift, z_where, z_pres_logits, z_depth_post, z_scale_post, z_shift_post, z_what, z_what_post = model.encode(data)
+        z_p = z_pres.detach().cpu().numpy()
+        z_sc = z_scale.detach().cpu().numpy()
+        z_sh = z_shift.detach().cpu().numpy()
+        z_wh = z_what.detach().cpu().numpy()
+        indices = z_p > 0.98
+        #coordinates = z_sh[indices]
+        #sizes = z_sc[indices]
+    for i in range(len(points)):
+
+        this_im_indices = np.squeeze(indices[i])
+        c_im = z_sh[i][this_im_indices]
+        c_w = z_wh[i][this_im_indices]
+        c_sc = z_sc[i][this_im_indices]
+        print("i: {}".format(i))
+        if len(c_im) > 1:
+            print('len bigger than 1')
+        print("char: {}".format(c_w[:, 8]))
+        for c in c_w[:, 8]:
+            char.append(c)
+
+
+
+        g_idx, o_idx = get_indices_goal_obstacle(c_w)
+        if i in [0,3,6,9, 14, 17, 20, 26, 31,35, 38, 40, 42,45,48]:
+            a = 1
+        if len(g_idx) == 0:
+            print('oh')
+        else:
+            print(c_im[o_idx])
+            c_im = c_im[g_idx[0]]
+
+            #s_im = z_sc[i][this_im_indices]
+            plt.scatter(c_im[1], c_im[0], c='blue')
+            plt.annotate(n_labels[i], (c_im[1], c_im[0]))
+    char = np.array(char)
+    print("the min is {} \n the max is{} \n the mean is {}".format(
+        np.min(char),np.max(char), np.mean(char)))
+    plt.title('latent')
+    plt.savefig("{}.png".format(fig_file_name))
+    plt.close()
 
 
 def traversal(env, model, img_size,  latent_size, n, enc_type, using_sb=True, fig_file_name=None):
@@ -663,7 +775,7 @@ if __name__ == '__main__':
     parser.add_argument('--ind_2', help='second index to extract from latent vector', type=np.int32)
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
-                        default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes', 'mixed', 'all'])
+                        default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes', 'mixed', 'all', 'space'])
     parser.add_argument('--mix_h', help='if the representation should de done with goals or obstacles', type=str,
                         default='goal', choices=['goal', 'obstacle'])
 
@@ -694,6 +806,8 @@ if __name__ == '__main__':
         size_to_use = (obstacle_size + puck_size) /2
     elif args.enc_type == 'all':
         size_to_use = 0.06
+    elif args.enc_type == 'space':
+        size_to_use = 0.0
 
     if args.task == 'show_space' or args.task == 'show_size' or args.task == 'show_traversal':
         # load the latent_size and model
@@ -703,6 +817,10 @@ if __name__ == '__main__':
             model = load_Vae_SB(weights_path, args.img_size, args.latent_size)
         elif args.enc_type == 'all':
             model = load_Monet(weights_path, args.img_size, args.latent_size, num_slots=4)
+        elif args.enc_type == 'space':
+            model = load_space_model(checkpoint_path='../data/FetchGenerativeEnv-v1/',
+                                     check_name='../data/FetchGenerativeEnv-v1/model_000030001.pth', device='cuda:0')
+            model.eval()
         else:
             model = load_Vae(weights_path, args.imgsize, args.latent_size)
 
@@ -717,6 +835,10 @@ if __name__ == '__main__':
                 visualization_grid_points_all(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
                                               enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,
                                               fig_file_name='all_fig_cylinder')
+            elif args.enc_type == 'space':
+                visualization_grid_points_space(n=9, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
+                                              enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,
+                                              fig_file_name='space_fig_cylinder')
             else:
                 visualization_grid_points(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
                                           enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,

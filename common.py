@@ -14,6 +14,7 @@ from j_vae.common_data import vae_sb_weights_file_name, vae_weights_file_name
 from PIL import Image
 from vae_env_inter import take_env_image, take_image_objects
 from j_vae.distance_estimation import calculate_distance, DistMovEst, DistMovEstReal
+from SPACE.main_space import load_space_model
 
 def get_args():
 	parser = get_arg_parser()
@@ -79,7 +80,7 @@ def get_args():
 	parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
 	#type of VAE
 	parser.add_argument('--vae_type', help='', type=str,
-						default=None, choices=['sb', 'mixed', 'monet'])
+						default=None, choices=['sb', 'mixed', 'monet', 'space'])
 	#type VAE for size
 	parser.add_argument('--vae_size_type', help='', type=str,
 						default='all', choices=['normal', 'sb', 'mixed', 'monet'])#if mixed or monet then representation is shared
@@ -134,6 +135,10 @@ def load_vaes(args):
 	data_dir = base_data_dir + args.env + '/'
 
 	#load VAES for positional data
+	if args.vae_type == 'space':
+		args.vae_model = load_space_model(checkpoint_path='data/FetchGenerativeEnv-v1/',
+							 check_name='data/FetchGenerativeEnv-v1/model_000030001.pth', device='cuda:0')
+		return
 
 	if args.vae_type == 'sb':
 		weights_path_goal = data_dir + vae_sb_weights_file_name['goal']

@@ -64,7 +64,6 @@ if __name__=='__main__':
 					obstacle_size_latents.append(obs['obstacle_size_latent'].copy())
 				else:
 					obstacle_real.append(obs['real_obstacle_pos'])
-
 			if args.with_dist_estimator:
 				args.dist_estimator.update(obstacle_latents, obstacle_size_latents)
 			else:

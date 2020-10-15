@@ -5,6 +5,7 @@ import copy
 from utils.os_utils import remove_color
 from vae_env_inter import take_goal_image, take_obstacle_image, take_image_objects, goal_latent_from_images, \
 	obstacle_latent_from_images, latents_from_images
+from PIL import Image
 
 
 class VanillaGoalEnv():
@@ -79,9 +80,12 @@ class VanillaGoalEnv():
 		obs, reward, done, info = self.env.step(action)
 		if (hasattr(self.args, 'transform_dense') and self.args.transform_dense) or \
 				(hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help):
-			if self.args.vae_type == 'monet':
+			if self.args.vae_type == 'monet' or self.args.vae_type == 'space':
 				achieved_image = take_image_objects(self, self.args.img_size)
-				lg, lo, lo_s = latents_from_images(np.array([achieved_image]), self.args)
+				if self.args.vae_type == 'space':
+					lg, lg_s, lo, lo_s = latents_from_images(np.array([achieved_image]), self.args)
+				else:
+					lg, lo, lo_s = latents_from_images(np.array([achieved_image]), self.args)
 				self.achieved_goal_latent = lg[0].copy()
 				self.obstacle_latent = lo[0].copy()
 				self.obstacle_size_latent = lo_s[0].copy()
@@ -115,16 +119,29 @@ class VanillaGoalEnv():
 		if (hasattr(self.args, 'transform_dense') and self.args.transform_dense) or \
 				(hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help):
 			obs = self.env.env._get_obs()
-			if self.args.vae_type == 'monet':
+			if self.args.vae_type == 'monet' or self.args.vae_type == 'space':
 				self.env.env._move_object(position=obs['desired_goal'].copy())
 				desired_goal_image = take_image_objects(self, self.args.img_size)
+				#imd = Image.fromarray(desired_goal_image.astype(np.uint8))
+				#imd.show()
+				#imd.close()
 				self.env.env._move_object(position=obs['achieved_goal'].copy())
 				achieved_goal_image = take_image_objects(self, self.args.img_size)
-				lg, lo, lo_s = latents_from_images(np.array([desired_goal_image, achieved_goal_image]), self.args)
-				self.desired_goal_latent = lg[0].copy()
-				self.achieved_goal_latent = lg[1].copy()
-				self.obstacle_latent = lo[1].copy()
-				self.obstacle_size_latent = lo_s[1].copy()
+				#imd = Image.fromarray(achieved_goal_image.astype(np.uint8))
+				#imd.show()
+				#imd.close()
+				if self.args.vae_type == 'space':
+					lg, lg_s, lo, lo_s = latents_from_images(np.array([desired_goal_image, achieved_goal_image]), self.args)
+					self.desired_goal_latent = lg[0].copy()
+					self.achieved_goal_latent = lg[1].copy()
+					self.obstacle_latent = lo[1].copy()
+					self.obstacle_size_latent = lo_s[1].copy()
+				else:
+					lg, lo, lo_s = latents_from_images(np.array([desired_goal_image, achieved_goal_image]), self.args)
+					self.desired_goal_latent = lg[0].copy()
+					self.achieved_goal_latent = lg[1].copy()
+					self.obstacle_latent = lo[1].copy()
+					self.obstacle_size_latent = lo_s[1].copy()
 
 			else:
 				self.env.env._move_object(position=obs['desired_goal'].copy())
@@ -173,11 +190,14 @@ class VanillaGoalEnv():
 		if (hasattr(self.args, 'transform_dense') and self.args.transform_dense) or \
 				(hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help):
 			obs = self.env.env._get_obs()
-			if self.args.vae_type == 'monet':
+			if self.args.vae_type == 'monet' or self.args.vae_type == 'space':
 				self.env.env._move_object(position=value.copy())
 				desired_goal_image = take_image_objects(self, self.args.img_size)
 				self.env.env._move_object(position=obs['achieved_goal'].copy())
-				lg, lo, lo_s = latents_from_images(np.array([desired_goal_image]), self.args)
+				if self.args.vae_type == 'space':
+					lg, lg_s, lo, lo_s = latents_from_images(np.array([desired_goal_image]), self.args)
+				else:
+					lg, lo, lo_s = latents_from_images(np.array([desired_goal_image]), self.args)
 				self.desired_goal_latent = lg[0].copy()
 			else:
 				self.env.env._move_object(position=value.copy())

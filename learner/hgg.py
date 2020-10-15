@@ -581,24 +581,25 @@ class HGGLearner_VAEs(HGGLearner):
 				# update target network
 				agent.target_update()
 
-		if args.with_dist_estimator and epoch==0 and not args.dist_estimator.update_complete:
+		'''if args.with_dist_estimator and epoch==0 and not args.dist_estimator.update_complete:
 			args.dist_estimator.update(
 				np.concatenate(achieved_trajectory_obstacle_latents, axis=0),
 				np.concatenate(achieved_trajectory_obstacle_latents_sizes, axis=0)
 			)
+			pass
 		if args.with_dist_estimator:
 			if (epoch==0 or epoch==1) and cycle in [0, 1,2,3,4]:
-				'''args.dist_estimator.update_sizes(
+				args.dist_estimator.update_sizes(
 					np.concatenate(achieved_trajectory_obstacle_latents, axis=0),
 					np.concatenate(achieved_trajectory_goals_latents, axis=0)
-				)'''
+				)
 				pass
 			elif cycle % 5 == 0:
-				'''args.dist_estimator.update_sizes(
+				args.dist_estimator.update_sizes(
 					np.concatenate(achieved_trajectory_obstacle_latents, axis=0),
 					np.concatenate(achieved_trajectory_goals_latents, axis=0)
-				)'''
-				pass
+				)
+				pass'''
 
 		selection_trajectory_idx = {}
 		for i in range(self.args.episodes):

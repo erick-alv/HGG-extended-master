@@ -234,6 +234,17 @@ class DistMovEst:
 
     #todo use other distribution instead of uniform (for example norm), even better a more complex one
     def update(self, obstacle_latent_list, obstacle_size_latent_list):
+        if len(obstacle_latent_list[0].shape) > 1:
+            new_list_obs = []
+            new_list_s = []
+            for i in range(len(obstacle_latent_list)):
+                for ob in obstacle_latent_list[i]:
+                    new_list_obs.append(ob)
+                for ob_s in obstacle_size_latent_list[i]:
+                    new_list_s.append(ob_s)
+            obstacle_latent_list = new_list_obs
+            obstacle_size_latent_list = new_list_s
+
         obstacle_latent_array = np.array(obstacle_latent_list)
         obstacle_size_latent_array = np.array(obstacle_size_latent_list)
         a_x = np.min(obstacle_latent_array[:, 0])
@@ -331,9 +342,9 @@ class DistMovEst:
 
         undr_pos = current_pos_batch[inside]
         #todo this must be more general
-        top = np.array([self.max_x + 0.001*self.s_x, self.y_mid])
+        top = np.array([self.max_x + 0.0001*self.s_x, self.y_mid])
         through_top = np.linalg.norm(undr_pos - top, axis=1) + np.linalg.norm(goal_pos - top)
-        bottom = np.array([self.min_x - 0.001*self.s_x, self.y_mid])
+        bottom = np.array([self.min_x - 0.0001*self.s_x, self.y_mid])
         through_bottom = np.linalg.norm(undr_pos - bottom, axis=1) + np.linalg.norm(goal_pos - bottom)
         min_d = np.minimum(through_top, through_bottom)
         distances[inside] = min_d
