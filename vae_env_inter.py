@@ -156,7 +156,9 @@ def latents_from_images(images, args):
             z_scale_post, z_shift_post, z_what, z_what_post = args.vae_model.encode(images)
             z_p = z_pres.detach().cpu().numpy()
             z_sc = z_scale.detach().cpu().numpy()
+            z_sc = np.flip(z_sc, axis=2)
             z_sh = z_shift.detach().cpu().numpy()
+            z_sh = np.flip(z_sh, axis=2)
             z_wh = z_what.detach().cpu().numpy()
             indices = z_p > 0.98
             # coordinates = z_sh[indices]

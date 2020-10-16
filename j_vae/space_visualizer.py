@@ -323,7 +323,9 @@ def visualization_grid_points_space(env, model, size_to_use, img_size, n, enc_ty
         z_pres, z_depth, z_scale, z_shift, z_where, z_pres_logits, z_depth_post, z_scale_post, z_shift_post, z_what, z_what_post = model.encode(data)
         z_p = z_pres.detach().cpu().numpy()
         z_sc = z_scale.detach().cpu().numpy()
+        z_sc = np.flip(z_sc, axis=2)
         z_sh = z_shift.detach().cpu().numpy()
+        z_sh = np.flip(z_sh, axis=2)
         z_wh = z_what.detach().cpu().numpy()
         indices = z_p > 0.98
         #coordinates = z_sh[indices]
@@ -353,8 +355,8 @@ def visualization_grid_points_space(env, model, size_to_use, img_size, n, enc_ty
             c_im = c_im[g_idx[0]]
 
             #s_im = z_sc[i][this_im_indices]
-            plt.scatter(c_im[1], c_im[0], c='blue')
-            plt.annotate(n_labels[i], (c_im[1], c_im[0]))
+            plt.scatter(c_im[0], c_im[1], c='blue')
+            plt.annotate(n_labels[i], (c_im[0], c_im[1]))
     char = np.array(char)
     print("the min is {} \n the max is{} \n the mean is {}".format(
         np.min(char),np.max(char), np.mean(char)))
