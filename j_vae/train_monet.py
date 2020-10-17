@@ -11,12 +11,19 @@ from PIL import Image
 import os
 this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
 
-def double_conv(in_channels, out_channels):
+'''def double_conv(in_channels, out_channels):
     return nn.Sequential(
         nn.Conv2d(in_channels, out_channels, 3, padding=1),
         nn.BatchNorm2d(out_channels),
         nn.ReLU(inplace=True),
         nn.Conv2d(out_channels, out_channels, 3, padding=1),
+        nn.BatchNorm2d(out_channels),
+        nn.ReLU(inplace=True)
+    )'''
+
+def double_conv(in_channels, out_channels):
+    return nn.Sequential(
+        nn.Conv2d(in_channels, out_channels, 3, padding=1),
         nn.BatchNorm2d(out_channels),
         nn.ReLU(inplace=True)
     )
