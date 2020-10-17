@@ -61,23 +61,6 @@ class UNet(nn.Module):
 
         return self.final_conv(cur)
 
-'''class AttentionNet(nn.Module):
-    def __init__(self, num_blocks, channel_base):
-        super().__init__()
-        self.unet = UNet(num_blocks=num_blocks,
-                         in_channels=4,
-                         out_channels=2,
-                         channel_base=channel_base)
-    def forward(self, x, scope):
-        inp = torch.cat((x, scope), 1)
-        logits = self.unet(inp)
-        alpha = torch.softmax(logits, 1)
-        # output channel 0 represents alpha_k,
-        # channel 1 represents (1 - alpha_k).
-        mask = scope * alpha[:, 0:1]
-        new_scope = scope * alpha[:, 1:2]
-        return mask, new_scope'''
-
 class AttentionNet(nn.Module):
     def __init__(self, num_blocks, channel_base):
         super().__init__()
@@ -353,7 +336,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
     for batch_idx, idx_select in enumerate(idx_set):
         data = data_set[idx_select]
         data = torch.from_numpy(data).float().to(device)
-        data /= 255.
+        data /= 255
         data = data.permute([0, 3, 1, 2])
         optimizer.zero_grad()
         mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
@@ -408,7 +391,7 @@ def visualize_masks(imgs, masks, recons, file_name):
 
 def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, beta, gamma, bg_sigma, fg_sigma,
               epochs=100, no_cuda=False, seed=1, log_interval=100, load=False,
-              num_blocks=4, channel_base=64, num_slots=6,
+              num_blocks=5, channel_base=64, num_slots=6,
               full_connected_size=256, color_channels=3,kernel_size=3, encoder_stride=2,decoder_stride=1,
               conv_size1=32, conv_size2=64):
     cuda = not no_cuda and torch.cuda.is_available()
@@ -485,7 +468,7 @@ def compare_with_data_set(model, device, filename_suffix, latent_size, train_fil
                         file_name=this_file_dir+'results/reconstruction_{}.png'.format(filename_suffix))
 
 
-def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1, num_blocks=4, channel_base=64, num_slots=6,
+def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1, num_blocks=5, channel_base=64, num_slots=6,
                  full_connected_size=256, color_channels=3,kernel_size=3, encoder_stride=2,decoder_stride=1,
                  conv_size1=32, conv_size2=64):
     cuda = not no_cuda and torch.cuda.is_available()
@@ -510,13 +493,13 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=32.)
+    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=10.)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=20)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
     parser.add_argument('--num_slots', help='number of slots', type=np.int32, default=5)
-    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=2.)#5#8
-    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=5.)#5
+    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=0.5)#5#8
+    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=0.25)#5
     parser.add_argument('--bg_sigma', help='', type=np.float, default=0.09)
     parser.add_argument('--fg_sigma', help='', type=np.float, default=0.11)
 
