@@ -338,7 +338,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
     #creates indexes and shuffles them. So it can acces the data
     idx_set = np.arange(data_size)
     np.random.shuffle(idx_set)
-    idx_set = idx_set[:5000]#todo delete this
+    #idx_set = idx_set[:5000]#todo delete this
     idx_set = np.split(idx_set, len(idx_set) / batch_size)
     for batch_idx, idx_select in enumerate(idx_set):
         data = data_set[idx_select]
