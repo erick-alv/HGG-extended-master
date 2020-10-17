@@ -110,8 +110,10 @@ class VAE_SB(nn.Module):
         return self.decode(z), mu, logvar
 
 # Reconstruction + KL divergence losses summed over all elements and batch
-def loss_function(recon_x, x, mu, logvar, beta):
+def loss_function(recon_x, x, mu, logvar, beta, do_print=False):
     BCE = F.binary_cross_entropy(recon_x, x, reduction='sum')
+    if do_print:
+        print('BCE IS: {}'.format(BCE))
 
     # see Appendix B from VAE paper:
     # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
@@ -120,6 +122,8 @@ def loss_function(recon_x, x, mu, logvar, beta):
 
     # Try to adjust
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    if do_print:
+        print('KLD is: {}'.format(KLD))
 
     return BCE + beta*KLD
 
@@ -135,6 +139,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
     for batch_idx, data in enumerate(data_set):
         data = torch.from_numpy(data).float().to(device)
         data /= 255
+
         data = data.permute([0, 3, 1, 2])
         optimizer.zero_grad()
         recon_batch, mu, logvar = model(data)
