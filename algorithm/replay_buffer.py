@@ -108,7 +108,8 @@ class ReplayBuffer_Episodic:
 		self.counter = 0
 		self.steps_counter = 0
 		self.sample_methods = {
-			'ddpg': self.sample_batch_ddpg
+			'ddpg': self.sample_batch_ddpg,
+			'sac': self.sample_batch_ddpg #use same sample mechanism
 		}
 		if hasattr(args, 'alg'):
 			self.sample_batch = self.sample_methods[args.alg]

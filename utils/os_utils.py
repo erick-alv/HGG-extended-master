@@ -416,52 +416,54 @@ class SummaryWriter:
 		return tf.summary.FileWriter(summary_path, graph=graph)
 
 	def setup(self):
-		with self.graph.as_default():
-			self.summary_ph = {}
-			self.summary = []
-			self.summary_cmp = []
-			with tf.variable_scope('summary_scope'):
-				for key in self.scalars.keys():
-					if self.check_prefix(key):
-						# add to test summaries
-						key_cmp = self.remove_prefix(key)
-						if not(key_cmp in self.summary_ph.keys()):
-							self.summary_ph[key_cmp] = tf.placeholder(tf.float32, name=key_cmp)
-							self.summary_cmp.append(tf.summary.scalar(key_cmp, self.summary_ph[key_cmp], family='test'))
-					else:
-						# add to debug summaries
-						assert not(key in self.summary_ph.keys())
-						self.summary_ph[key] = tf.placeholder(tf.float32, name=key)
-						self.summary.append(tf.summary.scalar(key, self.summary_ph[key], family='train'))
+		if self.graph is not None:
+			with self.graph.as_default():
+				self.summary_ph = {}
+				self.summary = []
+				self.summary_cmp = []
+				with tf.variable_scope('summary_scope'):
+					for key in self.scalars.keys():
+						if self.check_prefix(key):
+							# add to test summaries
+							key_cmp = self.remove_prefix(key)
+							if not(key_cmp in self.summary_ph.keys()):
+								self.summary_ph[key_cmp] = tf.placeholder(tf.float32, name=key_cmp)
+								self.summary_cmp.append(tf.summary.scalar(key_cmp, self.summary_ph[key_cmp], family='test'))
+						else:
+							# add to debug summaries
+							assert not(key in self.summary_ph.keys())
+							self.summary_ph[key] = tf.placeholder(tf.float32, name=key)
+							self.summary.append(tf.summary.scalar(key, self.summary_ph[key], family='train'))
 
-			self.summary_op = tf.summary.merge(self.summary)
-			self.writer = self.register_writer(self.summary_path+'/debug', self.graph)
-			if len(self.summary_cmp)>0:
-				self.summary_cmp_op = tf.summary.merge(self.summary_cmp)
-				self.train_writer = self.register_writer(self.summary_path+'/train')
-				self.test_writer = self.register_writer(self.summary_path+'/test')
+				self.summary_op = tf.summary.merge(self.summary)
+				self.writer = self.register_writer(self.summary_path+'/debug', self.graph)
+				if len(self.summary_cmp)>0:
+					self.summary_cmp_op = tf.summary.merge(self.summary_cmp)
+					self.train_writer = self.register_writer(self.summary_path+'/train')
+					self.test_writer = self.register_writer(self.summary_path+'/test')
 
 	def show(self, steps):
-		feed_dict = {'debug':{},'train':{},'test':{}}
-		for key in self.scalars:
-			value = self.scalars[key][0]/max(self.scalars[key][1],1e-3)
-			if self.check_prefix(key):
-				# add to train/test feed_dict
-				key_cmp = self.remove_prefix(key)
-				feed_dict[self.get_prefix(key)][self.summary_ph[key_cmp]] = value
-			else: # add to debug feed_dict
-				feed_dict['debug'][self.summary_ph[key]] = value
+		if self.graph is not None:
+			feed_dict = {'debug':{},'train':{},'test':{}}
+			for key in self.scalars:
+				value = self.scalars[key][0]/max(self.scalars[key][1],1e-3)
+				if self.check_prefix(key):
+					# add to train/test feed_dict
+					key_cmp = self.remove_prefix(key)
+					feed_dict[self.get_prefix(key)][self.summary_ph[key_cmp]] = value
+				else: # add to debug feed_dict
+					feed_dict['debug'][self.summary_ph[key]] = value
 
-		summary = self.sess.run(self.summary_op, feed_dict['debug'])
-		self.writer.add_summary(summary, steps)
-		self.writer.flush()
-		if len(self.summary_cmp)>0:
-			summary_train = self.sess.run(self.summary_cmp_op, feed_dict['train'])
-			summary_test = self.sess.run(self.summary_cmp_op, feed_dict['test'])
-			self.train_writer.add_summary(summary_train, steps)
-			self.test_writer.add_summary(summary_test, steps)
-			self.train_writer.flush()
-			self.test_writer.flush()
+			summary = self.sess.run(self.summary_op, feed_dict['debug'])
+			self.writer.add_summary(summary, steps)
+			self.writer.flush()
+			if len(self.summary_cmp)>0:
+				summary_train = self.sess.run(self.summary_cmp_op, feed_dict['train'])
+				summary_test = self.sess.run(self.summary_cmp_op, feed_dict['test'])
+				self.train_writer.add_summary(summary_train, steps)
+				self.test_writer.add_summary(summary_test, steps)
+				self.train_writer.flush()
+				self.test_writer.flush()
 
 def get_logger(name=None):
 	return Logger(name)

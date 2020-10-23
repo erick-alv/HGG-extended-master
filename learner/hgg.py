@@ -4,7 +4,7 @@ from envs import make_env
 from envs.utils import goal_distance
 from algorithm.replay_buffer import Trajectory, goal_concat
 from utils.gcc_utils import gcc_load_lib, c_double, c_int
-from envs.distance_graph import DistanceGraph
+from envs.distance_graph import DistanceGraph, DistanceGraph2D
 from vae_env_inter import take_goal_image, take_obstacle_image, take_env_image, transform_image_to_latent_batch_torch
 from j_vae.latent_space_transformations import torch_goal_transformation, torch_obstacle_transformation, torch_get_size_in_space
 from j_vae.distance_estimation import calculate_distance_batch, calculate_distance
@@ -104,11 +104,28 @@ class MatchSampler:
 			self.create_graph_distance()
 
 		# estimating diameter
-		self.max_dis = 0
+		self.max_dis = 0#todo!!!!!!!!!!!! this self.max dis can have a great impact on the performance
 		for i in range(1000):
 			obs = self.env.reset()
-			dis = self.get_graph_goal_distance(obs['achieved_goal'], obs['desired_goal'])
+			dis = self.evaluate_distance_start(obs)
 			if dis>self.max_dis: self.max_dis = dis
+
+	def evaluate_distance_start(self, obs):
+		if self.args.dist_estimator_type is not None:
+			if self.args.dist_estimator_type == 'realCoords' or self.args.dist_estimator_type == 'multipleReal':
+				g = obs['desired_goal']
+				current = obs['achieved_goal']
+			else:
+				g = obs['desired_goal_latent'].copy()
+				current = obs['achieved_goal_latent'].copy()
+
+			d = self.args.dist_estimator.calculate_distance_batch(goal_pos=g,
+																  current_pos_batch=np.array([current])
+																  )[0]
+			return d
+		else:
+			return self.get_graph_goal_distance(obs['achieved_goal'], obs['desired_goal'])
+
 
 	# Pre-computation of graph-based distances
 	def create_graph_distance(self):
@@ -116,6 +133,17 @@ class MatchSampler:
 		field = self.env.env.env.adapt_dict["field"]
 		obstacles = self.env.env.env.adapt_dict["obstacles"]
 		num_vertices = self.args.num_vertices
+		## just to make temporal prove delete then
+		'''field_2D = [field[0], field[1], field[3], field[4]]  #
+		num_vertices_2D = [self.args.num_vertices[0], self.args.num_vertices[1]]
+
+		obstacles_2D = []
+		for o in obstacles:
+			obstacles_2D.append([o[0], o[1], o[3], o[4]])
+			
+		graph = DistanceGraph2D(args=self.args, field=field_2D, num_vertices=num_vertices_2D, obstacles=obstacles_2D)'''
+		
+		##
 		graph = DistanceGraph(args=self.args, field=field, num_vertices=num_vertices, obstacles=obstacles)
 		graph.compute_cs_graph()
 		graph.compute_dist_matrix()
@@ -170,11 +198,7 @@ class MatchSampler:
 		achieved_value = []
 		for i in range(len(achieved_pool)):
 			obs = [goal_concat(achieved_pool_init_state[i], achieved_pool[i][j]) for j in range(achieved_pool[i].shape[0])]#obervation from first state of trajectoy to goal, which is the achieved state in the trajectory
-			feed_dict = {
-				agent.raw_obs_ph: obs
-			}
-			value = agent.sess.run(agent.q_pi, feed_dict)[:,0]#get the q values at each achieved state
-			value = np.clip(value, -1.0/(1.0-self.args.gamma), 0)
+			value = agent.get_q_pi(obs)
 			achieved_value.append(value.copy())
 
 		n = 0
@@ -191,12 +215,12 @@ class MatchSampler:
 		for i in range(len(achieved_pool)):
 			self.match_lib.add(0, graph_id['achieved'][i], 1, 0)
 		for i in range(len(achieved_pool)):
-			if self.args.vae_dist_help or self.args.with_dist_estimator or self.args.with_dist_estimator_real:
-				#allow a bit of error??#todo see if this could be problematic
-				i1 = achieved_pool[i][:, 0] > 1.56
-				i2 = achieved_pool[i][:, 0] < 1.04
-				i3 = achieved_pool[i][:, 1] > 1.01
-				i4 = achieved_pool[i][:, 1] < 0.49
+			if self.args.vae_dist_help or self.args.dist_estimator_type is not None:
+				#allow a bit of error?? see if this could be problematic# for now not
+				i1 = achieved_pool[i][:, 0] > self.args.field_center[0] + self.args.field_size[0]
+				i2 = achieved_pool[i][:, 0] < self.args.field_center[0] - self.args.field_size[0]
+				i3 = achieved_pool[i][:, 1] > self.args.field_center[1] + self.args.field_size[1]
+				i4 = achieved_pool[i][:, 1] < self.args.field_center[1] - self.args.field_size[1]
 				indices_outside = np.logical_or(np.logical_or(i1, i2), np.logical_or(i3, i4))
 			for j in range(len(desired_goals)):
 				if self.args.graph:
@@ -208,7 +232,7 @@ class MatchSampler:
 				elif self.args.vae_dist_help:
 					distances = np.zeros(shape=len(achieved_latent_goals[i]))
 					indices_inside = np.logical_not(indices_outside)
-					if self.args.with_dist_estimator:
+					if self.args.dist_estimator_type is not None:
 						latent_distances = \
 						self.args.dist_estimator.calculate_distance_batch(goal_pos=desired_goals_latents[j].copy(),
 																		  current_pos_batch=achieved_latent_goals[i][indices_inside].copy())
@@ -239,7 +263,7 @@ class MatchSampler:
 					h_extra = h_extra*4
 					distances[h_p] += h_extra'''
 					res = distances - achieved_value[i] / (self.args.hgg_L / self.max_dis / (1 - self.args.gamma))
-				elif self.args.with_dist_estimator_real:
+				elif self.args.dist_estimator_type == 'realCoords' or self.args.dist_estimator_type == 'multipleReal':
 					distances = np.zeros(shape=len(achieved_pool[i]))
 					indices_inside = np.logical_not(indices_outside)
 					ds = self.args.dist_estimator.calculate_distance_batch(goal_pos=desired_goals[j].copy(),
@@ -257,7 +281,7 @@ class MatchSampler:
 
 				#(2.22) c * || m(s^_0 ^i) - m(s_0 ^i) || + min_t(..)
 				if self.args.vae_dist_help:
-					if self.args.with_dist_estimator:
+					if self.args.dist_estimator_type is not None:
 						d_i = self.args.dist_estimator.calculate_distance_batch(
 							goal_pos=desired_goals_latents[j].copy(),
 							current_pos_batch=np.array([achieved_latent_goals[i][0].copy()])
@@ -269,7 +293,7 @@ class MatchSampler:
 												 goal_pos=initial_goals_latents[j].copy(),
 										   range_x=[-1., 1.], range_y=[-1., 1.])
 					match_dis = np.min(res) + d_i * self.args.hgg_c
-				elif self.args.with_dist_estimator_real:
+				elif self.args.dist_estimator_type == 'realCoords' or self.args.dist_estimator_type == 'multipleReal':
 						d_i = self.args.dist_estimator.calculate_distance_batch(
 							goal_pos=desired_goals[j].copy(),
 							current_pos_batch=np.array([achieved_pool[i][0].copy()])
@@ -580,26 +604,6 @@ class HGGLearner_VAEs(HGGLearner):
 					args.logger.add_dict(info)
 				# update target network
 				agent.target_update()
-
-		'''if args.with_dist_estimator and epoch==0 and not args.dist_estimator.update_complete:
-			args.dist_estimator.update(
-				np.concatenate(achieved_trajectory_obstacle_latents, axis=0),
-				np.concatenate(achieved_trajectory_obstacle_latents_sizes, axis=0)
-			)
-			pass
-		if args.with_dist_estimator:
-			if (epoch==0 or epoch==1) and cycle in [0, 1,2,3,4]:
-				args.dist_estimator.update_sizes(
-					np.concatenate(achieved_trajectory_obstacle_latents, axis=0),
-					np.concatenate(achieved_trajectory_goals_latents, axis=0)
-				)
-				pass
-			elif cycle % 5 == 0:
-				args.dist_estimator.update_sizes(
-					np.concatenate(achieved_trajectory_obstacle_latents, axis=0),
-					np.concatenate(achieved_trajectory_goals_latents, axis=0)
-				)
-				pass'''
 
 		selection_trajectory_idx = {}
 		for i in range(self.args.episodes):

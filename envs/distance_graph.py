@@ -18,7 +18,7 @@ class DistanceGraph:
     dist_matrix = None
     predecessors = None
 
-    def __init__(self, args, field, num_vertices, obstacles):
+    def __init__(self, args, field, num_vertices, obstacles, z_dim_is_flat=False, size_increase=0.02):
         # field is of form [m_x, m_y, m_z, l, w, h], same format as in mujoco
         # obstacles is list with entries of form: [m_x, m_y, m_z, l, w, h], same format as in mujoco
         # Up to 10000 nodes can be handled memorywise (computation time non-problematic in this case)
@@ -28,7 +28,6 @@ class DistanceGraph:
         self.args = args
 
         # Get min and max coordinate values, number of spaces in each direction, obstacles and z_penalty
-
         self.x_min = m_x - l
         self.y_min = m_y - w
         self.z_min = m_z - h
@@ -36,6 +35,9 @@ class DistanceGraph:
         self.x_max = m_x + l
         self.y_max = m_y + w
         self.z_max = m_z + h
+
+        #increasement for region with ostacles
+        self.size_increase = size_increase
 
         assert len(num_vertices) == 3
 
@@ -50,7 +52,10 @@ class DistanceGraph:
 
         self.dx = (self.x_max - self.x_min) / (self.n_x - 1)
         self.dy = (self.y_max - self.y_min) / (self.n_y - 1)
-        self.dz = (self.z_max - self.z_min) / (self.n_z - 1)
+        if z_dim_is_flat:
+            self.dz = 1# logical should be 0 but for calculations better leave it as 1
+        else:
+            self.dz = (self.z_max - self.z_min) / (self.n_z - 1)
 
         # total number of vertices
 
@@ -84,9 +89,14 @@ class DistanceGraph:
         for [m_x, m_y, m_z, l, w, h] in self.obstacles:
             n_x_min = max(n_x_min, (self.x_max - self.x_min) / (2*l) + 1)
             n_y_min = max(n_y_min, (self.y_max - self.y_min) / (2*w) + 1)
-            n_z_min = max(n_z_min, (self.z_max - self.z_min) / (2*h) + 1)
-            if l <= self.dx/2 or w <= self.dy/2 or h <= self.dz/2:
-                graph_okay = False
+            if z_dim_is_flat:
+                n_z_min = 1
+                if l <= self.dx/2 or w <= self.dy/2:
+                    graph_okay = False
+            else:
+                n_z_min = max(n_z_min, (self.z_max - self.z_min) / (2*h) + 1)
+                if l <= self.dx/2 or w <= self.dy/2 or h <= self.dz/2:
+                    graph_okay = False
 
         # print section
         if self.args:
@@ -108,9 +118,9 @@ class DistanceGraph:
         # checks whether a point (x, y, z) lies inside an obstacle
         for [m_x, m_y, m_z, l, w, h] in self.obstacles:
             # l, w, h are increased to make sure that the edges of the obstacles are considered as well
-            l += 0.02
-            w += 0.02
-            h += 0.02
+            l += self.size_increase
+            w += self.size_increase
+            h += self.size_increase
             if m_x - l <= x <= m_x + l and m_y - w <= y <= m_y + w and m_z - h <= z <= m_z + h:
                 return True
         return False
@@ -389,5 +399,33 @@ class DistanceGraph:
         plt.savefig(save_path + ".pdf")
         if self.args:
             self.args.logger.info("\tdone")
+
+class DistanceGraph2D(DistanceGraph):
+    def __init__(self, args, field, num_vertices, obstacles, size_increase):
+        #This completely uses other methods, just adapts the parameters to use as 2D plane
+
+        field = [field[0], field[1], 0., field[2], field[3], 0.]#
+        num_vertices = [num_vertices[0], num_vertices[1], 1]
+
+        new_obstacles = []
+        for o in obstacles:
+            new_obstacles.append([o[0], o[1], 0., o[2], o[3], 0.])
+
+        super(DistanceGraph2D, self).__init__(args, field, num_vertices, new_obstacles, z_dim_is_flat=True,
+                                              size_increase=size_increase)
+
+
+    def get_dist(self, coords1, coords2, return_path=False):
+        c1 = np.array([coords1[0], coords1[1], 0.])
+        c2 = np.array([coords2[0], coords2[1], 0.])
+        return super(DistanceGraph2D, self).get_dist(c1, c2, return_path)
+
+    def coords2gridpoint(self, coords):#here rececive coords as 3D and returns as 3D, but with 0 to simulate flat
+        superans = super(DistanceGraph2D, self).coords2gridpoint(coords)
+        if superans is None:
+            return None
+        else:
+            i, j, _ = superans
+            return i, j, 0
 
 

@@ -476,6 +476,92 @@ class DistMovEstReal(DistMovEst):
     def prob_dstr_y(self, y_coordinates):
         pass
 
+from envs.distance_graph import  DistanceGraph2D
+#Works for estimations in 2D plane
+class MultipleDistReal(DistMovEstReal):#in same principle the same but for every single obstacle
+    def __init__(self):
+        self.max_x = None
+        self.min_x = None
+        self.max_y = None
+        self.min_y = None
+        self.x_mid = None
+        self.y_mid = None
+        self.s_x = None
+        self.s_y = None
+        self.update_calls = 0
+        self.update_complete = False
+        self.real = True
+        self.none_vals_yet = True
+
+
+    def update(self, obstacle_latent_list, obstacle_size_latent_list):
+        #obstacle_size_latent will be actually empty
+        if not isinstance(obstacle_size_latent_list, np.ndarray):
+            obstacle_array = np.array(obstacle_latent_list)
+        else:
+            obstacle_array = obstacle_size_latent_list
+
+        #shape of obstacle size latent (B, N, D); B number of samples; N number of obstacles, D dimension of attribute
+        #(B, N, D) -> (N, B, D)
+        obstacle_array = np.transpose(obstacle_array, axes=[1, 0, 2])
+        N, B, D = obstacle_array.shape
+        #each object info is organized as [x,y,z,size_x,size_y, size_z]
+        a_xs = np.amin(obstacle_array[0:N, :, 0], axis=1)
+        b_xs = np.amax(obstacle_array[0:N, :, 0], axis=1)
+        a_ys = np.amin(obstacle_array[0:N, :, 1], axis=1)
+        b_ys = np.amax(obstacle_array[0:N, :, 1], axis=1)
+        s_xs = np.mean(obstacle_array[0:N, :, 3], axis=1)
+        s_ys = np.mean(obstacle_array[0:N, :, 4], axis=1)
+
+        if self.none_vals_yet:#assume everything else is
+            self.max_x = b_xs + s_xs
+            self.min_x = a_xs - s_xs
+            self.max_y = b_ys + s_ys
+            self.min_y = a_ys - s_ys
+            self.s_x = s_xs
+            self.s_y = s_ys
+            self.none_vals_yet = False
+        else:
+            indices_to_change = b_xs + s_xs > self.max_x
+            self.max_x[indices_to_change] = b_xs[indices_to_change] + s_xs[indices_to_change]
+            indices_to_change = a_xs - s_xs < self.min_x
+            self.min_x[indices_to_change] = a_xs[indices_to_change] - s_xs[indices_to_change]
+            indices_to_change = b_ys + s_ys > self.max_y
+            self.max_y[indices_to_change] = b_ys[indices_to_change] + s_ys[indices_to_change]
+            indices_to_change = a_ys - s_ys < self.min_y
+            self.min_y[indices_to_change] = a_ys[indices_to_change] - s_ys[indices_to_change]
+
+        self.x_mid = (self.max_x + self.min_x) / 2.0
+        self.y_mid = (self.max_y + self.min_y) / 2.0
+
+    def initialize_internal_distance_graph(self, field, num_vertices, size_increase):
+        obstacles = []
+        for i in range(len(self.x_mid)):
+            size_x = self.max_x[i] - self.x_mid[i]
+            size_y = self.max_y[i] - self.y_mid[i]
+            obstacles.append([self.x_mid[i], self.y_mid[i], size_x, size_y])
+        graph = DistanceGraph2D(args=None, field=field, num_vertices=num_vertices,
+                                obstacles=obstacles, size_increase=size_increase)
+        graph.compute_cs_graph()
+        graph.compute_dist_matrix()
+        self.graph = graph
+
+    def calculate_distance_batch(self, goal_pos, current_pos_batch):
+        B = len(current_pos_batch)
+        distances = []
+        for i in range(B):
+            d, _ = self.graph.get_dist(goal_pos, current_pos_batch[i])
+            if d == np.inf:
+                d = 9999
+            distances.append(d)
+        distances = np.array(distances)
+        return distances
+
+
+
+class MultipleDist(DistMovEst):
+    pass
+
 
 
 '''if __name__ == '__main__':

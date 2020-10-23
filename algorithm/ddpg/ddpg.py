@@ -167,3 +167,15 @@ class DDPG:
 
 	def target_update(self):
 		self.sess.run(self.target_update_op)
+
+	def save(self, filename, global_step = None):  # we just use the
+		self.saver.save(self.sess, filename, global_step=global_step)
+
+	def get_q_pi(self, obs):
+		feed_dict = {
+			self.raw_obs_ph: obs
+		}
+		value = self.sess.run(self.q_pi, feed_dict)[:, 0]  # get the q values at each achieved state
+		value = np.clip(value, -1.0 / (1.0 - self.args.gamma), 0)
+		return value
+

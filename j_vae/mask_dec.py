@@ -56,7 +56,7 @@ class MaskDec(nn.Module):
         embed_size = img_size // 16
         self.num_slots = num_slots
         self.feat_size = feat_size
-        self.enc = nn.Sequential(
+        self.enc2 = nn.Sequential(
             nn.Conv2d(3, 64, 3, 2, 1),
             nn.BatchNorm2d(64),
             nn.ELU(),
@@ -73,6 +73,21 @@ class MaskDec(nn.Module):
             Flatten(),
             nn.Linear(64 * embed_size ** 2, num_slots*feat_size),
             nn.ELU(),
+        )
+        kernel_size = 3
+        conv_size1 = 64
+        conv_size2 = 32
+        encoder_stride = 2
+        self.enc = nn.Sequential(
+            nn.Conv2d(in_channels=3, out_channels=conv_size1,
+                      kernel_size=kernel_size, stride=encoder_stride),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=conv_size1, out_channels=conv_size2,
+                      kernel_size=kernel_size, stride=encoder_stride),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=conv_size2, out_channels=conv_size2,
+                      kernel_size=kernel_size, stride=encoder_stride),
+            nn.ReLU(inplace=True)
         )
         self.spatial_broadcast4d = SpatialBroadcast4D()
         self.img_size = img_size
@@ -94,8 +109,11 @@ class MaskDec(nn.Module):
 
     def forward(self, x):
         B = x.shape[0]
-        #(B, S*D)
-        x = self.enc(x)
+        #(B, 3, H, W) -> (B, 3, H*K, W)
+        x_repeat = torch.repeat_interleave(x, self.num_slots, dim=2)
+
+        x = self.enc(x_repeat)
+
         #to (B, S, D)
         x = x.reshape(shape=(B, self.num_slots, -1))
         #(B, S,  L + 2, W, H)
@@ -174,14 +192,14 @@ if __name__ == '__main__':
 
     rec = model(data)
     print(rec.shape)'''
-    device = 'cuda:0'
+    '''device = 'cuda:0'
     model = MaskDec(6).to(device)
     optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
-    train(model, optimizer, device, log_interval=400, batch_size=4)
+    train(model, optimizer, device, log_interval=400, batch_size=4)'''
 
 
-    '''device = 'cuda:0'
-    from j_vae.train_monet import load_Vae
+    device = 'cuda:0'
+    from j_vae.train_monet import load_Vae, visualize_masks
     model = load_Vae(path='../data/FetchGenerativeEnv-v1/all_sb_model', img_size=64, latent_size=6)
     model = model.to(device)
     data_size = len(data_set)
@@ -193,17 +211,26 @@ if __name__ == '__main__':
     with torch.no_grad():
         for batch_idx, idx_select in enumerate(idx_set):
             data_np = data_set[idx_select]
+
             data = np_data_batch_to_torch(data_np.copy(), device)
             masks = model.get_masks(data)
             # (B, S, 1, H, W)
             masks = masks.cpu().numpy()
+
+            #visualize_masks(np.transpose(data_np.copy()/255., axes=[0, 3, 1, 2]),
+            #                np.squeeze(masks.copy()),
+            #                np.transpose(data_np.copy()/255., axes=[0, 3, 1, 2]), 'results/new_data.png')
             # (B, S, 3, H, W)
             masks = np.tile(masks, (1, 1, 3, 1, 1))
             # to (B, S, H, W, 3)
             masks = np.transpose(masks, axes=(0, 1, 3, 4, 2))
+
+
+
             # (B, S+1, H, W, 3)
             #make masks visible in image
             masks *= 255.
             ims = np.concatenate([np.expand_dims(data_np, axis=1), masks], axis=1)
             new_data_set[batch_idx:batch_idx + batch_size] = ims
-    np.save('../data/FetchGenerativeEnv-v1/all_set_with_masks.npy', new_data_set)'''
+            #show_im(np.concatenate([i for i in ims[0]], axis=0))
+    np.save('../data/FetchGenerativeEnv-v1/all_set_with_masks.npy', new_data_set)

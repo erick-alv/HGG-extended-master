@@ -1,15 +1,17 @@
 # DEPRECATED, use baselines.common.plot_util instead
 
 import os
+#import matplotlib
+#matplotlib.rc('xtick', labelsize=20)
+#matplotlib.rc('ytick', labelsize=20)
 import matplotlib.pyplot as plt
+
 import numpy as np
 import json
 import seaborn as sns; sns.set()
 import glob2
 import argparse
 import re
-import pandas as pd
-import math
 
 
 def smooth_reward_curve(x, y):
@@ -73,7 +75,7 @@ if __name__ == "__main__":
     # Load all data.
     data = {}
     paths = [os.path.abspath(os.path.join(path, '..')) for path in glob2.glob(os.path.join(args.dir, '**', 'progress.csv'))]
-    location = 2
+    location = 4
     for curr_path in paths:
         if not os.path.isdir(curr_path):
             continue
@@ -86,8 +88,8 @@ if __name__ == "__main__":
         if args.naming == 0:
             config = clean_path
         elif args.naming == 1:
-            if (("graph" in clean_path) or ("mesh" in clean_path)):
-                config = "G-HGG"
+            if "ihgg" in clean_path:
+                config = "I-HGG"
             elif "hgg" in clean_path:
                 config = "HGG"
             elif "normal" in clean_path:
@@ -141,26 +143,6 @@ if __name__ == "__main__":
                 config = r"G-HGG ($n = 1485$)"
             elif (("graph" in clean_path) or ("mesh" in clean_path)):
                 config = r"G-HGG ($n = 10571$)"
-        elif args.naming == 6:
-            if 'hgg-vae' in clean_path:
-                config = "HGG-VAE"
-            elif 'hgg-optimal' in clean_path:
-                config = "HGG-optimal-case"
-            elif 'hgg-space' in clean_path:
-                config = "HGG-SPACE"
-            elif 'hgg' in clean_path:
-                config = "HGG"
-            else:
-                raise Exception("Naming failed!")
-        elif args.naming == 7:#for James' results
-            if "ihgg" in clean_path:
-                config = "I-HGG"
-            elif "hgg" in clean_path:
-                config = "HGG"
-            elif "normal" in clean_path:
-                config = "HER"
-            else:
-                raise Exception("Naming failed!")
 
         # Test:
         run = config
@@ -193,16 +175,20 @@ if __name__ == "__main__":
                     data[config][run] = []
                 data[config][run].append((x, y))
 
-
     # Plot data.
     print('exporting {}'.format(env_id))
     plt.clf()
+    fig, ax = plt.subplots(figsize=(8., 6.))
+
+    #mpl.rcParams['font.size']  =  100.0  # todo see if this changes something
 
     # new curve for each config
     if args.naming == 4 or args.naming == 5 or args.naming == 1:
         configs = sorted(data.keys(), key=len)
     else:
         configs = sorted(data.keys())
+
+    configs = ['HER', 'HGG', 'I-HGG']
 
     for config in configs:
         print("Config: {}".format(config))
@@ -215,10 +201,17 @@ if __name__ == "__main__":
             plt.plot(xs[0], np.nanmedian(ys, axis=0), label=config)
             plt.fill_between(xs[0], np.nanpercentile(ys, 25, axis=0), np.nanpercentile(ys, 75, axis=0), alpha=0.25)
 
-    plt.title(env_id)
-    plt.xlabel('Iteration')
-    plt.ylabel('Median Success Rate')
-    plt.legend(loc=location)
+    f_size_axes = 18.
+    f_size_title = 16.
+    f_size_ticks = 16.
+    f_size_legend = 16.
+    plt.title(env_id, fontsize=f_size_title)
+    plt.xlabel('Iteration', fontsize=f_size_axes)
+    plt.ylabel('Median Success Rate', fontsize=f_size_axes)
+    plt.xticks(fontsize=f_size_ticks)
+    plt.yticks(fontsize=f_size_ticks)
+    #plt.legend(loc=4,fontsize=f_size_legend)
+    plt.legend(fontsize=f_size_legend)
     plt.savefig(os.path.join(args.dir, 'fig_{}.pdf'.format(env_id)), format='pdf')
     if args.save_path:
         plt.savefig(args.save_path)

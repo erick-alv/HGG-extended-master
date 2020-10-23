@@ -303,7 +303,6 @@ class ImgEncoderFg(nn.Module):
         
         # Foreground Image Encoder in the paper
         # Encoder: (B, C, Himg, Wimg) -> (B, E, G, G)
-        # G is H=W in the paper
         if arch.img_shape[0] == 64:
             self.enc = nn.Sequential(
                 nn.Conv2d(in_channels=3, out_channels=32, kernel_size=4, stride=2, padding=1),

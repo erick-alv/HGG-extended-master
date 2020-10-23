@@ -4,7 +4,9 @@ from common import get_args, experiment_setup
 from hindsight_goals_visualizer import show_points
 from copy import deepcopy
 import pickle
+import torch
 import tensorflow as tf
+from algorithm.sac import SAC
 
 from gym.envs.registration import register
 
@@ -14,7 +16,10 @@ if __name__=='__main__':
 	# Set up learning environment including, gym env, ddpg agent, hgg/normal learner, tester
 	args = get_args()
 	env, env_test, agent, buffer, learner, tester = experiment_setup(args)
-	args.logger.summary_init(agent.graph, agent.sess)
+	if isinstance(agent, SAC):
+		args.logger.summary_init(None, None)
+	else:
+		args.logger.summary_init(agent.graph, agent.sess)
 
 
 	# Progress info
@@ -36,41 +41,6 @@ if __name__=='__main__':
 
 	args.logger.summary_setup()
 	counter= 0
-
-	if args.with_dist_estimator or args.with_dist_estimator_real:
-		for rs in range(5):
-			if args.with_dist_estimator:
-				goal_latents = []
-				obstacle_latents = []
-				obstacle_size_latents = []
-			else:
-				obstacle_real = []
-
-			env.reset()
-			obs = env.get_obs()
-			if args.with_dist_estimator:
-				goal_latents.append(obs['achieved_goal_latent'].copy())
-				obstacle_latents.append(obs['obstacle_latent'].copy())
-				obstacle_size_latents.append(obs['obstacle_size_latent'].copy())
-			else:
-				obstacle_real.append(obs['real_obstacle_pos'])
-			for timestep in range(args.timesteps):
-				# get action from the ddpg policy
-				action = env.action_space.sample()
-				obs, _, _, _ = env.step(action)
-				if args.with_dist_estimator:
-					goal_latents.append(obs['achieved_goal_latent'].copy())
-					obstacle_latents.append(obs['obstacle_latent'].copy())
-					obstacle_size_latents.append(obs['obstacle_size_latent'].copy())
-				else:
-					obstacle_real.append(obs['real_obstacle_pos'])
-			if args.with_dist_estimator:
-				args.dist_estimator.update(obstacle_latents, obstacle_size_latents)
-			else:
-				args.dist_estimator.update(obstacle_real, [])
-			#args.dist_estimator.update_sizes(obstacle_latents, goal_latents)
-			#since this are just randomly not increase
-			args.dist_estimator.update_calls = 0
 
 	# Learning
 	for epoch in range(args.epoches):
@@ -100,19 +70,19 @@ if __name__=='__main__':
 
 			# Save latest policy
 			policy_file = args.logger.my_log_dir + "saved_policy-latest"
-			agent.saver.save(agent.sess, policy_file)
+			agent.save(policy_file)
 
 			# Save policy if new best_success was reached
 			if args.logger.values["Success"] > best_success:
 				best_success = args.logger.values["Success"]
 				policy_file = args.logger.my_log_dir + "saved_policy-best"
-				agent.saver.save(agent.sess, policy_file)
+				agent.save(policy_file)
 				args.logger.info("Saved as best policy to {}!".format(args.logger.my_log_dir))
 
 
 		# Save periodic policy every epoch
 		policy_file = args.logger.my_log_dir + "saved_policy"
-		agent.saver.save(agent.sess, policy_file, global_step=epoch)
+		agent.save(policy_file, global_step=epoch)
 		args.logger.info("Saved periodic policy to {}!".format(args.logger.my_log_dir))
 
 		# Plot current goal distribution for visualization (G-HGG only)

@@ -5,9 +5,9 @@ import numpy as np
 import copy
 
 # Ensure we get the path separator correct on windows
-MODEL_XML_PATH = os.path.join('fetch', 'push_moving_obstacle_fetch.xml')
+MODEL_XML_PATH = os.path.join('fetch', 'push_moving_double_obstacle.xml')
 
-class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
+class FetchPushMovingDoubleObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
     def __init__(self, reward_type='sparse'):
         self.further = False
 
@@ -19,13 +19,15 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.target_goal_center = np.array([1.3, 0.57, 0.425])
         self.object_center = np.array([1.3, 0.93, 0.425])
         #for moving
-        self.obstacle_vel = 8.
+        self.obstacle_vel = 7.
         self.initial_obstacle_direction = 1
         self.obstacle_direction = 1
-        #limits are not 100% percent accurate; cahnging the range and margin parameters from the XML help to improve
+        #limits are not 100% percent accurate; changing the range and margin parameters from the XML help to improve
         #this accuracy
-        self.obstacle_upper_limit = 1.35
-        self.obstacle_lower_limit = 1.25
+        self.obstacle_upper_limit1 = 1.35
+        self.obstacle_lower_limit1 = 1.14
+        self.obstacle_upper_limit2 = 1.46
+        self.obstacle_lower_limit2 = 1.25
 
 
         initial_qpos = {
@@ -41,6 +43,7 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
             initial_qpos=initial_qpos, reward_type=reward_type)
         utils.EzPickle.__init__(self)
         self.obstacle_slider_idx = self.sim.model.joint_names.index('obstacle:joint')
+        self.obstacle_slider_idx2 = self.sim.model.joint_names.index('obstacle2:joint')
 
     # RobotEnv methods
     # ----------------------------
@@ -73,9 +76,10 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.sim.set_state(to_mod)
         self.sim.forward()
 
-    def set_obstacle_slide_vel(self, vel):
+    def set_obstacle_slide_vel(self, vel, vel2):
         qvel = self.sim.data.qvel.flat[:]
         qvel[self.obstacle_slider_idx] = vel
+        qvel[self.obstacle_slider_idx2] = vel2
         to_mod = copy.deepcopy(self.sim.get_state())
         to_mod = to_mod._replace(qvel=qvel)
         self.sim.set_state(to_mod)
@@ -83,15 +87,16 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
 
     def move_obstacle(self):
         body_id = self.sim.model.body_name2id('obstacle')
-        if self.sim.data.body_xpos[body_id][0] >= self.obstacle_upper_limit and self.obstacle_direction == 1:
+        if self.sim.data.body_xpos[body_id][0] >= self.obstacle_upper_limit1 and self.obstacle_direction == 1:
             self.obstacle_direction = -1
-        elif self.sim.data.body_xpos[body_id][0] <= self.obstacle_lower_limit and self.obstacle_direction == -1:
+        elif self.sim.data.body_xpos[body_id][0] <= self.obstacle_lower_limit1 and self.obstacle_direction == -1:
             self.obstacle_direction = 1
-        self.set_obstacle_slide_vel(self.obstacle_vel*self.obstacle_direction)
+        self.set_obstacle_slide_vel(self.obstacle_vel*self.obstacle_direction, self.obstacle_vel*self.obstacle_direction*-1)
+        #print(self.sim.data.body_xpos[body_id][0])
 
     def step(self, action):
         self.move_obstacle()
-        return super(FetchPushMovingObstacleEnv, self).step(action)
+        return super(FetchPushMovingDoubleObstacleEnv, self).step(action)
 
 
     def _sample_goal(self):
@@ -102,7 +107,7 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
     def _reset_sim(self):
         self.sim.set_state(self.initial_state)
         self.obstacle_direction = self.initial_obstacle_direction
-        self.set_obstacle_slide_vel(self.obstacle_vel * self.obstacle_direction)
+        self.set_obstacle_slide_vel(self.obstacle_vel * self.obstacle_direction, self.obstacle_vel * self.obstacle_direction*-1)
 
         object_xpos = self.object_center[:2] + self.np_random.uniform(-self.obj_range,
                                                                       self.obj_range, size=2)
@@ -116,9 +121,15 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         return True
 
     def _get_obs(self):
-        obs = super(FetchPushMovingObstacleEnv, self)._get_obs()
+        obs = super(FetchPushMovingDoubleObstacleEnv, self)._get_obs()
         body_id = self.sim.model.body_name2id('obstacle')
-        obs['real_obstacle_info'] = self.sim.data.body_xpos[body_id].copy()
+        pos1 = np.array(self.sim.data.body_xpos[body_id].copy())
+        body_id2 = self.sim.model.body_name2id('obstacle2')
+        pos2 = np.array(self.sim.data.body_xpos[body_id2].copy())
+        dims = np.array([0.14, 0.018, 0.035])
+        ob1 = np.concatenate((pos1, dims.copy()))
+        ob2 = np.concatenate((pos2, dims.copy()))
+        obs['real_obstacle_info'] = np.array([ob1, ob2])
         return obs
 
 '''if __name__ == '__main__':

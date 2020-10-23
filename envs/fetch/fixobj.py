@@ -13,7 +13,7 @@ class FixedObjectGoalEnv(VanillaGoalEnv):
 		self.sim.set_state(self.initial_state)
 
 		if self.has_object:
-			if hasattr(self, 'object_center'):
+			if self.object_center is not None:
 				object_xpos = self.object_center[:2] \
 							  + np.random.uniform(-self.obj_range, self.obj_range, size=2)
 				object_qpos = self.sim.data.get_joint_qpos('object0:joint')

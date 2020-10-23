@@ -338,7 +338,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
     #creates indexes and shuffles them. So it can acces the data
     idx_set = np.arange(data_size)
     np.random.shuffle(idx_set)
-    idx_set = idx_set[:20000]#todo delete this
+    idx_set = idx_set[:1200]#[:20000]#todo delete this
     idx_set = np.split(idx_set, len(idx_set) / batch_size)
     for batch_idx, idx_select in enumerate(idx_set):
         data = data_set[idx_select]
@@ -500,7 +500,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=32.)
+    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=10.)#32
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=20)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
@@ -520,16 +520,16 @@ if __name__ == '__main__':
     train_file = data_dir + train_file_name[args.enc_type]
     weights_path = data_dir + vae_sb_weights_file_name[args.enc_type]
 
-    train_Vae(epochs=args.train_epochs, batch_size=args.batch_size,img_size=args.img_size,latent_size=args.latent_size,
+    '''train_Vae(epochs=args.train_epochs, batch_size=args.batch_size,img_size=args.img_size,latent_size=args.latent_size,
               train_file=train_file,
               vae_weights_path=weights_path, beta=args.beta, gamma=args.gamma, bg_sigma=args.bg_sigma,
-              fg_sigma=args.fg_sigma, load=False, num_slots=args.num_slots)
+              fg_sigma=args.fg_sigma, load=False, num_slots=args.num_slots)'''
 
 
-    '''device = torch.device("cuda")
+    device = torch.device("cuda")
 
     model = load_Vae(path=weights_path, img_size=args.img_size, latent_size=args.latent_size)
 
 
     compare_with_data_set(model=model, device=device, latent_size=args.latent_size,
-                     filename_suffix="test", train_file=train_file )'''
+                     filename_suffix="test", train_file=train_file )

@@ -25,9 +25,9 @@ class VanillaGoalEnv():
 		self.target_in_the_air = self.env.env.target_in_the_air
 		if self.has_object: self.height_offset = self.env.env.height_offset
 		if not hasattr(self.env.env, 'target_goal_center'):
-			delattr(self, 'target_goal_center')
+			self.target_goal_center = None
 		if not hasattr(self.env.env, 'object_center'):
-			delattr(self, 'object_center')
+			self.object_center = None
 
 		self.render = self.env.render
 		self.reset_sim = self.env.env._reset_sim
@@ -208,19 +208,34 @@ class VanillaGoalEnv():
 
 	@property
 	def target_goal_center(self):
-		return self.env.env.target_goal_center.copy()
+		v = self.env.env.target_goal_center
+		if v is None:
+			return None
+		else:
+			return v.copy()
 
 	@target_goal_center.setter
 	def target_goal_center(self, value):
-		self.env.env.target_goal_center = value.copy()
+		if value is not None:
+			self.env.env.target_goal_center = value.copy()
+		else:
+			self.env.env.target_goal_center = None
 
 	@property
 	def object_center(self):
-		return self.env.env.object_center.copy()
+		v = self.env.env.object_center
+		if v is None:
+			return None
+		else:
+			return v.copy()
+
 
 	@object_center.setter
 	def object_center(self, value):
-		self.env.env.object_center = value.copy()
+		if value is not None:
+			self.env.env.object_center = value.copy()
+		else:
+			self.env.env.object_center = None
 
 	@property
 	def obj_range(self):

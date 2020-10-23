@@ -13,14 +13,14 @@ from j_vae.train_monet import load_Vae as load_Monet
 from j_vae.common_data import vae_sb_weights_file_name, vae_weights_file_name
 from PIL import Image
 from vae_env_inter import take_env_image, take_image_objects
-from j_vae.distance_estimation import calculate_distance, DistMovEst, DistMovEstReal
+from j_vae.distance_estimation import calculate_distance, DistMovEst, DistMovEstReal, MultipleDist, MultipleDistReal
 from SPACE.main_space import load_space_model
 
 def get_args():
 	parser = get_arg_parser()
 
 	parser.add_argument('--tag', help='terminal tag in logger', type=str, default='')
-	parser.add_argument('--alg', help='backend algorithm', type=str, default='ddpg', choices=['ddpg', 'ddpg2'])
+	parser.add_argument('--alg', help='backend algorithm', type=str, default='ddpg', choices=['ddpg', 'ddpg2', 'sac'])
 	parser.add_argument('--learn', help='type of training method', type=str, default='hgg', choices=learner_collection.keys())
 
 	parser.add_argument('--env', help='gym env id', type=str, default='FetchReach-v1', choices=Robotics_envs_id)
@@ -38,6 +38,7 @@ def get_args():
 	parser.add_argument('--play_path', help='path to meta_file directory for play', type=str, default=None)
 	parser.add_argument('--play_epoch', help='epoch to play', type=str, default='latest')
 	parser.add_argument('--stop_hgg_threshold', help='threshold of goals inside goalspace, between 0 and 1, deactivated by default value 2!', type=np.float32, default=2)
+	parser.add_argument('--agent_device', help='the device to load the agent', type=str, default='cpu')
 
 	parser.add_argument('--n_x', help='number of vertices in x-direction for g-hgg', type=int, default=31)
 	parser.add_argument('--n_y', help='number of vertices in y-direction for g-hgg', type=int, default=31)
@@ -99,12 +100,12 @@ def get_args():
 	parser.add_argument('--size_ind', help='index 2 component latent vector', type=np.int32, default=None)
 	parser.add_argument('--size_ind_2', help='index 2 component latent vector', type=np.int32, default=None)
 
-	parser.add_argument('--with_dist_estimator', help='see if use the same VAE also for size',
-						type=str2bool, default=False)
-	parser.add_argument('--with_dist_estimator_real', help='see if use the same VAE also for size',
-						type=str2bool, default=False)
+	parser.add_argument('--dist_estimator_type', help='the type if dist estimator to use or None if not using',
+						type=str, default=None,
+						choices=['normal', 'realCoords', 'multiple', 'multipleReal'])
 	#for dense reward transformation
 	parser.add_argument('--transform_dense', help='if transform to dense with VAES or not', type=str2bool, default=False)
+
 
 
 	args = parser.parse_args()
@@ -187,27 +188,106 @@ def load_vaes(args):
 		raise Exception("VAE type of size invalid or not given")
 
 
+#This loads the field in 2D since methods used extract information in this way
+def load_field_parameters(args):
+	if args.vae_dist_help:
+		if args.vae_type == 'space':
+			#model space is trained to create measures in range [-1, 1]
+			args.field_center = [0., 0.]
+			args.field_size = [1., 1.]
+		else:
+			raise Warning('Using a VAE or model, with own space. Assure that the transformations is this space are correct')
+	else:
+		if args.env in ['FetchPushLabyrinth-v1', 'FetchPushObstacleFetchEnv-v1', 'FetchPushMovingObstacleEnv-v1']:
+			args.field_center = [1.3, 0.75]
+			args.field_size = [0.25, 0.25]
+		elif args.env in ['FetchPushMovingDoubleObstacleEnv-v1']:
+			args.field_center = [1.3, 0.75]
+			args.field_size = [0.3, 0.3]
+		else:
+			raise Warning('The environment used does not have predefined field dimensions. Assure they are not needed')
+
+def load_dist_estimator(args, env):
+	if args.dist_estimator_type == 'normal':
+		args.dist_estimator = DistMovEst()
+	elif args.dist_estimator_type == 'realCoords':
+		args.dist_estimator = DistMovEstReal()
+	elif args.dist_estimator_type == 'multipleReal':
+		args.dist_estimator = MultipleDistReal()
+	else:
+		raise Exception('logic for dist estimator type not implemented yet')
+
+	for rs in range(5):
+		if args.dist_estimator_type == 'normal':
+			goal_latents = []
+			obstacle_latents = []
+			obstacle_size_latents = []
+		elif args.dist_estimator_type == 'realCoords' or args.dist_estimator_type == 'multipleReal':
+			obstacle_real = []
+		else:
+			raise Exception('logic for dist estimator type not implemented yet')
+
+		env.reset()
+		obs = env.get_obs()
+		if args.dist_estimator_type == 'normal':
+			goal_latents.append(obs['achieved_goal_latent'].copy())
+			obstacle_latents.append(obs['obstacle_latent'].copy())
+			obstacle_size_latents.append(obs['obstacle_size_latent'].copy())
+		elif args.dist_estimator_type == 'realCoords' or args.dist_estimator_type == 'multipleReal':
+			obstacle_real.append(obs['real_obstacle_info'])
+		else:
+			raise Exception('logic for dist estimator type not implemented yet')
+
+		for timestep in range(args.timesteps):
+			# get action from the ddpg policy
+			action = env.action_space.sample()
+			obs, _, _, _ = env.step(action)
+			if args.dist_estimator_type == 'normal':
+				goal_latents.append(obs['achieved_goal_latent'].copy())
+				obstacle_latents.append(obs['obstacle_latent'].copy())
+				obstacle_size_latents.append(obs['obstacle_size_latent'].copy())
+			elif args.dist_estimator_type == 'realCoords' or args.dist_estimator_type == 'multipleReal':
+				obstacle_real.append(obs['real_obstacle_info'])
+			else:
+				raise Exception('logic for dist estimator type not implemented yet')
+
+		if args.dist_estimator_type == 'normal':
+			args.dist_estimator.update(obstacle_latents, obstacle_size_latents)
+		elif args.dist_estimator_type == 'realCoords' or args.dist_estimator_type == 'multipleReal':
+			args.dist_estimator.update(obstacle_real, [])
+		else:
+			raise Exception('logic for dist estimator type not implemented yet')
+
+		#args.dist_estimator.update_sizes(obstacle_latents, goal_latents)
+		#since this are just randomly not increase
+		args.dist_estimator.update_calls = 0
+	if args.dist_estimator_type == 'multiple' or args.dist_estimator_type == 'multipleReal':
+		args.dist_estimator.initialize_internal_distance_graph([args.field_center[0], args.field_center[1],
+																args.field_size[0], args.field_size[1]],
+															   num_vertices=[100, 100], size_increase=0.0)
+		#args.dist_estimator.graph.plot_graph(graph=True, obstacle_vertices=True, save_path='test')
 
 
 def experiment_setup(args):
-	if args.vae_dist_help or args.transform_dense:
+	if args.vae_dist_help:
 		load_vaes(args)
 
-	if args.transform_dense:
-		args.compute_reward_dense = calculate_distance
 
 	env = make_env(args)
 	env_test = make_env(args)
-	if args.with_dist_estimator:
-		args.dist_estimator = DistMovEst()
-	elif args.with_dist_estimator_real:
-		args.dist_estimator = DistMovEstReal()
+
+	load_field_parameters(args)
+	if args.dist_estimator_type is not None:
+		load_dist_estimator(args, env)
+
+
 	#rgb_array = take_env_image(env, args.img_size)
 	#img = Image.fromarray(rgb_array)
 	#img.show()
 	#img.close()
 
 	if args.goal_based:
+
 		args.obs_dims = list(goal_based_process(env.reset()).shape)
 		args.acts_dims = [env.action_space.shape[0]]
 		args.compute_reward = env.compute_reward

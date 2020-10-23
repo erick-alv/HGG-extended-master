@@ -46,6 +46,10 @@ def take_env_image(env, img_size):
     env.env.env._set_visibility(names_list=['object0'], alpha_val=1.0)
     env.env.env._set_visibility(names_list=['obstacle'], alpha_val=1.0)
     env.env.env._set_visibility(names_list=['table0'], alpha_val=1.0)
+    try:
+        env.env.env._set_visibility(names_list=['obstacle2'], alpha_val=1.0)
+    except:
+        pass
     for id in  [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,16, 17, 18, 21]:
         env.env.env._set_visibility_with_id(id, alpha_val=0.2)
     #just to activate in case viewer is not intialized
@@ -65,7 +69,7 @@ def take_objects_image_training(env, img_size):
     env.env.env._set_visibility(names_list=['cube'], alpha_val=1.0)
     env.env.env._set_visibility(names_list=['cylinder'], alpha_val=1.0)
     env.env.env._set_visibility(names_list=['table0'], alpha_val=0.0)
-    # just to activate in case viewer is not intialized
+    # just to activate in case viewer is not initialized
     if not hasattr(env.env.env.viewer, 'cam'):
         np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
     rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
@@ -75,6 +79,11 @@ def take_image_objects(env, img_size):
     env.env.env._set_arm_visible(visible=False)
     env.env.env._set_visibility(names_list=['object0'], alpha_val=1.0)
     env.env.env._set_visibility(names_list=['obstacle'], alpha_val=1.0)
+    try:
+        env.env.env._set_visibility(names_list=['obstacle2'], alpha_val=1.0)
+        env.env.env._set_visibility(names_list=['table0'], alpha_val=0.3)
+    except:
+        pass
     # just to activate in case viewer is not intialized
     if not hasattr(env.env.env.viewer, 'cam'):
         np.array(env.render(mode='rgb_array', width=img_size, height=img_size))

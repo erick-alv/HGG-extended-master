@@ -11,7 +11,7 @@ class IntervalGoalEnv(FixedObjectGoalEnv):
 		FixedObjectGoalEnv.__init__(self, args)
 
 	def generate_goal_old(self):
-		if hasattr(self, 'target_goal_center'):
+		if self.target_goal_center is not None:
 			goal = self.target_goal_center + np.random.uniform(-self.target_range, self.target_range, size=3)
 			goal[2] = self.height_offset
 		else:
