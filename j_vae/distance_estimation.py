@@ -261,14 +261,14 @@ class DistMovEst:
             self.s_x = s_x
             self.s_y = s_y
         else:
-            if b_x + self.s_x > self.max_x:
-                self.max_x = b_x + self.s_x
-            if a_x - self.s_x < self.min_x:
-                self.min_x = a_x - self.s_x
-            if b_y + self.s_x > self.max_y:
-                self.max_y = b_y + self.s_x
-            if a_y - self.s_x < self.min_y:
-                self.min_y = a_y - self.s_x
+            if b_x + s_x > self.max_x:
+                self.max_x = b_x + s_x
+            if a_x - s_x < self.min_x:
+                self.min_x = a_x - s_x
+            if b_y + s_y > self.max_y:
+                self.max_y = b_y + s_y
+            if a_y - s_y < self.min_y:
+                self.min_y = a_y - s_y
 
         self.x_mid = np.mean([self.max_x, self.min_x])
         self.y_mid = np.mean([self.max_y, self.min_y])
@@ -276,33 +276,30 @@ class DistMovEst:
         if self.update_calls == 3:
             self.update_complete = True
 
-    def update_sizes(self, obstacle_latent_list, goal_latent_list):
-        obstacle_latents = np.array(obstacle_latent_list)
-        goal_latents = np.array(goal_latent_list)
-
-        diffs_x = np.abs(goal_latents[:, 0] - obstacle_latents[:, 0])
-        diffs_y = np.abs(goal_latents[:, 1] - obstacle_latents[:, 1])
-        x_smaller = diffs_x < self.s_x
-        y_smaller = diffs_y < self.s_y
-        both = np.logical_and(x_smaller, y_smaller)
-        x_correction_candidates = diffs_x[both]
-        if len(x_correction_candidates) > 0:
-            s_min_x = np.min(x_correction_candidates)
-            print('updating x to: {}'.format(s_min_x))
-            self.max_x = self.max_x - self.s_x + s_min_x
-            self.min_x = self.min_x + self.s_x - s_min_x
-            self.x_mid = np.mean([self.max_x, self.min_x])
-            self.s_x = s_min_x.copy()
-        y_correction_candidates = diffs_y[both]
-        if len(y_correction_candidates) > 0:
-            s_min_y = np.min(y_correction_candidates)
-            print('updating y to: {}'.format(s_min_y))
-            self.max_y = self.max_y - self.s_y + s_min_y
-            self.min_y = self.min_y + self.s_y - s_min_y
-            self.y_mid = np.mean([self.max_y, self.min_y])
-            self.s_y = s_min_y.copy()
+    def initialize_internal_distance_graph(self, field, num_vertices, size_increase):
+        obstacles = []
+        size_x = self.max_x - self.x_mid
+        size_y = self.max_y - self.y_mid
+        obstacles.append([self.x_mid, self.y_mid, size_x, size_y])
+        graph = DistanceGraph2D(args=None, field=field, num_vertices=num_vertices,
+                                obstacles=obstacles, size_increase=size_increase)
+        graph.compute_cs_graph()
+        graph.compute_dist_matrix()
+        self.graph = graph
 
     def calculate_distance_batch(self, goal_pos, current_pos_batch):
+        B = len(current_pos_batch)
+        distances = []
+        for i in range(B):
+            d, _ = self.graph.get_dist(goal_pos, current_pos_batch[i])
+            if d == np.inf:
+                d = 9999
+            distances.append(d)
+        distances = np.array(distances)
+        return distances
+
+
+    '''def calculate_distance_batch(self, goal_pos, current_pos_batch):
         #todo generalize this even more
         # http://www.jeffreythompson.org/collision-detection/line-line.php
         def lines_to_line_intersection(xs1, ys1, x2, y2, x3, y3, x4, y4):
@@ -351,7 +348,7 @@ class DistMovEst:
         return distances
 
 
-        '''to_g_v = goal_point - points
+        to_g_v = goal_point - points
         distance = np.linalg.norm(to_g_v, axis=1)
         normalized = to_g_v / distance
         #to y
@@ -369,22 +366,11 @@ class DistMovEst:
         ds[inside] = modified_distances
         pass'''
 
-    def prob_dstr_x(self, x_coordinates):
-        assert self.min_x is None and self.max_x is not None
-        prs = uniform.pdf(x_coordinates, loc=self.min_x, scale=self.max_x - self.min_x)
-        return prs
-
-    def prob_dstr_y(self, y_coordinates):
-        assert self.min_y is None and self.max_y is not None
-        prs = uniform.pdf(y_coordinates, loc=self.min_y, scale=self.max_y - self.min_y)
-        return prs
-
 class DistMovEstReal(DistMovEst):
     def __init__(self):
         super(DistMovEstReal, self).__init__()
         self.real = True
-        self.s_x = 0.09
-        self.s_y = 0.03
+
 
     def update(self, obstacle_real_list, obstacle_size_real_list):
         obstacle_real_array = np.array(obstacle_real_list)
@@ -393,20 +379,24 @@ class DistMovEstReal(DistMovEst):
         b_x = np.max(obstacle_real_array[:, 0])
         a_y = np.min(obstacle_real_array[:, 1])
         b_y = np.max(obstacle_real_array[:, 1])
+        s_x = np.mean(obstacle_real_array[:, 3])
+        s_y = np.mean(obstacle_real_array[:, 4])
         if self.min_x == None:  # assume everything else is
-            self.max_x = b_x + self.s_x
-            self.min_x = a_x - self.s_x
-            self.max_y = b_y + self.s_y
-            self.min_y = a_y - self.s_y
+            self.max_x = b_x + s_x
+            self.min_x = a_x - s_x
+            self.max_y = b_y + s_y
+            self.min_y = a_y - s_y
+            self.s_x = s_x
+            self.s_y = s_y
         else:
-            if b_x + self.s_x > self.max_x:
-                self.max_x = b_x + self.s_x
-            if a_x - self.s_x < self.min_x:
-                self.min_x = a_x - self.s_x
-            if b_y + self.s_x > self.max_y:
-                self.max_y = b_y + self.s_x
-            if a_y - self.s_x < self.min_y:
-                self.min_y = a_y - self.s_x
+            if b_x + s_x > self.max_x:
+                self.max_x = b_x + s_x
+            if a_x - s_x < self.min_x:
+                self.min_x = a_x - s_x
+            if b_y + s_y > self.max_y:
+                self.max_y = b_y + s_y
+            if a_y - s_y < self.min_y:
+                self.min_y = a_y - s_y
 
         self.x_mid = np.mean([self.max_x, self.min_x])
         self.y_mid = np.mean([self.max_y, self.min_y])
@@ -414,10 +404,29 @@ class DistMovEstReal(DistMovEst):
         if self.update_calls == 3:
             self.update_complete = True
 
-    def update_sizes(self, obstacle_real_list, goal_real_list):
-        pass
+    def initialize_internal_distance_graph(self, field, num_vertices, size_increase):
+        obstacles = []
+        size_x = self.max_x - self.x_mid
+        size_y = self.max_y - self.y_mid
+        obstacles.append([self.x_mid, self.y_mid, size_x, size_y])
+        graph = DistanceGraph2D(args=None, field=field, num_vertices=num_vertices,
+                                obstacles=obstacles, size_increase=size_increase)
+        graph.compute_cs_graph()
+        graph.compute_dist_matrix()
+        self.graph = graph
 
     def calculate_distance_batch(self, goal_pos, current_pos_batch):
+        B = len(current_pos_batch)
+        distances = []
+        for i in range(B):
+            d, _ = self.graph.get_dist(goal_pos, current_pos_batch[i])
+            if d == np.inf:
+                d = 9999
+            distances.append(d)
+        distances = np.array(distances)
+        return distances
+
+    '''def calculate_distance_batch(self, goal_pos, current_pos_batch):
         #todo generalize this even more
         # http://www.jeffreythompson.org/collision-detection/line-line.php
         def lines_to_line_intersection(xs1, ys1, x2, y2, x3, y3, x4, y4):
@@ -468,17 +477,13 @@ class DistMovEstReal(DistMovEst):
         through_bottom = np.linalg.norm(undr_pos - bottom, axis=1) + np.linalg.norm(goal_pos - bottom)
         min_d = np.minimum(through_top, through_bottom)
         distances[inside] = min_d
-        return distances
+        return distances'''
 
-    def prob_dstr_x(self, x_coordinates):
-        pass
 
-    def prob_dstr_y(self, y_coordinates):
-        pass
 
 from envs.distance_graph import  DistanceGraph2D
 #Works for estimations in 2D plane
-class MultipleDistReal(DistMovEstReal):#in same principle the same but for every single obstacle
+class MultipleObstacle(DistMovEst):
     def __init__(self):
         self.max_x = None
         self.min_x = None
@@ -493,6 +498,30 @@ class MultipleDistReal(DistMovEstReal):#in same principle the same but for every
         self.real = True
         self.none_vals_yet = True
 
+    def initialize_internal_distance_graph(self, field, num_vertices, size_increase):
+        obstacles = []
+        for i in range(len(self.x_mid)):
+            size_x = self.max_x[i] - self.x_mid[i]
+            size_y = self.max_y[i] - self.y_mid[i]
+            obstacles.append([self.x_mid[i], self.y_mid[i], size_x, size_y])
+        graph = DistanceGraph2D(args=None, field=field, num_vertices=num_vertices,
+                                obstacles=obstacles, size_increase=size_increase)
+        graph.compute_cs_graph()
+        graph.compute_dist_matrix()
+        self.graph = graph
+
+    def calculate_distance_batch(self, goal_pos, current_pos_batch):
+        B = len(current_pos_batch)
+        distances = []
+        for i in range(B):
+            d, _ = self.graph.get_dist(goal_pos, current_pos_batch[i])
+            if d == np.inf:
+                d = 9999
+            distances.append(d)
+        distances = np.array(distances)
+        return distances
+
+class MultipleDistReal(MultipleObstacle):#in same principle the same but for every single obstacle
 
     def update(self, obstacle_latent_list, obstacle_size_latent_list):
         #obstacle_size_latent will be actually empty
@@ -534,33 +563,92 @@ class MultipleDistReal(DistMovEstReal):#in same principle the same but for every
         self.x_mid = (self.max_x + self.min_x) / 2.0
         self.y_mid = (self.max_y + self.min_y) / 2.0
 
-    def initialize_internal_distance_graph(self, field, num_vertices, size_increase):
-        obstacles = []
-        for i in range(len(self.x_mid)):
-            size_x = self.max_x[i] - self.x_mid[i]
-            size_y = self.max_y[i] - self.y_mid[i]
-            obstacles.append([self.x_mid[i], self.y_mid[i], size_x, size_y])
-        graph = DistanceGraph2D(args=None, field=field, num_vertices=num_vertices,
-                                obstacles=obstacles, size_increase=size_increase)
-        graph.compute_cs_graph()
-        graph.compute_dist_matrix()
-        self.graph = graph
 
-    def calculate_distance_batch(self, goal_pos, current_pos_batch):
-        B = len(current_pos_batch)
-        distances = []
-        for i in range(B):
-            d, _ = self.graph.get_dist(goal_pos, current_pos_batch[i])
-            if d == np.inf:
-                d = 9999
-            distances.append(d)
-        distances = np.array(distances)
-        return distances
+
+class MultipleDist(MultipleObstacle):
+    def update(self, obstacle_latent_list, obstacle_size_latent_list):
+        #obstacle_size_latent will be actually empty
+        #todo for now we suppose that obstacles keep their relationship
+        #todo for now this will just work for double obstacle array
+        #divide corresponding to y axis
 
 
 
-class MultipleDist(DistMovEst):
-    pass
+
+        if not isinstance(obstacle_size_latent_list, np.ndarray):
+            obstacle_array = np.array(obstacle_latent_list)
+            obstacle_array_size = np.array(obstacle_size_latent_list)
+        else:
+            obstacle_array = obstacle_size_latent_list
+            obstacle_array_size = obstacle_size_latent_list
+
+        #shape of obstacle size latent (B, N, D); B number of samples; N number of obstacles, D dimension of attribute
+        #must be done in this way since now it recognizes multiple obstacles, somtimes different numbers
+        #sorted = [np.zeros_like(ar) for ar in obstacle_array]
+        #sorted = np.array(sorted)
+        #sorted_size = [np.zeros_like(ar) for ar in obstacle_array_size]
+        #sorted_size = np.array(sorted_size)
+        N = 0
+        y_acc = 0.
+        n_acc = 0
+        for index, batch_els in enumerate(obstacle_array):
+            #sorted_x_indices = np.argsort(batch_els[:, 0])
+            #sorted_x = batch_els[sorted_x_indices]
+            #sorted_x_size = obstacle_array_size[index][sorted_x_indices]
+            #sorted_y_indices = np.argsort(sorted_x[:, 1])
+            #sorted_y = sorted_x[sorted_y_indices]
+            #sorted_y_size = sorted_x_size[sorted_y_indices]
+            #sorted[index] = sorted_y
+            #sorted_size[index] = sorted_y_size
+            if len(batch_els) > N:
+                N = len(batch_els)
+            n_acc += len(batch_els)
+            y_acc += np.sum(batch_els[:, 1])
+        y_mean = y_acc/n_acc
+
+
+
+        obstacle_array = sorted.copy()
+        obstacle_array_size = sorted_size.copy()
+
+        #(B, N, D) -> (N, B, D)
+        B = len(obstacle_array)
+        #max N
+
+        #obstacle_array = np.transpose(obstacle_array, axes=[1, 0, 2])
+        #N, B, D = obstacle_array.shape
+
+        #each object info is organized as [x,y,z,size_x,size_y, size_z]
+        el = obstacle_array[:][ 0:N, 0]
+        #for
+
+        a_xs = np.amin(obstacle_array[0:N, :, 0], axis=1)
+        b_xs = np.amax(obstacle_array[0:N, :, 0], axis=1)
+        a_ys = np.amin(obstacle_array[0:N, :, 1], axis=1)
+        b_ys = np.amax(obstacle_array[0:N, :, 1], axis=1)
+        s_xs = np.mean(obstacle_array[0:N, :, 3], axis=1)
+        s_ys = np.mean(obstacle_array[0:N, :, 4], axis=1)
+
+        if self.none_vals_yet:#assume everything else is
+            self.max_x = b_xs + s_xs
+            self.min_x = a_xs - s_xs
+            self.max_y = b_ys + s_ys
+            self.min_y = a_ys - s_ys
+            self.s_x = s_xs
+            self.s_y = s_ys
+            self.none_vals_yet = False
+        else:
+            indices_to_change = b_xs + s_xs > self.max_x
+            self.max_x[indices_to_change] = b_xs[indices_to_change] + s_xs[indices_to_change]
+            indices_to_change = a_xs - s_xs < self.min_x
+            self.min_x[indices_to_change] = a_xs[indices_to_change] - s_xs[indices_to_change]
+            indices_to_change = b_ys + s_ys > self.max_y
+            self.max_y[indices_to_change] = b_ys[indices_to_change] + s_ys[indices_to_change]
+            indices_to_change = a_ys - s_ys < self.min_y
+            self.min_y[indices_to_change] = a_ys[indices_to_change] - s_ys[indices_to_change]
+
+        self.x_mid = (self.max_x + self.min_x) / 2.0
+        self.y_mid = (self.max_y + self.min_y) / 2.0
 
 
 

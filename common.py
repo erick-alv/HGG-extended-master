@@ -192,9 +192,9 @@ def load_vaes(args):
 def load_field_parameters(args):
 	if args.vae_dist_help:
 		if args.vae_type == 'space':
-			#model space is trained to create measures in range [-1, 1]
+			#model space is trained to create measures in range [-1, 1], a bit more for calculation
 			args.field_center = [0., 0.]
-			args.field_size = [1., 1.]
+			args.field_size = [1.2, 1.2]
 		else:
 			raise Warning('Using a VAE or model, with own space. Assure that the transformations is this space are correct')
 	else:
@@ -218,8 +218,7 @@ def load_dist_estimator(args, env):
 		raise Exception('logic for dist estimator type not implemented yet')
 
 	for rs in range(5):
-		if args.dist_estimator_type == 'normal':
-			goal_latents = []
+		if args.dist_estimator_type == 'normal' or args.dist_estimator_type == 'multiple':
 			obstacle_latents = []
 			obstacle_size_latents = []
 		elif args.dist_estimator_type == 'realCoords' or args.dist_estimator_type == 'multipleReal':
@@ -229,8 +228,7 @@ def load_dist_estimator(args, env):
 
 		env.reset()
 		obs = env.get_obs()
-		if args.dist_estimator_type == 'normal':
-			goal_latents.append(obs['achieved_goal_latent'].copy())
+		if args.dist_estimator_type == 'normal' or args.dist_estimator_type == 'multiple':
 			obstacle_latents.append(obs['obstacle_latent'].copy())
 			obstacle_size_latents.append(obs['obstacle_size_latent'].copy())
 		elif args.dist_estimator_type == 'realCoords' or args.dist_estimator_type == 'multipleReal':
@@ -242,8 +240,7 @@ def load_dist_estimator(args, env):
 			# get action from the ddpg policy
 			action = env.action_space.sample()
 			obs, _, _, _ = env.step(action)
-			if args.dist_estimator_type == 'normal':
-				goal_latents.append(obs['achieved_goal_latent'].copy())
+			if args.dist_estimator_type == 'normal' or args.dist_estimator_type == 'multiple':
 				obstacle_latents.append(obs['obstacle_latent'].copy())
 				obstacle_size_latents.append(obs['obstacle_size_latent'].copy())
 			elif args.dist_estimator_type == 'realCoords' or args.dist_estimator_type == 'multipleReal':
@@ -251,21 +248,20 @@ def load_dist_estimator(args, env):
 			else:
 				raise Exception('logic for dist estimator type not implemented yet')
 
-		if args.dist_estimator_type == 'normal':
+		if args.dist_estimator_type == 'normal' or args.dist_estimator_type == 'multiple':
 			args.dist_estimator.update(obstacle_latents, obstacle_size_latents)
 		elif args.dist_estimator_type == 'realCoords' or args.dist_estimator_type == 'multipleReal':
 			args.dist_estimator.update(obstacle_real, [])
 		else:
 			raise Exception('logic for dist estimator type not implemented yet')
 
-		#args.dist_estimator.update_sizes(obstacle_latents, goal_latents)
 		#since this are just randomly not increase
 		args.dist_estimator.update_calls = 0
-	if args.dist_estimator_type == 'multiple' or args.dist_estimator_type == 'multipleReal':
+	if args.dist_estimator_type == 'normal' or args.dist_estimator_type == 'realCoords' or args.dist_estimator_type == 'multiple' or args.dist_estimator_type == 'multipleReal':
 		args.dist_estimator.initialize_internal_distance_graph([args.field_center[0], args.field_center[1],
 																args.field_size[0], args.field_size[1]],
 															   num_vertices=[100, 100], size_increase=0.0)
-		#args.dist_estimator.graph.plot_graph(graph=True, obstacle_vertices=True, save_path='test')
+		args.dist_estimator.graph.plot_graph(save_path='test', elev=90, azim=0)
 
 
 def experiment_setup(args):

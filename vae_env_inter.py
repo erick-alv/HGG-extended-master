@@ -213,13 +213,18 @@ def latents_from_images(images, args):
 
 
 #todo this must be inferred
-def get_indices_goal_obstacle(z_char, goal_val=-1.19, goal_val2=3.8, obstacle_val=1.3, obstacle_val2=3.2):
-    goal_indices = z_char[:, 8] <= goal_val
+def get_indices_goal_obstacle(z_char, goal_val=0.8, goal_val2=3.8, obstacle_val=1.3, obstacle_val2=3.2):#goal_val=-1.19, goal_val2=3.8, obstacle_val=1.3, obstacle_val2=3.2):
+    #mean = 0.5 * z_char[:, 2] + 0.5 * z_char[:, 3]
+    #goal_indices = mean <= -0.65#-0.9
+    goal_indices = z_char[:, 2] <= -0.5
+    obstacle_indices = np.logical_not(goal_indices)
+    '''#goal_indices = z_char[:, 2] <= goal_val
+    goal_indices = z_char[:, 2] >= goal_val
     obstacle_indices = np.logical_not(goal_indices)
     #goal_indices = z_char[:, 9] <= goal_val
     #goal_indices_2 = z_char[:, 9] >= goal_val2
     #goal_indices = np.logical_or(goal_indices, goal_indices_2)
     #obstacle_indices = z_char[:, 9] >= obstacle_val
     #obstacle_indices2 = z_char[:, 9] <= obstacle_val2
-    #obstacle_indices = np.logical_and(obstacle_indices, obstacle_indices2)
+    #obstacle_indices = np.logical_and(obstacle_indices, obstacle_indices2)'''
     return np.squeeze(np.argwhere(goal_indices), axis=1), np.squeeze(np.argwhere(obstacle_indices), axis=1)

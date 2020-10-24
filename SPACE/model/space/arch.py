@@ -22,7 +22,7 @@ arch = CfgNode({
     'z_where_scale_dim': 2,
     # (x, y)
     'z_where_shift_dim': 2,
-    'z_what_dim': 32,
+    'z_what_dim': 4,
     
     # z_pres prior
     'z_pres_start_step': 4000,

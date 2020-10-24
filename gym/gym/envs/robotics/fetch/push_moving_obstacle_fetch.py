@@ -118,7 +118,10 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
     def _get_obs(self):
         obs = super(FetchPushMovingObstacleEnv, self)._get_obs()
         body_id = self.sim.model.body_name2id('obstacle')
-        obs['real_obstacle_info'] = self.sim.data.body_xpos[body_id].copy()
+        pos = self.sim.data.body_xpos[body_id].copy()
+        dims = np.array([0.09, 0.03, 0.035])
+        ob = np.concatenate((pos, dims.copy()))
+        obs['real_obstacle_info'] = ob.copy()
         return obs
 
 '''if __name__ == '__main__':

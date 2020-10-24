@@ -317,6 +317,7 @@ def visualization_grid_points_space(env, model, size_to_use, img_size, n, enc_ty
     data /= 255
     data = data.permute([0, 3, 1, 2])
     char = []
+
     with torch.no_grad():
         model.eval()
 
@@ -330,6 +331,7 @@ def visualization_grid_points_space(env, model, size_to_use, img_size, n, enc_ty
         indices = z_p > 0.98
         #coordinates = z_sh[indices]
         #sizes = z_sc[indices]
+    zs = []
     for i in range(len(points)):
 
         this_im_indices = np.squeeze(indices[i])
@@ -339,29 +341,41 @@ def visualization_grid_points_space(env, model, size_to_use, img_size, n, enc_ty
         print("i: {}".format(i))
         if len(c_im) > 1:
             print('len bigger than 1')
-        print("char: {}".format(c_w[:, 8]))
-        for c in c_w[:, 8]:
-            char.append(c)
+        #print("char: {}".format(c_w[:, 8]))
+        #for c in c_w[:, 8]:
+        #    char.append(c)
 
 
 
         g_idx, o_idx = get_indices_goal_obstacle(c_w)
+        #g_idx, o_idx = [0], [1]
         if i in [0,3,6,9, 14, 17, 20, 26, 31,35, 38, 40, 42,45,48]:
             a = 1
         if len(g_idx) == 0:
             print('oh')
         else:
-            print(c_im[o_idx])
+            #print(c_im[o_idx])
             c_im = c_im[g_idx[0]]
 
             #s_im = z_sc[i][this_im_indices]
             plt.scatter(c_im[0], c_im[1], c='blue')
             plt.annotate(n_labels[i], (c_im[0], c_im[1]))
+            zs.append(c_w[g_idx[0]])
     char = np.array(char)
-    print("the min is {} \n the max is{} \n the mean is {}".format(
-        np.min(char),np.max(char), np.mean(char)))
+    #print("the min is {} \n the max is{} \n the mean is {}".format(
+    #    np.min(char),np.max(char), np.mean(char)))
     plt.title('latent')
     plt.savefig("{}.png".format(fig_file_name))
+    plt.close()
+    zs = np.array(zs)
+    steps = np.arange(zs.shape[0])
+    '''for l_i in [2,3]:
+        yval = zs[:, l_i]
+        plt.plot(steps, yval, label='ind: {}'.format(l_i))'''
+    mean = 0.5*zs[:, 2] + 0.5 *zs[:, 3]
+    plt.plot(steps, mean, label='ind: mean')
+    plt.legend()
+    plt.savefig("dims_along1_5.png")
     plt.close()
 
 
