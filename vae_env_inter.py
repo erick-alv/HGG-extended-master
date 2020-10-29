@@ -198,6 +198,33 @@ def latents_from_images(images, args):
                 obstacles_size.append(im_scale[o_idx])
 
         return np.array(goal_pos), np.array(goal_size), np.array(obstacles_pos), np.array(obstacles_size)
+    elif args.vae_type == 'bbox':
+        with torch.no_grad():
+            args.vae_model.eval()
+            images = torch.from_numpy(images).float().to(args.device)
+            images /= 255.
+            images = images.permute([0, 3, 1, 2])
+            #todo cahnge the index through inference
+            goal_index = 0
+            #todo it could be obstacle indices, and then we have to also see of they are present
+            obstacle_idx = [4]
+
+            #(B, K, D)
+            z_pres, z_depth, z_scale, z_pos = args.vae_model.encode(images)
+            z_pres, z_depth, z_scale, z_pos = z_pres.detach().cpu().numpy(), z_depth.detach().cpu().numpy(), \
+                                              z_scale.detach().cpu().numpy(), z_pos.detach().cpu().numpy()
+            
+        goal_pos = z_pos[:, goal_index, :]
+        goal_size = z_scale[:, goal_index, :]
+        obstacles_pos = z_pos[:, obstacle_idx, :]
+        obstacles_size = z_scale[:, obstacle_idx, :]
+        indices_goal_present = z_pres[:, goal_index, 0] > 0.98
+        indices_goal_not_present = np.logical_not(indices_goal_present)
+        #set those goals far away
+        goal_pos[indices_goal_not_present] = np.array([100., 100.])#todo these goals should be avoided as hgg so this needs also to be passed
+
+        return goal_pos, goal_size, obstacles_pos, obstacles_size
+        
     else:
         # first transform them in latent_representation
         mu_s, logvar_s, masks = transform_image_to_latent_batch_torch(images.copy(), args.vae_model_goal,

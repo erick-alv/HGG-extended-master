@@ -130,6 +130,11 @@ class DistanceGraph:
         node = gridpoint[0] + gridpoint[1] * self.n_x + gridpoint[2] * self.n_x * self.n_y
         return int(node)
 
+    def gridpoint2vertex_batch(self, i_batch, j_batch, k_batch):
+        # converts gridpoint representation [i, j, k] to vertex ID
+        node = i_batch + j_batch * self.n_x + k_batch * self.n_x * self.n_y
+        return node.astype(np.int)
+
 
     def vertex2gridpoint(self, vertex):
         # converts vertex ID to gridpoint representation [i, j ,k]
@@ -158,6 +163,20 @@ class DistanceGraph:
         j = np.round((y-self.y_min)/self.dy)
         k = np.round((z-self.z_min)/self.dz)
         return i, j, k
+
+    def coords2gridpoint_batch(self, coords):
+        # converts coords representation [x, y, z] to gridpoint representation [i, j, k]
+        x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
+        none_index = np.logical_and(self.x_min<= x, x <= self.x_max)
+        none_index = np.logical_and(none_index, self.y_min <= y)
+        none_index = np.logical_and(none_index, y <= self.y_max)
+        none_index = np.logical_and(none_index, self.z_min <= z)
+        none_index = np.logical_and(none_index, z <= self.z_max)
+        none_index = np.logical_not(none_index)
+        i = np.round((x-self.x_min)/self.dx)
+        j = np.round((y-self.y_min)/self.dy)
+        k = np.round((z-self.z_min)/self.dz)
+        return i, j, k, none_index
 
 
     def compute_cs_graph(self):
@@ -238,7 +257,7 @@ class DistanceGraph:
         vertex_a = self.gridpoint2vertex(gridpoint1)
         vertex_b = self.gridpoint2vertex(gridpoint2)
         if not return_path:
-            return self.dist_matrix[vertex_a, vertex_b], None
+            return self.dist_matrix[vertex_a, vertex_b], None#todo create method to do this in parallel
         else:
             if self.predecessors is None:
                 raise Exception("No predecessors available!")
@@ -254,6 +273,35 @@ class DistanceGraph:
                     return self.dist_matrix[vertex_a, vertex_b], None
                 path.append(self.gridpoint2coords(self.vertex2gridpoint(current_node)))
             return self.dist_matrix[vertex_a, vertex_b], path
+
+    def get_dist_batch(self, coords1, coords2_batch, return_path=False):
+        # get the shortest distance between coord1 and coords2 (each of form [x, y, z]) on cs_graph
+        # in case a predecessor matrix has been calculated, one can also return the shortest path
+        distances = np.zeros(coords2_batch.shape[0])
+
+        if self.dist_matrix is None:
+            raise Exception("No dist_matrix available!")
+
+        # transfer coords [x, y, z] to the closest node in gridpoint representation [i, j, k]
+        gridpoint1 = self.coords2gridpoint(coords1)
+        # if gridpoint is not in grid, assume there is no connection (shortest distance = inf)
+        if gridpoint1 is None:
+            distances[:] = np.inf
+            return distances, None
+        i, j, k, none_index = self.coords2gridpoint_batch(coords2_batch)
+        valid_index = np.logical_not(none_index)
+        distances[none_index] = np.inf
+
+        # transfer gridpoint representation to vertex ID
+        vertex_a = self.gridpoint2vertex(gridpoint1)
+        vertex_b_batch = self.gridpoint2vertex_batch(i[valid_index], j[valid_index], k[valid_index])
+        if not return_path:
+            dist_matrix_distances = self.dist_matrix[vertex_a, vertex_b_batch]
+            distances[valid_index] = dist_matrix_distances
+            return distances, None
+
+        else:
+            raise Exception("With batch return path True is not implemented yet")
 
     def plot_goals(self, goals=None, colors=None, azim=-12, elev=15, show=False, save_path='test', extra=None):
         # Plot goals with different options
@@ -420,12 +468,10 @@ class DistanceGraph2D(DistanceGraph):
         c2 = np.array([coords2[0], coords2[1], 0.])
         return super(DistanceGraph2D, self).get_dist(c1, c2, return_path)
 
-    def coords2gridpoint(self, coords):#here rececive coords as 3D and returns as 3D, but with 0 to simulate flat
-        superans = super(DistanceGraph2D, self).coords2gridpoint(coords)
-        if superans is None:
-            return None
-        else:
-            i, j, _ = superans
-            return i, j, 0
+    def get_dist_batch(self, coords1, coords2, return_path=False):
+        c1 = np.array([coords1[0], coords1[1], 0.])
+        c2 = np.concatenate([coords2[:, 0:1], coords2[:, 1:2], np.zeros(shape=(coords2.shape[0], 1))], axis=1)
+        return super(DistanceGraph2D, self).get_dist_batch(c1, c2, return_path)
+
 
 

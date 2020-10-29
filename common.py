@@ -10,6 +10,7 @@ import torch
 from j_vae.train_vae_sb import load_Vae as load_Vae_SB
 from j_vae.train_vae import load_Vae
 from j_vae.train_monet import load_Vae as load_Monet
+from j_vae.Bbox import load_Model as load_Bbox
 from j_vae.common_data import vae_sb_weights_file_name, vae_weights_file_name
 from PIL import Image
 from vae_env_inter import take_env_image, take_image_objects
@@ -81,7 +82,7 @@ def get_args():
 	parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
 	#type of VAE
 	parser.add_argument('--vae_type', help='', type=str,
-						default=None, choices=['sb', 'mixed', 'monet', 'space'])
+						default=None, choices=['sb', 'mixed', 'monet', 'space', 'bbox'])
 	#type VAE for size
 	parser.add_argument('--vae_size_type', help='', type=str,
 						default='all', choices=['normal', 'sb', 'mixed', 'monet'])#if mixed or monet then representation is shared
@@ -140,6 +141,10 @@ def load_vaes(args):
 		args.vae_model = load_space_model(checkpoint_path='data/FetchGenerativeEnv-v1/',
 							 check_name='data/FetchGenerativeEnv-v1/model_000030001.pth', device='cuda:0')
 		return
+	elif args.vae_type == 'bbox':
+		args.vae_model = load_Bbox(path='data/FetchGenerativeEnv-v1/model_bbox',img_size=args.img_size, latent_size=0,
+								   device='cuda:0', num_slots=5)#latent size is not being used for now
+		return
 
 	if args.vae_type == 'sb':
 		weights_path_goal = data_dir + vae_sb_weights_file_name['goal']
@@ -191,19 +196,28 @@ def load_vaes(args):
 #This loads the field in 2D since methods used extract information in this way
 def load_field_parameters(args):
 	if args.vae_dist_help:
-		if args.vae_type == 'space':
-			#model space is trained to create measures in range [-1, 1], a bit more for calculation
+		if args.vae_type == 'space' or 'bbox':
+			#model space is trained to create measures in range [-1, 1], a bit more space is given for the calculations
 			args.field_center = [0., 0.]
-			args.field_size = [1.2, 1.2]
+			args.field_size = [1.05, 1.05]
+			if args.env in ['FetchPushLabyrinth-v1', 'FetchPushObstacleFetchEnv-v1', 'FetchPushMovingObstacleEnv-v1']:
+				args.real_field_center = [1.3, 0.75]
+				args.real_field_size = [0.25, 0.25]
+			elif args.env in ['FetchPushMovingDoubleObstacleEnv-v1']:
+				args.real_field_center = [1.3, 0.75]
+				args.real_field_size = [0.3, 0.3]
+			else:
+				raise Warning(
+					'The environment used does not have predefined field dimensions. Assure they are not needed')
 		else:
 			raise Warning('Using a VAE or model, with own space. Assure that the transformations is this space are correct')
 	else:
 		if args.env in ['FetchPushLabyrinth-v1', 'FetchPushObstacleFetchEnv-v1', 'FetchPushMovingObstacleEnv-v1']:
-			args.field_center = [1.3, 0.75]
-			args.field_size = [0.25, 0.25]
+			args.field_center = args.real_field_center = [1.3, 0.75]
+			args.field_size = args.real_field_size = [0.25, 0.25]
 		elif args.env in ['FetchPushMovingDoubleObstacleEnv-v1']:
-			args.field_center = [1.3, 0.75]
-			args.field_size = [0.3, 0.3]
+			args.field_center = args.real_field_center = [1.3, 0.75]
+			args.field_size = args.real_field_size = [0.3, 0.3]
 		else:
 			raise Warning('The environment used does not have predefined field dimensions. Assure they are not needed')
 

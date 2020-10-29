@@ -216,11 +216,11 @@ class MatchSampler:
 			self.match_lib.add(0, graph_id['achieved'][i], 1, 0)
 		for i in range(len(achieved_pool)):
 			if self.args.vae_dist_help or self.args.dist_estimator_type is not None:
-				#allow a bit of error?? see if this could be problematic# for now not
-				i1 = achieved_pool[i][:, 0] > self.args.field_center[0] + self.args.field_size[0]
-				i2 = achieved_pool[i][:, 0] < self.args.field_center[0] - self.args.field_size[0]
-				i3 = achieved_pool[i][:, 1] > self.args.field_center[1] + self.args.field_size[1]
-				i4 = achieved_pool[i][:, 1] < self.args.field_center[1] - self.args.field_size[1]
+				#allow a bit of error?? see if this could be problematic# for now not#todo this is failing since field center of latent is -1, 1 and we are comparing with real coords
+				i1 = achieved_pool[i][:, 0] > self.args.real_field_center[0] + self.args.real_field_size[0]
+				i2 = achieved_pool[i][:, 0] < self.args.real_field_center[0] - self.args.real_field_size[0]
+				i3 = achieved_pool[i][:, 1] > self.args.real_field_center[1] + self.args.real_field_size[1]
+				i4 = achieved_pool[i][:, 1] < self.args.real_field_center[1] - self.args.real_field_size[1]
 				indices_outside = np.logical_or(np.logical_or(i1, i2), np.logical_or(i3, i4))
 			for j in range(len(desired_goals)):
 				if self.args.graph:

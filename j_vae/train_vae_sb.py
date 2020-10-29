@@ -95,7 +95,7 @@ class VAE_SB(nn.Module):
     # maybe z * 11
     def decode(self, z):
         tz = torch_spatial_broadcast(z, self.img_size, self.img_size, self.device)
-        d1 =  F.relu(self.dc1(tz))
+        d1 = F.relu(self.dc1(tz))
         d2 = F.relu(self.dc2(d1))
         d3 = F.relu(self.dc3(d2))
         if self.extra_layer:
