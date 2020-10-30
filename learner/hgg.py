@@ -104,7 +104,7 @@ class MatchSampler:
 			self.create_graph_distance()
 
 		# estimating diameter
-		self.max_dis = 0#todo!!!!!!!!!!!! this self.max dis can have a great impact on the performance
+		self.max_dis = 0
 		for i in range(1000):
 			obs = self.env.reset()
 			dis = self.evaluate_distance_start(obs)
@@ -216,7 +216,7 @@ class MatchSampler:
 			self.match_lib.add(0, graph_id['achieved'][i], 1, 0)
 		for i in range(len(achieved_pool)):
 			if self.args.vae_dist_help or self.args.dist_estimator_type is not None:
-				#allow a bit of error?? see if this could be problematic# for now not#todo this is failing since field center of latent is -1, 1 and we are comparing with real coords
+				#allow a bit of error?? see if this could be problematic# for now not
 				i1 = achieved_pool[i][:, 0] > self.args.real_field_center[0] + self.args.real_field_size[0]
 				i2 = achieved_pool[i][:, 0] < self.args.real_field_center[0] - self.args.real_field_size[0]
 				i3 = achieved_pool[i][:, 1] > self.args.real_field_center[1] + self.args.real_field_size[1]
@@ -246,7 +246,7 @@ class MatchSampler:
 												 range_x=[-1., 1.], range_y=[-1., 1.])
 
 					distances[indices_inside] = latent_distances.copy()
-					distances[indices_outside] = 100.0
+					distances[indices_outside] = 9999.
 
 					#real_distances = np.sqrt(np.sum(np.square(achieved_pool[i] - desired_goals[j]), axis=1))
 					'''real_distances = np.sqrt(np.sum(np.square(achieved_pool[i][:, :2] - desired_goals[j][:2]), axis=1))
@@ -567,13 +567,13 @@ class HGGLearner_VAEs(HGGLearner):
 				trajectory_obstacles_latents.append(obs['obstacle_latent'].copy())
 				trajectory_obstacles_latents_sizes.append(obs['obstacle_size_latent'].copy())
 				## just for video
-				tr_env_images.append(take_env_image(self.env_List[i], args.img_size))
+				#tr_env_images.append(take_env_image(self.env_List[i], args.img_size))
 				##
 				if timestep==args.timesteps-1: done = True#this makes that the last obs is as done
 				current.store_step(action, obs, reward, done)
 				if done: break
 			## just for video
-			if (self.learn_calls%100==0 and i == args.episodes-1) or \
+			'''if (self.learn_calls%100==0 and i == args.episodes-1) or \
 					(info['Success'] == 1.0 and self.success_n%100 == 0):
 				self.goal_env_List[i].goal = explore_goal.copy()
 				self.goal_env_List[i].env.env._move_object(position=explore_goal.copy())
@@ -584,7 +584,7 @@ class HGGLearner_VAEs(HGGLearner):
 					self.success_n +=1
 				else:
 					create_rollout_video(tr_env_images, goal_image=tr_goal, args=args,
-									 filename='last_rollout_it{}'.format(self.learn_calls))
+									 filename='last_rollout_it{}'.format(self.learn_calls))'''
 			##
 			achieved_trajectories.append(np.array(trajectory))
 			achieved_init_states.append(init_state)

@@ -29,6 +29,7 @@ train_file_name = {'goal': 'goal_set.npy',
                    'mixed': 'mixed.npy',
                    'all':'all_set.npy',
                    'space':'n.npy',
+                   'bbox':'n.ppy'
                    }
 file_corners_name = {'goal': 'goal_corners.npy',
                      'obstacle':'obstacle_corners.npy',
@@ -43,7 +44,8 @@ vae_sb_weights_file_name = {'goal': 'vae_sb_model_goal',
                             'obstacle':'vae_sb_model_obstacle',
                             'mixed':'vae_sb_model_mixed',
                             'all':'all_sb_model',
-                            'space':'../data/FetchGenerativeEnv-v1/model_000030001.pth'
+                            'space':'../data/FetchGenerativeEnv-v1/model_000030001.pth',
+                            'bbox':'model_bbox'
                             }
 
 vae_weights_file_name = {

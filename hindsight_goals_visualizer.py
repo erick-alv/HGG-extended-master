@@ -5,7 +5,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns; sns.set()
 import argparse
 from plot import smooth_reward_curve, load_results, pad
-from common import get_args, load_vaes
+#from common import get_args, load_vaes
 from envs import make_env
 
 def show_points(points_list, save_file, space_of):
@@ -54,9 +54,9 @@ def compare_points(env, save_file, args):
     plt.savefig(save_file)
     plt.close()
 
-if __name__ == '__main__':
+'''if __name__ == '__main__':
     args = get_args()
     load_vaes(args)
 
     env = make_env(args)
-    compare_points(env, 'somefile.png', args)
+    compare_points(env, 'somefile.png', args)'''

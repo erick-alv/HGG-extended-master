@@ -11,6 +11,7 @@ from envs import make_env
 from vae_env_inter import take_goal_image, take_obstacle_image, take_objects_image_training
 from j_vae.train_vae import load_Vae
 from j_vae.train_monet import load_Vae as load_Monet
+from j_vae.Bbox import load_Model as load_Bbox
 import copy
 
 from j_vae.latent_space_transformations import create_rotation_matrix, rotate_list_of_points, angle_obstacle, angle_goal,\
@@ -321,33 +322,53 @@ def visualization_grid_points_space(env, model, size_to_use, img_size, n, enc_ty
     with torch.no_grad():
         model.eval()
 
-        z_pres, z_depth, z_scale, z_shift, z_where, z_pres_logits, z_depth_post, z_scale_post, z_shift_post, z_what, z_what_post = model.encode(data)
-        z_p = z_pres.detach().cpu().numpy()
-        z_sc = z_scale.detach().cpu().numpy()
-        z_sc = np.flip(z_sc, axis=2)
-        z_sh = z_shift.detach().cpu().numpy()
-        z_sh = np.flip(z_sh, axis=2)
-        z_wh = z_what.detach().cpu().numpy()
-        indices = z_p > 0.98
+        if args.enc_type == 'space':
+            z_pres, z_depth, z_scale, z_shift, z_where, z_pres_logits, z_depth_post, z_scale_post, \
+            z_shift_post, z_what, z_what_post = model.encode(data)
+            z_p = z_pres.detach().cpu().numpy()
+            z_sc = z_scale.detach().cpu().numpy()
+            z_sc = np.flip(z_sc, axis=2)
+            z_sh = z_shift.detach().cpu().numpy()
+            z_sh = np.flip(z_sh, axis=2)
+            z_wh = z_what.detach().cpu().numpy()
+            indices = z_p > 0.98
+        else:
+            z_pres, z_depth, z_scale, z_pos = model.encode(data)
+            z_p = z_pres.detach().cpu().numpy()
+            z_sc = z_scale.detach().cpu().numpy()
+            z_sh = z_pos.detach().cpu().numpy()
+            z_wh = np.zeros_like(z_sh)
+            indices = z_p > 0.98
+
         #coordinates = z_sh[indices]
         #sizes = z_sc[indices]
     zs = []
     for i in range(len(points)):
-
-        this_im_indices = np.squeeze(indices[i])
-        c_im = z_sh[i][this_im_indices]
-        c_w = z_wh[i][this_im_indices]
-        c_sc = z_sc[i][this_im_indices]
         print("i: {}".format(i))
-        if len(c_im) > 1:
-            print('len bigger than 1')
-        #print("char: {}".format(c_w[:, 8]))
-        #for c in c_w[:, 8]:
-        #    char.append(c)
+        if args.enc_type == 'space':
+            this_im_indices = np.squeeze(indices[i])
+            c_im = z_sh[i][this_im_indices]
+            c_w = z_wh[i][this_im_indices]
+            c_sc = z_sc[i][this_im_indices]
+
+            if len(c_im) > 1:
+                print('len bigger than 1')
+            # print("char: {}".format(c_w[:, 8]))
+            # for c in c_w[:, 8]:
+            #    char.append(c)
+            g_idx, o_idx = get_indices_goal_obstacle(c_w)
+        else:
+
+            c_im = z_sh[i]
+            c_sc = z_sc[i]
+            c_p = z_p[i]
+            if c_p[0] <= 0.8:
+                print("oh nooo, it does not recognize it")
 
 
+            g_idx, o_idx = [0], [4]
 
-        g_idx, o_idx = get_indices_goal_obstacle(c_w)
+
         #g_idx, o_idx = [0], [1]
         if i in [0,3,6,9, 14, 17, 20, 26, 31,35, 38, 40, 42,45,48]:
             a = 1
@@ -360,23 +381,22 @@ def visualization_grid_points_space(env, model, size_to_use, img_size, n, enc_ty
             #s_im = z_sc[i][this_im_indices]
             plt.scatter(c_im[0], c_im[1], c='blue')
             plt.annotate(n_labels[i], (c_im[0], c_im[1]))
-            zs.append(c_w[g_idx[0]])
     char = np.array(char)
     #print("the min is {} \n the max is{} \n the mean is {}".format(
     #    np.min(char),np.max(char), np.mean(char)))
     plt.title('latent')
     plt.savefig("{}.png".format(fig_file_name))
     plt.close()
-    zs = np.array(zs)
+    '''zs = np.array(zs)
     steps = np.arange(zs.shape[0])
-    '''for l_i in [2,3]:
-        yval = zs[:, l_i]
-        plt.plot(steps, yval, label='ind: {}'.format(l_i))'''
+    #for l_i in [2,3]:
+    #    yval = zs[:, l_i]
+    #    plt.plot(steps, yval, label='ind: {}'.format(l_i))
     mean = 0.5*zs[:, 2] + 0.5 *zs[:, 3]
     plt.plot(steps, mean, label='ind: mean')
     plt.legend()
     plt.savefig("dims_along1_5.png")
-    plt.close()
+    plt.close()'''
 
 
 def traversal(env, model, img_size,  latent_size, n, enc_type, using_sb=True, fig_file_name=None):
@@ -791,7 +811,8 @@ if __name__ == '__main__':
     parser.add_argument('--ind_2', help='second index to extract from latent vector', type=np.int32)
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
-                        default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes', 'mixed', 'all', 'space'])
+                        default='goal', choices=['goal', 'obstacle', 'obstacle_sizes', 'goal_sizes',
+                                                 'mixed', 'all', 'space', 'bbox'])
     parser.add_argument('--mix_h', help='if the representation should de done with goals or obstacles', type=str,
                         default='goal', choices=['goal', 'obstacle'])
 
@@ -822,7 +843,7 @@ if __name__ == '__main__':
         size_to_use = (obstacle_size + puck_size) /2
     elif args.enc_type == 'all':
         size_to_use = 0.06
-    elif args.enc_type == 'space':
+    elif args.enc_type == 'space' or 'bbox':
         size_to_use = 0.0
 
     if args.task == 'show_space' or args.task == 'show_size' or args.task == 'show_traversal':
@@ -837,11 +858,15 @@ if __name__ == '__main__':
             model = load_space_model(checkpoint_path='../data/FetchGenerativeEnv-v1/',
                                      check_name='../data/FetchGenerativeEnv-v1/model_000030001.pth', device='cuda:0')
             model.eval()
+        elif args.enc_type == 'bbox':
+            model = load_Bbox(path=weights_path, img_size=64, latent_size=8,
+                              device='cuda:0', num_slots=5)
+            model.eval()
+
         else:
             model = load_Vae(weights_path, args.imgsize, args.latent_size)
 
         if args.task == 'show_space':
-
             if args.enc_type == 'goal' or (args.enc_type == 'mixed' and args.mix_h == 'goal'):
                 fig_name = 'vis_grid_g'
             elif args.enc_type == 'obstacle' or (args.enc_type == 'mixed' and args.mix_h == 'obstacle'):
@@ -851,8 +876,8 @@ if __name__ == '__main__':
                 visualization_grid_points_all(n=7, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
                                               enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,
                                               fig_file_name='all_fig_cylinder')
-            elif args.enc_type == 'space':
-                visualization_grid_points_space(n=9, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
+            elif args.enc_type == 'space' or args.enc_type == 'bbox':
+                visualization_grid_points_space(n=11, env=env, model=model,size_to_use=size_to_use, img_size=args.img_size,
                                               enc_type=args.enc_type, ind_1=args.ind_1, ind_2=args.ind_2,
                                               fig_file_name='space_fig_cylinder')
             else:
