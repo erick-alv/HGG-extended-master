@@ -218,7 +218,7 @@ def latents_from_images(images, args):
         goal_size = z_scale[:, goal_index, :]
         obstacles_pos = z_pos[:, obstacle_idx, :]
         obstacles_size = z_scale[:, obstacle_idx, :]
-        indices_goal_present = z_pres[:, goal_index, 0] > 0.98
+        indices_goal_present = z_pres[:, goal_index, 0] > 0.8
         indices_goal_not_present = np.logical_not(indices_goal_present)
         #set those goals far away
         goal_pos[indices_goal_not_present] = np.array([100., 100.])#todo these goals should be avoided as hgg so this needs also to be passed
