@@ -81,13 +81,16 @@ def take_image_objects(env, img_size):
     env.env.env._set_visibility(names_list=['obstacle'], alpha_val=1.0)
     try:
         env.env.env._set_visibility(names_list=['obstacle2'], alpha_val=1.0)
-        env.env.env._set_visibility(names_list=['table0'], alpha_val=0.3)
     except:
         pass
     # just to activate in case viewer is not intialized
     if not hasattr(env.env.env.viewer, 'cam'):
         np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
     rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
+    from PIL import Image
+    #im = Image.fromarray(rgb_array.astype(np.uint8))
+    #im.show()
+    #im.close()
     return rgb_array
 
 
@@ -213,6 +216,9 @@ def latents_from_images(images, args):
             z_pres, z_depth, z_scale, z_pos = args.vae_model.encode(images)
             z_pres, z_depth, z_scale, z_pos = z_pres.detach().cpu().numpy(), z_depth.detach().cpu().numpy(), \
                                               z_scale.detach().cpu().numpy(), z_pos.detach().cpu().numpy()
+            #todo it should not be necessary to flip it. Just for testing
+            z_pos = np.flip(z_pos, axis=2)
+            z_scale = np.flip(z_scale, axis=2)
             
         goal_pos = z_pos[:, goal_index, :]
         goal_size = z_scale[:, goal_index, :]

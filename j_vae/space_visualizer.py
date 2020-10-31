@@ -362,7 +362,7 @@ def visualization_grid_points_space(env, model, size_to_use, img_size, n, enc_ty
             c_im = z_sh[i]
             c_sc = z_sc[i]
             c_p = z_p[i]
-            if c_p[0] <= 0.8:
+            if c_p[0] <= 0.7:
                 print("oh nooo, it does not recognize it")
 
 
