@@ -145,6 +145,7 @@ if __name__ == '__main__':
 
     end_time = time.time()
     print('Time transcurred: {}'.format(end_time - start_time))
+    np.save('data/FetchGenerativeEnv-v1/double_env.pny', env_images)
 
 
 

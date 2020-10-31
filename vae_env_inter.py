@@ -4,9 +4,9 @@ import torch
 from j_vae.train_vae_sb import VAE_SB
 from j_vae.train_vae import VAE
 from j_vae.train_monet import Monet_VAE
-
 from j_vae.latent_space_transformations import torch_goal_transformation, torch_obstacle_transformation, \
     torch_get_size_in_space
+from PIL import Image
 
 
 '''def setup_env_sizes(env, object_size=None, size_of_obstacle=None):
@@ -69,6 +69,27 @@ def take_objects_image_training(env, img_size):
     env.env.env._set_visibility(names_list=['cube'], alpha_val=1.0)
     env.env.env._set_visibility(names_list=['cylinder'], alpha_val=1.0)
     env.env.env._set_visibility(names_list=['table0'], alpha_val=0.0)
+    try:
+        env.env.env._set_visibility(names_list=['rectangle1'], alpha_val=1.0)
+    except:
+        pass
+    try:
+        env.env.env._set_visibility(names_list=['rectangle2'], alpha_val=1.0)
+    except:
+        pass
+    try:
+        env.env.env._set_visibility(names_list=['rectangle3'], alpha_val=1.0)
+    except:
+        pass
+    try:
+        env.env.env._set_visibility(names_list=['cube1'], alpha_val=1.0)
+    except:
+        pass
+    try:
+        env.env.env._set_visibility(names_list=['cylinder1'], alpha_val=1.0)
+    except:
+        pass
+
     # just to activate in case viewer is not initialized
     if not hasattr(env.env.env.viewer, 'cam'):
         np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
@@ -87,10 +108,6 @@ def take_image_objects(env, img_size):
     if not hasattr(env.env.env.viewer, 'cam'):
         np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
     rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
-    from PIL import Image
-    #im = Image.fromarray(rgb_array.astype(np.uint8))
-    #im.show()
-    #im.close()
     return rgb_array
 
 

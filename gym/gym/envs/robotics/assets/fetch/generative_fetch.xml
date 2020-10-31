@@ -32,15 +32,29 @@
 		<body pos="1.3 0.75 0.6" name="space0">
 			<site name="spacesite" size="0.25 0.25 0.2" rgba="0 0 1 0" type="box"></site>
 		</body>
-		<body pos="1.05 0.85 0.435" name="rectangle">
+		<body pos="10. 10. 0.435" name="rectangle">
+			<geom size="0.04  0.02 0.038" rgba="1 0 0 1" type="box" mass="2000" material="table_mat"></geom>
+		</body>
+		<body pos="10. 10. 0.435" name="rectangle1">
+			<geom size="0.04  0.02 0.038" rgba="1 0 0 1" type="box" mass="2000" material="table_mat"></geom>
+		</body>
+		<body pos="10. 10. 0.435" name="rectangle2">
 			<geom size="0.04  0.02 0.038" rgba="1 0 0 1" type="box" mass="2000" material="table_mat"></geom>
 		</body>
 
-		<body pos="1.3 0.9 0.42" name="cube">
+		<body pos="10. 10. 0.42" name="cube">
 			<geom size="0.035 0.035 0.035" rgba="1 0 0 1" type="box" mass="2000" material="table_mat"></geom>
 		</body>
 
-		<body pos="1.3 0.75 0.43" name="cylinder">
+		<body pos="10. 10. 0.42" name="cube1">
+			<geom size="0.035 0.035 0.035" rgba="1 0 0 1" type="box" mass="2000" material="table_mat"></geom>
+		</body>
+
+		<body pos="10. 10. 0.43" name="cylinder">
+			<geom size="0.05 0.02" rgba="1 0 0 1" type="cylinder" mass="2000" material="table_mat"></geom>
+		</body>
+
+		<body pos="10. 10. 0.43" name="cylinder1">
 			<geom size="0.05 0.02" rgba="1 0 0 1" type="cylinder" mass="2000" material="table_mat"></geom>
 		</body>
 

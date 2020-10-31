@@ -731,25 +731,61 @@ def load_Model(path, img_size, latent_size, device, num_slots, seed=1,
     #optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     return model
 
+def rec_dataset(model, dataset_path):
+    model.eval()
+    train_loss = 0
+    data_set = np.load(dataset_path)
+    data_size = len(data_set)
+    global_step = 0
+
+    # creates indexes and shuffles them. So it can acces the data
+    idx_set = np.arange(data_size)
+    np.random.shuffle(idx_set)
+    idx_set = np.split(idx_set, len(idx_set) / 16)
+    idx_select = idx_set[0]
+    data = data_set[idx_select]
+    data = torch.from_numpy(data).float().to(device)
+    data /= 255.
+    input_ims = data[:, 0, :, :, :]
+    input_ims = input_ims.permute([0, 3, 1, 2])
+    orig_masks = data[:, 1:, :, :, 0:1]  # also leave just one color channel since it is a mask converted to rgb
+    orig_masks = orig_masks.permute([0, 1, 4, 2, 3])
+    imgs_with_mask = data[:, 0:1, :, :, :]
+    imgs_with_mask = imgs_with_mask.permute([0, 1, 4, 2, 3])
+    imgs_with_mask = imgs_with_mask * orig_masks
+    # save_image(imgs_with_mask[0], 'mask_division.png')
+    z_pres, z_depth, z_scale, z_pos, z_where, loss, \
+    ims_with_masks_recs = model(input_ims, global_step, imgs_with_mask, orig_masks)
+
+    visualize_masks(input_ims, imgs_with_mask, orig_masks, ims_with_masks_recs,
+                    'recs_test.png', z_pres=z_pres)
+
 if __name__ == '__main__':
     device = 'cuda:0'
     #one less since background mask is not used
     seed=1
     torch.manual_seed(seed)
-    model = Bbox(5, device).to(device)
+    '''model = Bbox(5, device).to(device)
     optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
-    train(model, optimizer, device, log_interval_epoch=10, log_interval_batch=400, batch_size=16)#4)
+    train(model, optimizer, device, log_interval_epoch=10, log_interval_batch=400, batch_size=16)#4)'''
+
+
+    seed = 1
+    torch.manual_seed(seed)
+    model = load_Model('../data/FetchGenerativeEnv-v1/model_bbox', 64, 8, device, 5)
+    rec_dataset(model, '../data/FetchGenerativeEnv-v1/double_env_with_masks.npy')
 
 
 
-    '''data_set = np.load('../data/FetchGenerativeEnv-v1/all_set.npy')
+    '''#data_set = np.load('../data/FetchGenerativeEnv-v1/all_set.npy')
+    data_set = np.load('../data/FetchGenerativeEnv-v1/double_env.npy')
     device = 'cuda:0'
     from j_vae.train_monet import load_Vae, visualize_masks
     model = load_Vae(path='../data/FetchGenerativeEnv-v1/all_sb_model', img_size=64, latent_size=6)
     model = model.to(device)
     data_size = len(data_set)
     new_data_set = np.zeros(shape=(data_size, 6 + 1, 64, 64, 3))
-    batch_size = 8
+    batch_size = 10
     # creates indexes and shuffles them. So it can acces the data
     idx_set = np.arange(data_size)
     idx_set = np.split(idx_set, len(idx_set) / batch_size)
@@ -777,7 +813,8 @@ if __name__ == '__main__':
             ims = np.concatenate([np.expand_dims(data_np, axis=1), masks], axis=1)
             new_data_set[batch_idx*batch_size:batch_idx*batch_size + batch_size] = ims
             #show_im(np.concatenate([i for i in ims[0]], axis=0))
-    np.save('../data/FetchGenerativeEnv-v1/all_set_with_masks.npy', new_data_set)'''
+    #np.save('../data/FetchGenerativeEnv-v1/all_set_with_masks.npy', new_data_set)
+    np.save('../data/FetchGenerativeEnv-v1/double_env_with_masks.npy', new_data_set)'''
     '''new_data_set = np.load('../data/FetchGenerativeEnv-v1/all_set_with_masks.npy')
     bbox_info = preprocess_bounding_boxes(new_data_set[:, 1:, :, :, 0:1].copy())
     np.save('../data/FetchGenerativeEnv-v1/all_set_with_masks_bbox.npy', bbox_info)'''
