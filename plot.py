@@ -144,6 +144,8 @@ if __name__ == "__main__":
         elif args.naming == 6:
             if 'hgg-vae' in clean_path:
                 config = "HGG-VAE"
+            elif 'hgg-bbox' in clean_path:
+                config = "HGG-Bbox"
             elif 'hgg-optimal' in clean_path:
                 config = "HGG-optimal-case"
             elif 'hgg-space' in clean_path:
