@@ -18,7 +18,7 @@ class Player:
         self.args.timesteps = self.env.env.env.spec.max_episode_steps
         self.env_test = make_env(args)
         self.info = []
-        self.test_rollouts = 50
+        self.test_rollouts = 1
 
         # get current policy from path (restore tf session + graph)
         self.play_dir = args.play_path
@@ -41,8 +41,15 @@ class Player:
         # play policy on env
         env = self.env
         acc_sum, obs = 0.0, []
+        '''acs = [np.array([-0.05, 1., 0., 0.]) for _ in range(8)] + \
+              [np.array([-0.8, 0., 0., 0.]) for _ in range(2)] +\
+              [np.array([-0.5, -0.5, 0., 0.]) for _ in range(20)] +\
+              [np.array([0., 0., 0., 0.]) for _ in range(80)]'''
+        acs = [np.array([0., 1., 0., 0.]) for _ in range(25)] + [np.array([0., 0., 0., 0.]) for _ in range(110)]
         for i in range(self.test_rollouts):
             ob = env.reset()
+            #env.env.env._move_object(position=[1.13, 0.75, 0.425])
+
             obs.append(goal_based_process(ob))
             trajectory_goals = [ob['achieved_goal'].copy()]
             trajectory_goals_latents = [ob['achieved_goal_latent'].copy()]
@@ -56,6 +63,7 @@ class Player:
             for timestep in range(self.args.timesteps):
                 actions = self.my_step_batch(obs)
                 #actions = [env.action_space.sample() for _ in range(len(obs))]
+                #actions = [acs[timestep]]
                 obs, infos = [], []
                 ob, _, _, info = env.step(actions[0])
                 obs.append(goal_based_process(ob))
@@ -69,7 +77,7 @@ class Player:
                 tr_env_images.append(take_env_image(self.env, args.img_size))
 
                 infos.append(info)
-            if i % 5 == 0:
+            if i % 5 == 0 or i == self.test_rollouts -1:
                 steps = np.arange(len(tr_env_images))
                 #latent_ind_x = 1
                 #latent_ind_y = 0

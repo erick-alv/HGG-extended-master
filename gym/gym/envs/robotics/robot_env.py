@@ -106,9 +106,12 @@ class RobotEnv(gym.GoalEnv):
             self.viewer = None
             self._viewers = {}
 
-    def render(self, mode='human', width=DEFAULT_SIZE, height=DEFAULT_SIZE):
+    def render(self, mode='human', width=DEFAULT_SIZE, height=DEFAULT_SIZE, camera_name=None):
         # self._render_callback()
-        if mode == 'rgb_array':
+        if camera_name is not None:
+            data = self.sim.render(width=width, height=height, camera_name=camera_name)
+            return data[::-1, :, :]
+        elif mode == 'rgb_array':
             self._get_viewer(mode).render(width, height)
             # window size used for old mujoco-py:
             data = self._get_viewer(mode).read_pixels(width, height, depth=False)

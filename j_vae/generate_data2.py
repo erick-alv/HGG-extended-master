@@ -472,14 +472,17 @@ def _gen_rectangle():
     return size, rot_z, pos_obstacle, occuped_area_x, occuped_area_y
 
 def gen_all_data_mixed(env, args):
-    colors = [(1., 0., 0.), (0., 0., 1.), (0.5, 0., 0.5), (0., 0.5, 0.5)]
+    for n in ['rectangle', 'rectangle1', 'rectangle2', 'cylinder', 'cylinder1', 'cube', 'cube1']:
+        env.env.env._set_position(names_list=[n], position=[10., 10., 0.])
+
+    colors = [(1., 0., 0.), (0., 0., 1.), (0.5, 0., 0.5), (0., 0.2, 0.3), (0.8, 0.8, 0.)]
     color_count = {}
     for i in range(len(colors)):
         color_count[i] = 0
 
     def select_and_change_color(obj_name):
         color_ind = np.random.randint(0, len(colors))
-        while color_count[color_ind] >= 2:
+        while color_count[color_ind] >= 1:
             color_ind = (color_ind +1) % len(colors)
         r, g, b = colors[color_ind]
         env.env.env._change_color([obj_name], r, g, b)
@@ -490,7 +493,7 @@ def gen_all_data_mixed(env, args):
     occuped_areas_y = []
     max_els = 4
 
-    number_rectangles = np.random.choice(a=[0, 1, 2, 3], p = [0.3, 0.2 , 0.3, 0.2])
+    number_rectangles = np.random.choice(a=[0, 1, 2, 3], p = [0.3, 0.2, 0.3, 0.2])
     if number_rectangles == 4 or number_rectangles == 5:#this is done just to aument the possibility to have less els
         number_rectangles = 0
     rem_els = max_els - number_rectangles
@@ -515,7 +518,7 @@ def gen_all_data_mixed(env, args):
     if rem_els > 0:
         max_n_cylynders = min(2, rem_els)
         n_cylinders = np.random.randint(0, max_n_cylynders+1)
-        rem_els = max_els - n_cylinders
+        rem_els = rem_els - n_cylinders
         for i in range(n_cylinders):
             if i == 0:
                 cyl_name = 'cylinder'
@@ -531,7 +534,7 @@ def gen_all_data_mixed(env, args):
             occuped_areas_y.append(oc_y_cyl)
 
     if rem_els > 0:
-        max_n_cubes = min(2, 1)
+        max_n_cubes = min(1, rem_els)
         n_cubes = np.random.randint(0, max_n_cubes + 1)
 
         for i in range(n_cubes):
@@ -730,6 +733,8 @@ if __name__ == "__main__":
             def show_some_sampled_images():
                 n = 10
                 a = None
+                spacer_x = np.zeros(shape=(args.img_size, 5, 3))
+                spacer_y = np.zeros(shape=(5, n*args.img_size + 5*(n-1) ,3))
                 for i in range(n):
                     b = None
                     for j in range(n):
@@ -739,11 +744,11 @@ if __name__ == "__main__":
                         if b is None:
                             b = j_im.copy()
                         else:
-                            b = np.concatenate([b, j_im], axis=1)
+                            b = np.concatenate([b, spacer_x, j_im], axis=1)
                     if a is None:
                         a = b.copy()
                     else:
-                        a = np.concatenate([a, b], axis=0)
+                        a = np.concatenate([a, spacer_y, b], axis=0)
                 img = Image.fromarray(a.astype(np.uint8))
                 img.show()
                 img.close()

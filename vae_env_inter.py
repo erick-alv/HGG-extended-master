@@ -27,7 +27,7 @@ def take_obstacle_image(env, img_size, make_table_invisible=True):
     env.env.env._set_visibility(names_list=['object0'], alpha_val=0.0)
     if not make_table_invisible:
         env.env.env._set_visibility(names_list=['table0'], alpha_val=1.0)
-    rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
+    rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
     return rgb_array
 
 def take_goal_image(env, img_size, make_table_invisible=True, make_walls_invisible=True):
@@ -38,7 +38,7 @@ def take_goal_image(env, img_size, make_table_invisible=True, make_walls_invisib
     if not make_walls_invisible:
         if 'wall1' in env.env.env.sim.model.body_names:
             env.env.env._set_visibility(names_list=['wall1', 'wall2', 'wall3', 'wall4'], alpha_val=1.0)
-    rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
+    rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
     return rgb_array
 
 def take_env_image(env, img_size):
@@ -50,15 +50,19 @@ def take_env_image(env, img_size):
         env.env.env._set_visibility(names_list=['obstacle2'], alpha_val=1.0)
     except:
         pass
+    try:
+        env.env.env._set_visibility(names_list=["lookat"], alpha_val=1.0)
+    except:
+        pass
     for id in  [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,16, 17, 18, 21]:
         env.env.env._set_visibility_with_id(id, alpha_val=0.2)
     #just to activate in case viewer is not intialized
     if not hasattr(env.env.env.viewer, 'cam'):
-        np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
+        np.array(env.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
     #env.env.env.viewer.cam.distance += 0.3
     #env.env.env.viewer.cam.elevation += 15
     #self.viewer.cam.azimuth = 180.
-    rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
+    rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
     #env.env.env.viewer.cam.distance -= 0.3
     #env.env.env.viewer.cam.elevation -= 15
     return rgb_array
@@ -92,8 +96,8 @@ def take_objects_image_training(env, img_size):
 
     # just to activate in case viewer is not initialized
     if not hasattr(env.env.env.viewer, 'cam'):
-        np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
-    rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
+        np.array(env.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
+    rgb_array = np.array(env.render( mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
     return rgb_array
 
 def take_image_objects(env, img_size):
@@ -106,8 +110,9 @@ def take_image_objects(env, img_size):
         pass
     # just to activate in case viewer is not intialized
     if not hasattr(env.env.env.viewer, 'cam'):
-        np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
-    rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size))
+        #using camera name does not call viewer setup
+        np.array(env.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
+    rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
     return rgb_array
 
 
@@ -226,16 +231,14 @@ def latents_from_images(images, args):
             images = images.permute([0, 3, 1, 2])
             #todo cahnge the index through inference
             goal_index = 0
-            #todo it could be obstacle indices, and then we have to also see of they are present
+            #todo it could be obstacle indices, and then we have to also see if they are present
             obstacle_idx = [4]
 
             #(B, K, D)
             z_pres, z_depth, z_scale, z_pos = args.vae_model.encode(images)
             z_pres, z_depth, z_scale, z_pos = z_pres.detach().cpu().numpy(), z_depth.detach().cpu().numpy(), \
                                               z_scale.detach().cpu().numpy(), z_pos.detach().cpu().numpy()
-            #todo it should not be necessary to flip it. Just for testing
-            z_pos = np.flip(z_pos, axis=2)
-            z_scale = np.flip(z_scale, axis=2)
+
             
         goal_pos = z_pos[:, goal_index, :]
         goal_size = z_scale[:, goal_index, :]
