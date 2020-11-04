@@ -18,7 +18,7 @@ this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
         nn.ReLU(inplace=True),
         nn.Conv2d(out_channels, out_channels, 3, padding=1),
         nn.BatchNorm2d(out_channels),
-        nn.ReLU(inplace=True)
+        nn.ReLU(inplace=True)dists
     )'''
 
 def double_conv(in_channels, out_channels):
@@ -315,6 +315,10 @@ def loss_function(x, x_recon_s, masks, mask_pred_s, mu_s, logvar_s, beta, gamma,
     q_masks = dists.Categorical(probs=tr_masks)
     stacked_mask_preds = torch.stack(mask_pred_s, 3)
     q_masks_recon = dists.Categorical(logits=stacked_mask_preds)
+    p1 = dists.Categorical(probs=torch.tensor([0.2, 0.4, 0.5]))
+    q1 = dists.Categorical(probs=torch.tensor([0.9, 0.6, 0.5]))
+
+    kl1 = dists.kl_divergence(p1, q1)
 
     kl_masks = dists.kl_divergence(q_masks, q_masks_recon)
     kl_masks = torch.sum(kl_masks, [1, 2])
@@ -368,7 +372,7 @@ def numpify(tensor):
 
 def visualize_masks(imgs, masks, recons, file_name):
     recons = np.clip(recons, 0., 1.)
-    colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (0, 255, 255), (255, 0, 255), (255, 255, 0), (0, 0, 0), (0, 127, 255)]
+    colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (0, 255, 255), (255, 0, 255), (255, 255, 0), (0, 0, 0), (0, 127, 255), (0,255, 127)]
     colors.extend([(c[0]//2, c[1]//2, c[2]//2) for c in colors])
     colors.extend([(c[0]//4, c[1]//4, c[2]//4) for c in colors])
     seg_maps = np.zeros_like(imgs)
@@ -410,13 +414,9 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
                           channel_base=channel_base, num_slots=num_slots, full_connected_size=full_connected_size,
                           color_channels=color_channels, kernel_size=kernel_size, encoder_stride=encoder_stride,
                           decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2).to(device)
-        for w in model.parameters():
-            std_init = 0.01
-            nn.init.normal_(w, mean=0., std=std_init)
-        print('Initialized parameters')
+
         #todo check which optimizer is better
         optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
-        #optimizer = optim.Adam(model.parameters(), lr=1e-4)
         checkpoint = torch.load(vae_weights_path)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -428,6 +428,10 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
                           channel_base=channel_base, num_slots=num_slots, full_connected_size=full_connected_size,
                           color_channels=color_channels, kernel_size=kernel_size, encoder_stride=encoder_stride,
                           decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2).to(device)
+        for w in model.parameters():
+            std_init = 0.01
+            nn.init.normal_(w, mean=0., std=std_init)
+        print('Initialized parameters')
         # todo check which optimizer is better
         optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
         # optimizer = optim.Adam(model.parameters(), lr=1e-4)
@@ -522,7 +526,7 @@ if __name__ == '__main__':
     train_Vae(epochs=args.train_epochs, batch_size=args.batch_size,img_size=args.img_size,latent_size=args.latent_size,
               train_file=train_file,
               vae_weights_path=weights_path, beta=args.beta, gamma=args.gamma, bg_sigma=args.bg_sigma,
-              fg_sigma=args.fg_sigma, load=False, num_slots=args.num_slots)
+              fg_sigma=args.fg_sigma, load=True, num_slots=args.num_slots)
 
 
     '''device = torch.device("cuda")

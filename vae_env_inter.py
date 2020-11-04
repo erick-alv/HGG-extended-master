@@ -46,14 +46,12 @@ def take_env_image(env, img_size):
     env.env.env._set_visibility(names_list=['object0'], alpha_val=1.0)
     env.env.env._set_visibility(names_list=['obstacle'], alpha_val=1.0)
     env.env.env._set_visibility(names_list=['table0'], alpha_val=1.0)
-    try:
-        env.env.env._set_visibility(names_list=['obstacle2'], alpha_val=1.0)
-    except:
-        pass
-    try:
-        env.env.env._set_visibility(names_list=["lookat"], alpha_val=1.0)
-    except:
-        pass
+    # todo think more effective way of doing this
+    for name in ['obstacle2', 'obstacle3']:
+        try:
+            env.env.env._set_visibility(names_list=[name], alpha_val=1.0)
+        except:
+            pass
     for id in  [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,16, 17, 18, 21]:
         env.env.env._set_visibility_with_id(id, alpha_val=0.2)
     #just to activate in case viewer is not intialized
@@ -104,10 +102,12 @@ def take_image_objects(env, img_size):
     env.env.env._set_arm_visible(visible=False)
     env.env.env._set_visibility(names_list=['object0'], alpha_val=1.0)
     env.env.env._set_visibility(names_list=['obstacle'], alpha_val=1.0)
-    try:
-        env.env.env._set_visibility(names_list=['obstacle2'], alpha_val=1.0)
-    except:
-        pass
+    #todo think more effective way of doing this
+    for name in ['obstacle2', 'obstacle3']:
+        try:
+            env.env.env._set_visibility(names_list=[name], alpha_val=1.0)
+        except:
+            pass
     # just to activate in case viewer is not intialized
     if not hasattr(env.env.env.viewer, 'cam'):
         #using camera name does not call viewer setup

@@ -1,5 +1,6 @@
 #adapted from https://github.com/djbyrne/SAC.git which is based on
-# rlkit(https://github.com/vitchyr/rlkit/blob/master/rlkit/torch/sac/sac.py) and spinning up
+# rlkit(https://github.com/vitchyr/rlkit/blob/master/rlkit/torch/sac/sac.py) and spinning up.
+# Adaptions created with help of spinning up implementation https://github.com/openai/spinningup/blob/master/spinup/algos/pytorch/sac/core.py
 
 import numpy as np
 
@@ -32,12 +33,10 @@ class SoftQNetwork(nn.Module):
 
 class PolicyNetwork(nn.Module):
     def __init__(self, num_inputs, num_actions, device, hidden_size=[400, 300],
-                 init_w=3e-3, log_std_min=-20, log_std_max=2, epsilon=1e-6):
+                 init_w=3e-3, log_std_min=-20, log_std_max=2):
         super(PolicyNetwork, self).__init__()
 
         self.device = device
-
-        self.epsilon = epsilon
 
         self.log_std_min = log_std_min
         self.log_std_max = log_std_max
@@ -53,39 +52,42 @@ class PolicyNetwork(nn.Module):
         self.log_std_linear.weight.data.uniform_(-init_w, init_w)
         self.log_std_linear.bias.data.uniform_(-init_w, init_w)
 
-    def forward(self, state, deterministic=False):
+    def forward(self, state, deterministic=False, with_logprob=True):
         x = F.relu(self.linear1(state))
         x = F.relu(self.linear2(x))
 
-        mean = self.mean_linear(x)
+        mu = self.mean_linear(x)
 
         log_std = self.log_std_linear(x)
         log_std = torch.clamp(log_std, self.log_std_min, self.log_std_max)
 
         std = torch.exp(log_std)
 
-        log_prob = None
-
+        pi_distribution = Normal(mu, std)
         if deterministic:
-            action = torch.tanh(mean)
+            # Only used for evaluating policy at test time.
+            pi_action = mu
         else:
-            # assumes actions have been normalized to (0,1) #todo verify this in our case I believe is (-1,1)
-            normal = Normal(0, 1)
-            z = mean + std * normal.sample().requires_grad_()
-            action = torch.tanh(z)
-            log_prob_term_1 = Normal(mean, std).log_prob(z)
-            log_prob_term_1 = log_prob_term_1.sum(-1)
-            log_prob_term_2 = torch.log(1 - action * action + self.epsilon)
-            log_prob_term_2 = log_prob_term_2.sum(-1)
-            log_prob = log_prob_term_1 - log_prob_term_2
+            pi_action = pi_distribution.rsample()
 
-        return action, mean, log_std, log_prob, std
+        if with_logprob:
+            # Compute logprob from Gaussian, and then apply correction for Tanh squashing.
+            # NOTE: The correction formula is a little bit magic. To get an understanding
+            # of where it comes from, check out the original SAC paper (arXiv 1801.01290)
+            # and look in appendix C. This is a more numerically-stable equivalent to Eq 21.
+            # Try deriving it yourself as a (very difficult) exercise. :)
+            logp_pi = pi_distribution.log_prob(pi_action).sum(axis=-1)
+            logp_pi -= (2 * (np.log(2) - pi_action - F.softplus(-2 * pi_action))).sum(axis=1)
+        else:
+            logp_pi = None
+
+        pi_action = torch.tanh(pi_action)#!!!!This creates actions betewwn -1 and 1 if toher values needed, then multiply
+
+        return pi_action, logp_pi
 
     def get_action(self, state, deterministic=False):
-        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-        action, _, _, _, _ = self.forward(state, deterministic)
-        act = action.cpu()[0][0]
-        return act
+        action, _ = self.forward(state, deterministic, with_logprob=False)
+        return action
 
 
 class SAC(object):
@@ -149,24 +151,25 @@ class SAC(object):
             'Q_loss': []
         }
 
-    def get_action(self, state, deterministic=False, explore=False):#todo
+    def get_els_from_batch(self, batch):
+        return np.array(batch['obs']), np.array(batch['acts']), np.array(batch['rews']), \
+               np.array(batch['obs_next']), np.array(batch['done'])
 
-        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
-        #if explore:
-        #    return self.env.action_space.sample()
-        #else:
-        action = self.policy_net.get_action(state, deterministic).detach()
-        return action.numpy()
+    def train(self, batch):
+        state, action, reward, next_state, done = self.get_els_from_batch(batch)
+        info = self.update(state, action, reward, next_state, done)
+        return info
 
     def update(self, state, action, reward, next_state, done):
         #with torch.autograd.set_detect_anomaly(True):
-        state = torch.FloatTensor(state).to(self.device)
-        next_state = torch.FloatTensor(next_state).to(self.device)
-        action = torch.FloatTensor(action).to(self.device)
-        reward = torch.FloatTensor(reward).to(self.device)
-        done = torch.FloatTensor(np.float32(done)).to(self.device)
+        state = torch.from_numpy(state).to(self.device).float()
+        next_state = torch.from_numpy(next_state).to(self.device).float()
+        action = torch.from_numpy(action).to(self.device).float()
+        reward = torch.from_numpy(reward).to(self.device).float()
+        done = torch.from_numpy(np.float32(done)).to(self.device).float()
 
-        new_actions, policy_mean, policy_log_std, log_pi, *_ = self.policy_net(state)
+        #new_actions, policy_mean, policy_log_std, log_pi, *_ = self.policy_net(state)
+        new_actions, log_pi = self.policy_net(state)
 
         if self.auto_alpha:
             alpha_loss = -(self.log_alpha * (log_pi + self.target_entropy).detach()).mean()
@@ -190,14 +193,15 @@ class SAC(object):
         q1_pred = self.soft_q_net1(state, action)
         q2_pred = self.soft_q_net2(state, action)
 
-        new_next_actions, _, _, new_log_pi, *_ = self.policy_net(next_state)
+        with torch.no_grad():
+            new_next_actions, new_log_pi = self.policy_net(next_state)
 
-        target_q_values = torch.min(
-            self.target_soft_q_net1(next_state, new_next_actions),
-            self.target_soft_q_net2(next_state, new_next_actions),
-        ) - alpha * new_log_pi
+            target_q_values = torch.min(
+                self.target_soft_q_net1(next_state, new_next_actions),
+                self.target_soft_q_net2(next_state, new_next_actions),
+            )
+            q_target = reward + (1 - done) * self.discount * (target_q_values - alpha * new_log_pi.unsqueeze(1))
 
-        q_target = reward + (1 - done) * self.discount * target_q_values
         q1_loss = self.soft_q_criterion(q1_pred, q_target.detach())
         q2_loss = self.soft_q_criterion(q2_pred, q_target.detach())
 
@@ -232,23 +236,26 @@ class SAC(object):
             'Q_loss': ((q1_loss + q2_loss)/2.).item()
         }
 
+    def get_action(self, state, deterministic=False):
+        action = self.policy_net.get_action(state, deterministic)
+        return action.detach().cpu().numpy()
+
     def step(self, obs, explore=False, test_info=False):
         if (not test_info) and (self.args.buffer.steps_counter < self.args.warmup):
             return np.random.uniform(-1, 1, size=self.args.acts_dims)
         if self.args.goal_based: obs = goal_based_process(obs)
 
-        # eps-greedy exploration
+        # eps-greedy exploration TODO do we also need this with SAC
         if explore and np.random.uniform() <= self.args.eps_act:
             return np.random.uniform(-1, 1, size=self.args.acts_dims)
 
-        action = self.get_action(obs, explore=explore)
+        obs = torch.from_numpy(obs).unsqueeze(0).to(self.device).float()
+        action = self.get_action(obs, deterministic=not explore)
         if test_info:
-            #action, info = self.sess.run([self.pi, self.step_info], feed_dict)
-            state = torch.FloatTensor(obs).unsqueeze(0).to(self.device)
-            action_to_execute = torch.FloatTensor(action).unsqueeze(0).to(self.device)
+            action_to_execute = torch.from_numpy(action).unsqueeze(0).to(self.device).float()
             q_pi = torch.min(
-                self.soft_q_net1(state, action_to_execute),
-                self.soft_q_net2(state, action_to_execute)
+                self.soft_q_net1(obs, action_to_execute),
+                self.soft_q_net2(obs, action_to_execute)
             )
             info = {'Q_average': q_pi.item()}
         action = action[0]
@@ -256,36 +263,33 @@ class SAC(object):
         # uncorrelated gaussian explorarion
         #if explore: action += np.random.normal(0, self.args.std_act, size=self.args.acts_dims) removed sin in theory SAC does not need it
         #action = np.clip(action, -1, 1)
-        assert action >= -1
-        assert action <= 1
+        assert np.all(action >= -1)
+        assert np.all(action <= 1)
 
         if test_info:
             return action, info
         return action
 
-    def step_batch(self, obs):
+    def step_batch(self, obs):#todo if this is called from test or evaluation should be set to deterministic=True
+        if not isinstance(obs, np.ndarray):
+            obs = np.array(obs)
+        obs = torch.from_numpy(obs).to(self.device).float()
         actions = self.get_action(obs)
         return actions
 
     def get_q_pi(self, obs):
-        action = self.get_action(obs)
-        state = torch.FloatTensor(obs).to(self.device)
-        action_to_execute = torch.FloatTensor(action).to(self.device)
+        if not isinstance(obs, np.ndarray):
+            obs = np.array(obs)
+        obs = torch.from_numpy(obs).to(self.device).float()
+        action = self.get_action(obs)#todo should also be determinitic
+        action = torch.from_numpy(action).to(self.device).float()
         q_pi = torch.min(
-            self.soft_q_net1(state, action_to_execute),
-            self.soft_q_net2(state, action_to_execute)
-        )[:, 0]
-        q_pi = q_pi.detach().numpy()
+            self.soft_q_net1(obs, action),
+            self.soft_q_net2(obs, action)
+        )[:, 0]#todo see why 0
+        q_pi = q_pi.detach().cpu().numpy()
         value = np.clip(q_pi, -1.0 / (1.0 - self.args.gamma), 0)#todo THE VALUE was positive ans should be negative see if always is so
         return value
-
-    def get_els_from_batch(self, batch):
-        return batch['obs'], batch['acts'], batch['rews'], batch['obs_next'], batch['done']
-
-    def train(self, batch):
-        state, action, reward, next_state, done = self.get_els_from_batch(batch)
-        info = self.update(state, action, reward, next_state, done)
-        return info
 
     #train pi and train q not implemented, since apparently not used
 
@@ -316,4 +320,17 @@ class SAC(object):
             save_dict['log_alpha'] = self.log_alpha
             save_dict['log_alpha_optimizer'] = self.alpha_optimizer.state_dict()
 
-        torch.save(save_dict, filename)
+        torch.save(save_dict, fname)
+
+    def load(self, path):
+        checkpoint = torch.load(path)
+
+        self.soft_q_net1.load_state_dict(checkpoint['soft_q_net1'])
+        self.soft_q_net2.load_state_dict(checkpoint['soft_q_net2'])
+        self.policy_net.load_state_dict(checkpoint['policy_net'])
+        self.soft_q_optimizer1.load_state_dict(checkpoint['soft_q_optimizer1'])
+        self.soft_q_optimizer2.load_state_dict(checkpoint['soft_q_optimizer2 '])
+        self.policy_optimizer.load_state_dict(checkpoint['policy_optimizer'])
+        if self.auto_alpha:
+            self.log_alpha = checkpoint['log_alpha']
+            self.alpha_optimizer.load_state_dict(checkpoint['log_alpha_optimizer'])

@@ -210,9 +210,10 @@ def load_field_parameters(args):
 				raise Warning(
 					'The environment used does not have predefined field dimensions. Assure they are not needed')
 		else:
-			raise Warning('Using a VAE or model, with own space. Assure that the transformations is this space are correct')
+			raise Warning('Using a VAE or model, with own space. Assure that the transformations in this space are correct')
 	else:
-		if args.env in ['FetchPushLabyrinth-v1', 'FetchPushObstacleFetchEnv-v1', 'FetchPushMovingObstacleEnv-v1']:
+		if args.env in ['FetchPushLabyrinth-v1', 'FetchPushObstacleFetchEnv-v1',
+						'FetchPushMovingObstacleEnv-v1', 'FetchPushMovingComEnv-v1']:
 			args.field_center = args.real_field_center = [1.3, 0.75]
 			args.field_size = args.real_field_size = [0.25, 0.25]
 		elif args.env in ['FetchPushMovingDoubleObstacleEnv-v1']:
@@ -275,7 +276,7 @@ def load_dist_estimator(args, env):
 		args.dist_estimator.initialize_internal_distance_graph([args.field_center[0], args.field_center[1],
 																args.field_size[0], args.field_size[1]],
 															   num_vertices=[100, 100], size_increase=0.0)
-		args.dist_estimator.graph.plot_graph(save_path='test', elev=90, azim=0)
+		args.dist_estimator.graph.plot_graph(save_path='env_graph_created', elev=90, azim=0)
 
 
 def experiment_setup(args):

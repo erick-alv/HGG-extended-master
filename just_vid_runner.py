@@ -96,7 +96,8 @@ if __name__ == '__main__':
         o = env.reset()
         obs.append(o)
         prev_obs.append(o)
-        env_images.append(take_image_objects(env, args.img_size))
+        #env_images.append(take_image_objects(env, args.img_size))
+        env_images.append(take_env_image(env, args.img_size))
         for timestep in range(100):
 
             #env.env.env._rotate(["cube"], 0., 10. * timestep, 10. * timestep)
@@ -116,7 +117,8 @@ if __name__ == '__main__':
             #print('pos: {}'.format(o['obstacle_latent']))
             #print('size: {}'.format(o['obstacle_size_latent']))
             obs.append(o)
-            env_images.append(take_image_objects(env, args.img_size))
+            #env_images.append(take_image_objects(env, args.img_size))
+            env_images.append(take_env_image(env, args.img_size))
         create_rollout_video(env_images, args=args, filename='vid_{}_env'.format(vid))
     env_images = np.array(env_images)
     '''with torch.no_grad():
@@ -130,14 +132,14 @@ if __name__ == '__main__':
             data = data.permute([0, 3, 1, 2])
             args.vae_model_goal.encode(data)'''
 
-    obstacle1_inf = np.array([o['real_obstacle_info'][0] for o in obs])
+    '''obstacle1_inf = np.array([o['real_obstacle_info'][0] for o in obs])
     obstacle2_inf = np.array([o['real_obstacle_info'][1] for o in obs])
     print("obstacle 1 max x coord: {} min x coord {} \nmax y coord {}, min y coord {}".format(
         np.max(obstacle1_inf[:, 0]), np.min(obstacle1_inf[:, 0]), np.max(obstacle1_inf[:, 1]),
         np.min(obstacle1_inf[:, 1])))
     print("obstacle 2 max x coord: {} min x coord {} \nmax y coord {}, min y coord {}".format(
         np.max(obstacle2_inf[:, 0]), np.min(obstacle2_inf[:, 0]), np.max(obstacle2_inf[:, 1]),
-        np.min(obstacle2_inf[:, 1])))
+        np.min(obstacle2_inf[:, 1])))'''
 
 
     #dist_estimator.update([o['obstacle_latent'] for o in obs], [o['obstacle_size_latent'] for o in obs])

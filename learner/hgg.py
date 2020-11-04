@@ -395,7 +395,7 @@ class HGGLearner:
 			tr_env_images = [take_env_image(self.env_List[i], args.img_size)]
 			##
 			for timestep in range(args.timesteps):
-				# get action from the ddpg policy
+				# get action from the policy
 				action = agent.step(obs, explore=True)
 				obs, reward, done, info = self.env_List[i].step(action)
 				trajectory.append(obs['achieved_goal'].copy())

@@ -45,7 +45,7 @@ def extend_sample_region(env, args):
         #todo?? is this necessary
         env.obj_range = extend_region_parameters_goal[args.env]['range']
 
-#IMPORTANT: this is ate mporally solution. THe robot has difficultirs to reach the 'bottom' part of the table
+#IMPORTANT: this is a temporal solution. THe robot has difficultirs to reach the 'bottom' part of the table
 # the actual solution would be to change the model of the envrionment so robot can reach evry point equallt easy
 def goal_random_pos_recom(env, args):
     if args.enc_type == 'goal' or args.enc_type == 'goal_sizes':

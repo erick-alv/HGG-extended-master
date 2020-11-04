@@ -453,6 +453,18 @@ for reward_type in ['sparse', 'dense']:
         max_episode_steps=100, )
 
     register(
+        id='FetchPushMovingComEnv{}-v1'.format(suffix),
+        entry_point='gym.envs.robotics:FetchPushMovingComEnv',
+        kwargs=kwargs,
+        max_episode_steps=100, )
+
+    register(
+        id='FetchTwinkleObstacleEnv{}-v1'.format(suffix),
+        entry_point='gym.envs.robotics:FetchTwinkleObstacleEnv',
+        kwargs=kwargs,
+        max_episode_steps=100, )
+
+    register(
         id='FetchGenerativeEnv{}-v1'.format(suffix),
         entry_point='gym.envs.robotics:FetchGenerativeEnv',
         kwargs=kwargs,
