@@ -315,10 +315,9 @@ def loss_function(x, x_recon_s, masks, mask_pred_s, mu_s, logvar_s, beta, gamma,
     q_masks = dists.Categorical(probs=tr_masks)
     stacked_mask_preds = torch.stack(mask_pred_s, 3)
     q_masks_recon = dists.Categorical(logits=stacked_mask_preds)
-    p1 = dists.Categorical(probs=torch.tensor([0.2, 0.4, 0.5]))
-    q1 = dists.Categorical(probs=torch.tensor([0.9, 0.6, 0.5]))
-
-    kl1 = dists.kl_divergence(p1, q1)
+    #avoid problem of kl_divergence becoming inf
+    smallest_num = torch.finfo(q_masks_recon.probs.dtype).tiny
+    q_masks_recon.probs[q_masks_recon.probs == 0.] = smallest_num
 
     kl_masks = dists.kl_divergence(q_masks, q_masks_recon)
     kl_masks = torch.sum(kl_masks, [1, 2])
@@ -341,6 +340,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
     data_size = len(data_set)
     #creates indexes and shuffles them. So it can acces the data
     idx_set = np.arange(data_size)
+    idx_set = idx_set[:1000]
     np.random.shuffle(idx_set)
     idx_set = np.split(idx_set, len(idx_set) / batch_size)
     for batch_idx, idx_select in enumerate(idx_set):
@@ -509,9 +509,9 @@ if __name__ == '__main__':
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
     parser.add_argument('--num_slots', help='number of slots', type=np.int32, default=5)
     parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=5.)#5#8
-    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=2.)#0.25)#5
+    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=5.)#0.25)#5
     parser.add_argument('--bg_sigma', help='', type=np.float, default=0.09)
-    parser.add_argument('--fg_sigma', help='', type=np.float, default=0.11)
+    parser.add_argument('--fg_sigma', help='', type=np.float, default=0.15)
 
     args = parser.parse_args()
 
@@ -526,7 +526,7 @@ if __name__ == '__main__':
     train_Vae(epochs=args.train_epochs, batch_size=args.batch_size,img_size=args.img_size,latent_size=args.latent_size,
               train_file=train_file,
               vae_weights_path=weights_path, beta=args.beta, gamma=args.gamma, bg_sigma=args.bg_sigma,
-              fg_sigma=args.fg_sigma, load=True, num_slots=args.num_slots)
+              fg_sigma=args.fg_sigma, load=False, num_slots=args.num_slots)
 
 
     '''device = torch.device("cuda")

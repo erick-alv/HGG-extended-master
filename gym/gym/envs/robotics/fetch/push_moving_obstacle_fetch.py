@@ -65,6 +65,20 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
             self.sim.model.body_pos[body_id][0] += self.obstacle_vel * self.obstacle_direction * dt
         super(FetchPushMovingObstacleEnv, self)._step_callback()'''
 
+    def test_setup(self, new_vel_lims=[1.8, 2.2]):
+        '''
+        changes the parameter for further tests after training an agent
+        '''
+        #the default values makes the obstacle in average faster
+        self.vel_lims = new_vel_lims
+        self.current_obstacle_vel = new_vel_lims[1]
+        self.initial_obstacle_direction = 1
+        self.obstacle_direction = 1
+        # limits are not 100% percent accurate; cahnging the range and margin parameters from the XML help to improve
+        # this accuracy
+        self.obstacle_upper_limit = 1.35
+        self.obstacle_lower_limit = 1.25
+
     def set_obstacle_slide_pos(self, pos):
         # move obstacle
         qpos = self.sim.data.qpos.flat[:]

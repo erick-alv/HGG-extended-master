@@ -17,7 +17,7 @@ from vae_env_inter import take_env_image, take_image_objects
 from j_vae.distance_estimation import calculate_distance, DistMovEst, DistMovEstReal, MultipleDist, MultipleDistReal
 from SPACE.main_space import load_space_model
 
-def get_args():
+def get_args(do_just_test=False):#this parameter is just used for the name
 	parser = get_arg_parser()
 
 	parser.add_argument('--tag', help='terminal tag in logger', type=str, default='')
@@ -115,12 +115,19 @@ def get_args():
 	args.clip_return_l, args.clip_return_r = clip_return_range(args)
 
 	logger_name = args.alg+'-'+args.env+'-'+args.learn
+	if do_just_test:
+		logger_name = 'TEST-'+logger_name
 	if args.tag!='': logger_name = args.tag+'-'+logger_name
 	if args.graph:
 		logger_name =logger_name + '-graph'
 	if args.stop_hgg_threshold < 1:
 		logger_name = logger_name + '-stop'
+	if args.dist_estimator_type is not None:
+		logger_name = logger_name+'-' + args.dist_estimator_type
+	if args.vae_type is not None:
+		logger_name = logger_name +'-'+ args.vae_type
 	args.logger = get_logger(logger_name)
+
 
 	for key, value in args.__dict__.items():
 		if key!='logger':
