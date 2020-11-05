@@ -493,7 +493,7 @@ def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1, num_blocks=5, c
     #optimizer = optim.Adam(model.parameters(), lr=1e-3)
     checkpoint = torch.load(path)
     model.load_state_dict(checkpoint['model_state_dict'])
-    #optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
     return model
 
 if __name__ == '__main__':
@@ -503,7 +503,7 @@ if __name__ == '__main__':
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
     parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=32)
-    parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=40)
+    parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=45)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
     parser.add_argument('--num_slots', help='number of slots', type=np.int32, default=6)
@@ -525,7 +525,7 @@ if __name__ == '__main__':
     train_Vae(epochs=args.train_epochs, batch_size=args.batch_size,img_size=args.img_size,latent_size=args.latent_size,
               train_file=train_file,
               vae_weights_path=weights_path, beta=args.beta, gamma=args.gamma, bg_sigma=args.bg_sigma,
-              fg_sigma=args.fg_sigma, load=False, num_slots=args.num_slots)
+              fg_sigma=args.fg_sigma, load=True, num_slots=args.num_slots)
 
 
     '''device = torch.device("cuda")
