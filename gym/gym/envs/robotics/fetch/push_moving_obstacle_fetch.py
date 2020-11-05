@@ -23,8 +23,6 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.current_obstacle_vel = 1.2
         self.initial_obstacle_direction = 1
         self.obstacle_direction = 1
-        #limits are not 100% percent accurate; cahnging the range and margin parameters from the XML help to improve
-        #this accuracy
         self.obstacle_upper_limit = 1.35
         self.obstacle_lower_limit = 1.25
 

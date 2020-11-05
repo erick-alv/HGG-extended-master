@@ -475,7 +475,7 @@ def gen_all_data_mixed(env, args):
     for n in ['rectangle', 'rectangle1', 'rectangle2', 'cylinder', 'cylinder1', 'cube', 'cube1']:
         env.env.env._set_position(names_list=[n], position=[10., 10., 0.])
 
-    colors = [(1., 0., 0.), (0., 0., 1.), (0.5, 0., 0.5), (0., 0.2, 0.3), (0.8, 0.8, 0.)]
+    colors = [(1., 0., 0.), (0., 0., 1.), (0.5, 0., 0.5), (0., 0.5, 0.6), (0.8, 0.8, 0.)]
     color_count = {}
     for i in range(len(colors)):
         color_count[i] = 0

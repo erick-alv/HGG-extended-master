@@ -341,6 +341,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
     #creates indexes and shuffles them. So it can acces the data
     idx_set = np.arange(data_size)
     np.random.shuffle(idx_set)
+    idx_set = idx_set[12800]
     idx_set = np.split(idx_set, len(idx_set) / batch_size)
     for batch_idx, idx_select in enumerate(idx_set):
         data = data_set[idx_select]
@@ -503,12 +504,12 @@ if __name__ == '__main__':
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
     parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=32)
-    parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=45)
+    parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=40)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
     parser.add_argument('--num_slots', help='number of slots', type=np.int32, default=6)
     parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=5.)#5#8
-    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=1.2)#5
+    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=1.8)#5
     parser.add_argument('--bg_sigma', help='', type=np.float, default=0.09)
     parser.add_argument('--fg_sigma', help='', type=np.float, default=0.11)
 
@@ -525,7 +526,7 @@ if __name__ == '__main__':
     train_Vae(epochs=args.train_epochs, batch_size=args.batch_size,img_size=args.img_size,latent_size=args.latent_size,
               train_file=train_file,
               vae_weights_path=weights_path, beta=args.beta, gamma=args.gamma, bg_sigma=args.bg_sigma,
-              fg_sigma=args.fg_sigma, load=True, num_slots=args.num_slots)
+              fg_sigma=args.fg_sigma, load=False, num_slots=args.num_slots)
 
 
     '''device = torch.device("cuda")
