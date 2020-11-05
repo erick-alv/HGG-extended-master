@@ -428,10 +428,10 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
                           channel_base=channel_base, num_slots=num_slots, full_connected_size=full_connected_size,
                           color_channels=color_channels, kernel_size=kernel_size, encoder_stride=encoder_stride,
                           decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2).to(device)
-        for w in model.parameters():
-            std_init = 0.01
-            nn.init.normal_(w, mean=0., std=std_init)
-        print('Initialized parameters')
+        #for w in model.parameters():
+        #    std_init = 0.01
+        #    nn.init.normal_(w, mean=0., std=std_init)
+        #print('Initialized parameters')
         # todo check which optimizer is better
         optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
         # optimizer = optim.Adam(model.parameters(), lr=1e-4)
@@ -509,7 +509,7 @@ if __name__ == '__main__':
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
     parser.add_argument('--num_slots', help='number of slots', type=np.int32, default=6)
     parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=5.)#5#8
-    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=3.)#0.25)#5
+    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=0.25)#5
     parser.add_argument('--bg_sigma', help='', type=np.float, default=0.09)
     parser.add_argument('--fg_sigma', help='', type=np.float, default=0.11)
 
