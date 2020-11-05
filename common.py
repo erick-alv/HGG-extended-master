@@ -321,3 +321,31 @@ def experiment_setup(args):
 
 
 	return env, env_test, agent, buffer, learner, tester
+
+from play import Player
+def experiment_setup_test(args):
+	if args.vae_dist_help:
+		load_vaes(args)
+
+
+	env = make_env(args)
+	#todo make here the test setup from the
+
+	load_field_parameters(args)
+	if args.dist_estimator_type is not None:
+		load_dist_estimator(args, env)
+
+
+
+	if args.goal_based:
+		args.obs_dims = list(goal_based_process(env.reset()).shape)
+		args.acts_dims = [env.action_space.shape[0]]
+		args.compute_reward = env.compute_reward
+		args.compute_distance = env.compute_distance
+
+	args.agent = agent = Player(args)
+	args.tester = tester = Tester(args)
+	args.timesteps = env.env.env.spec.max_episode_steps
+
+
+	return env, agent, tester

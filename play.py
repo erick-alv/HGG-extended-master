@@ -33,6 +33,9 @@ class Player:
         actions = self.sess.run(self.pi, {self.raw_obs_ph: obs})
         return actions
 
+    def step_batch(self, obs):
+        return self.my_step_batch(obs)
+
     def play(self):
         # play policy on env
         env = self.env
