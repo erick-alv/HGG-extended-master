@@ -21,7 +21,7 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
 
 
         #for moving
-        self.vel_lims = [0.8, 2.1]
+        self.vel_lims = [0.8, 1.5]
         self.current_obstacle_vel = 2.1
         self.initial_obstacle_direction = 1
         self.obstacle_direction = 1
@@ -45,8 +45,13 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         utils.EzPickle.__init__(self)
         self.obstacle_slider_idx = self.sim.model.joint_names.index('obstacle:joint')
 
-    # RobotEnv methods
-    # ----------------------------
+    def test_setup(self, new_vel_lims=[1.4, 1.8]):
+        '''
+        changes the parameter for further tests after training an agent
+        '''
+        # the default values makes the obstacle in average faster
+        self.vel_lims = new_vel_lims
+        self.current_obstacle_vel = new_vel_lims[1]
 
     def set_obstacle_slide_pos(self, pos):
         # move obstacle

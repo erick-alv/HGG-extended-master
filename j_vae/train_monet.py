@@ -503,15 +503,15 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=32)
+    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=64)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=40)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
     parser.add_argument('--num_slots', help='number of slots', type=np.int32, default=5)
     parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=5.)#5#8
-    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=5.)#0.25)#5
+    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=3.)#0.25)#5
     parser.add_argument('--bg_sigma', help='', type=np.float, default=0.09)
-    parser.add_argument('--fg_sigma', help='', type=np.float, default=0.15)
+    parser.add_argument('--fg_sigma', help='', type=np.float, default=0.11)
 
     args = parser.parse_args()
 
