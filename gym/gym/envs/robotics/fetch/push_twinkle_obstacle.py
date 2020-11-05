@@ -20,12 +20,6 @@ class FetchTwinkleObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.object_center = np.array([1.3, 0.93, 0.425])
 
 
-        #for moving
-        self.vel_lims = [0.8, 2.1]
-        self.current_obstacle_vel = 2.1
-        self.initial_obstacle_direction = 1
-        self.obstacle_direction = 1
-
         self.is_active = True
         self.active_steps = 0
         self.inactive_steps = 0
@@ -50,8 +44,16 @@ class FetchTwinkleObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.obstacle_id = self.sim.model.body_name2id('obstacle')
         self.obstacle_original_pos = self.sim.data.body_xpos[self.obstacle_id].copy()
 
-    # RobotEnv methods
-    # ----------------------------
+
+    def test_setup(self, active_steps_max=9, active_steps_min=6, inactive_steps_max=3, inactive_steps_min=1):
+        '''
+        changes the parameter for further tests after training an agent
+        '''
+        #the default values makes obstacle present for more timesteps thus difficulting to reach goal
+        self.active_steps_max = active_steps_max
+        self.active_steps_min = active_steps_min
+        self.inactive_steps_max = inactive_steps_max
+        self.inactive_steps_min = inactive_steps_min
 
     def set_obstacle_slide_pos(self, pos):
         # move obstacle
@@ -69,45 +71,6 @@ class FetchTwinkleObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         to_mod = to_mod._replace(qvel=qvel)
         self.sim.set_state(to_mod)
         self.sim.forward()
-
-    def move_obstacle(self):
-        dt = self.sim.nsubsteps * self.sim.model.opt.timestep
-        qpos = self.sim.data.qpos.flat[:]
-        current_qpos = qpos[self.obstacle_slider_idx]
-
-        if self.obstacle_direction == 1:
-            if current_qpos >= 0.05:
-                new_pos = current_qpos - self.current_obstacle_vel * dt
-                self.set_obstacle_slide_pos(new_pos)
-                self.obstacle_direction = -1
-            else:
-                extra_dist = self.current_obstacle_vel * dt
-                if current_qpos + extra_dist >= 0.05:
-                    new_pos = 0.05
-                    self.set_obstacle_slide_pos(new_pos)
-                    self.obstacle_direction = -1
-                else:
-                    new_pos = current_qpos + extra_dist
-                    self.set_obstacle_slide_pos(new_pos)
-
-        else:
-            if current_qpos <= -0.05:
-                new_pos = current_qpos + self.current_obstacle_vel * dt
-                self.set_obstacle_slide_pos(new_pos)
-                self.obstacle_direction = 1
-            else:
-                extra_dist = self.current_obstacle_vel * dt
-                if current_qpos - extra_dist <= -0.05:
-                    new_pos = -0.05
-                    self.set_obstacle_slide_pos(new_pos)
-                    self.obstacle_direction = 1
-                else:
-                    new_pos = current_qpos - extra_dist
-                    self.set_obstacle_slide_pos(new_pos)
-
-        #body_id = self.sim.model.body_name2id('obstacle')
-        #mov_obst_center = self.sim.data.body_xpos[body_id]
-        #print(mov_obst_center)
 
     def twinkle_obstacle(self):
         if self.is_active:
