@@ -19,7 +19,7 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.target_goal_center = np.array([1.3, 0.57, 0.425])
         self.object_center = np.array([1.3, 0.93, 0.425])
         #for moving
-        self.vel_lims = [0.8, 1.2]
+        self.vel_lims = [1., 1.5]
         self.current_obstacle_vel = 1.2
         self.initial_obstacle_direction = 1
         self.obstacle_direction = 1
