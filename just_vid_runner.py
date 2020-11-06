@@ -92,7 +92,7 @@ if __name__ == '__main__':
     start_time = time.time()
 
 
-    for vid in range(10):
+    for vid in range(5):
         o = env.reset()
         obs.append(o)
         prev_obs.append(o)

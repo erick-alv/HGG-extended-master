@@ -36,6 +36,8 @@ class Tester:
 
 
 	def test_acc(self, key, env, agent):
+		if self.args.goal == 'intervalCollision':
+			envs_collision = [2 for _ in range(len(self.env_List))]
 		if (self.args.vae_dist_help or self.args.transform_dense) and (self.calls % 40 == 0 or self.calls in [0, 1, 2, 5, 8, 10]):
 			eps_idx = [0, 5, 8, 10, 15, 20, self.test_rollouts-1]
 			ex_logs = [LoggerExtra(self.args.logger.my_log_dir, 'results_it_{}_ep_{}_test'.format(self.calls, i))
@@ -69,7 +71,14 @@ class Tester:
 				for i in range(self.test_rollouts):
 					ob, _, _, info = env[i].step(actions[i])
 					obs.append(goal_based_process(ob))
+					#this should be used just for testing after training
+					if self.args.goal == 'intervalCollision':
+						if envs_collision[i] <= 0 or ob['collision_check']:
+							envs_collision[i] -= 1
+							info['Success'] = 0.0
 					infos.append(info)
+
+
 					if i in eps_idx:
 						t = eps_idx.index(i)
 						ex_logs[t].add_record('Step', timestep)
@@ -112,6 +121,10 @@ class Tester:
 				for i in range(self.test_rollouts):
 					ob, _, _, info = env[i].step(actions[i])
 					obs.append(goal_based_process(ob))
+					if self.args.goal == 'intervalCollision':
+						if envs_collision[i] <= 0 or ob['collision_check']:
+							envs_collision[i] -= 1
+							info['Success'] = 0.0
 					infos.append(info)
 		minDist = infos[0]['Distance']
 		maxDist = infos[0]['Distance']

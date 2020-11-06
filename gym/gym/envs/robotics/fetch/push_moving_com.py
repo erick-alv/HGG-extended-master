@@ -152,8 +152,8 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         pos = self.sim.data.body_xpos[body_id].copy()
         dims = np.array([0.1, 0.03, 0.025])
         o1 = np.concatenate((pos, dims.copy()))
-        o2 = np.array([1.3, 0.5, 0.425, 0.25, 0.01, 0.025])
-        o3 = np.array([1.45, 0.7, 0.425, 0.015, 0.19, 0.025])
+        o2 = np.array([1.3, 0.5, 0.44, 0.25, 0.01, 0.04])
+        o3 = np.array([1.44, 0.7, 0.44, 0.02, 0.19, 0.04])
         obs['real_obstacle_info'] = np.array([o1, o2, o3])
         return obs
 

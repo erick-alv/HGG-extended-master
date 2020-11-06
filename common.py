@@ -29,7 +29,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	if args.env=='HandReach-v0':
 		parser.add_argument('--goal', help='method of goal generation', type=str, default='reach', choices=['vanilla', 'reach'])
 	else:
-		parser.add_argument('--goal', help='method of goal generation', type=str, default='interval', choices=['vanilla', 'fixobj', 'interval', 'custom'])
+		parser.add_argument('--goal', help='method of goal generation', type=str, default='interval', choices=['vanilla', 'fixobj', 'interval', 'intervalCollision','custom'])
 		if args.env[:5]=='Fetch':
 			parser.add_argument('--init_offset', help='initial offset in fetch environments', type=np.float32, default=1.0)
 		elif args.env[:4]=='Hand':
@@ -334,8 +334,6 @@ def experiment_setup_test(args):
 	load_field_parameters(args)
 	if args.dist_estimator_type is not None:
 		load_dist_estimator(args, env)
-
-
 
 	if args.goal_based:
 		args.obs_dims = list(goal_based_process(env.reset()).shape)

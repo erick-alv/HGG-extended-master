@@ -46,9 +46,9 @@ class Player:
               [np.array([-0.5, -0.5, 0., 0.]) for _ in range(20)] +\
               [np.array([0., 0., 0., 0.]) for _ in range(80)]'''
         acs = [np.array([0., 1., 0., 0.]) for _ in range(25)] + [np.array([0., 0., 0., 0.]) for _ in range(110)]
-        for i in range(self.test_rollouts):
+        for t in range(self.test_rollouts):
             ob = env.reset()
-            #env.env.env._move_object(position=[1.13, 0.75, 0.425])
+            env.env.env._move_object(position=[1.13, 0.75, 0.425])
 
             obs.append(goal_based_process(ob))
             trajectory_goals = [ob['achieved_goal'].copy()]
@@ -59,6 +59,9 @@ class Player:
             trajectory_obstacles_latents_sizes = [ob['obstacle_size_latent'].copy()]
 
             tr_env_images = [take_env_image(self.env, args.img_size)]
+
+
+
 
             for timestep in range(self.args.timesteps):
                 actions = self.my_step_batch(obs)
@@ -77,7 +80,9 @@ class Player:
                 tr_env_images.append(take_env_image(self.env, args.img_size))
 
                 infos.append(info)
-            if i % 5 == 0 or i == self.test_rollouts -1:
+
+
+            if t % 5 == 0 or t == self.test_rollouts -1:
                 steps = np.arange(len(tr_env_images))
                 #latent_ind_x = 1
                 #latent_ind_y = 0
@@ -88,14 +93,14 @@ class Player:
                 plt.plot(steps, map_x_table(np.array(trajectory_goals_latents)[:, latent_ind_x]), label='latent')
                 plt.title('positions_x_goals')
                 plt.legend(loc=4)
-                plt.savefig("{}it_{}_positions_x_goals.png".format(args.logger.my_log_dir, i))
+                plt.savefig("{}it_{}_positions_x_goals.png".format(args.logger.my_log_dir, t))
                 plt.close()
 
                 plt.plot(steps, np.array(trajectory_goals)[:, 1], label='real')
                 plt.plot(steps, map_y_table(np.array(trajectory_goals_latents)[:, latent_ind_y]), label='latent')
                 plt.title('positions_y_goals')
                 plt.legend(loc=4)
-                plt.savefig("{}it_{}_positions_y_goals.png".format(args.logger.my_log_dir, i))
+                plt.savefig("{}it_{}_positions_y_goals.png".format(args.logger.my_log_dir, t))
                 plt.close()
 
                 '''plt.plot(steps, np.array(trajectory_obstacles)[:, 0], label='real')
@@ -128,7 +133,7 @@ class Player:
                 plt.savefig("{}it_{}_sizes_y_obstacles.png".format(args.logger.my_log_dir, i))
                 plt.close()'''
 
-                create_rollout_video(tr_env_images, args=self.args, filename='play_it_{}'.format(i))
+                create_rollout_video(tr_env_images, args=self.args, filename='play_it_{}'.format(t))
 
 def interval_map_function(a,b,c, d):
     def map(x):
