@@ -778,6 +778,8 @@ if __name__ == '__main__':
 
 
     data_set = np.load('../data/FetchGenerativeEnv-v1/all_set.npy')
+    #just take half the data
+    data_set = data_set[:19200]
     device = 'cuda:0'
     from j_vae.train_monet import load_Vae, visualize_masks
     model = load_Vae(path='../data/FetchGenerativeEnv-v1/all_sb_model', img_size=64, latent_size=6)
