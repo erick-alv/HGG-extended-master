@@ -763,22 +763,21 @@ def rec_dataset(model, dataset_path):
 if __name__ == '__main__':
     device = 'cuda:0'
     #one less since background mask is not used
-    seed=1
-    torch.manual_seed(seed)
+    #seed=1
+    #torch.manual_seed(seed)
     '''model = Bbox(5, device).to(device)
     optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
     train(model, optimizer, device, log_interval_epoch=10, log_interval_batch=400, batch_size=16)#4)'''
 
 
-    seed = 1
+    '''seed = 1
     torch.manual_seed(seed)
     model = load_Model('../data/FetchGenerativeEnv-v1/model_bbox', 64, 8, device, 5)
-    rec_dataset(model, '../data/FetchGenerativeEnv-v1/double_env_with_masks.npy')
+    rec_dataset(model, '../data/FetchGenerativeEnv-v1/double_env_with_masks.npy')'''
 
 
 
-    '''#data_set = np.load('../data/FetchGenerativeEnv-v1/all_set.npy')
-    data_set = np.load('../data/FetchGenerativeEnv-v1/double_env.npy')
+    data_set = np.load('../data/FetchGenerativeEnv-v1/all_set.npy')
     device = 'cuda:0'
     from j_vae.train_monet import load_Vae, visualize_masks
     model = load_Vae(path='../data/FetchGenerativeEnv-v1/all_sb_model', img_size=64, latent_size=6)
@@ -813,8 +812,7 @@ if __name__ == '__main__':
             ims = np.concatenate([np.expand_dims(data_np, axis=1), masks], axis=1)
             new_data_set[batch_idx*batch_size:batch_idx*batch_size + batch_size] = ims
             #show_im(np.concatenate([i for i in ims[0]], axis=0))
-    #np.save('../data/FetchGenerativeEnv-v1/all_set_with_masks.npy', new_data_set)
-    np.save('../data/FetchGenerativeEnv-v1/double_env_with_masks.npy', new_data_set)'''
+    np.save('../data/FetchGenerativeEnv-v1/all_set_with_masks.npy', new_data_set)
     '''new_data_set = np.load('../data/FetchGenerativeEnv-v1/all_set_with_masks.npy')
     bbox_info = preprocess_bounding_boxes(new_data_set[:, 1:, :, :, 0:1].copy())
     np.save('../data/FetchGenerativeEnv-v1/all_set_with_masks_bbox.npy', bbox_info)'''
