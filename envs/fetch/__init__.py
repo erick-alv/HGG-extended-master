@@ -3,6 +3,8 @@ from .fixobj import FixedObjectGoalEnv
 from .interval import IntervalGoalEnv
 from .custom import CustomGoalEnv
 from .interval_with_contact_detection import IntervalWithCollisionDetection
+from .extensions_interval import IntervalExt
+
 
 # TODO: change this file for new env handling!
 def make_env(args):
@@ -11,5 +13,6 @@ def make_env(args):
 		'fixobj': FixedObjectGoalEnv,
 		'interval': IntervalGoalEnv,
 		'custom': CustomGoalEnv,
-		'intervalCollision':IntervalWithCollisionDetection
+		'intervalCollision':IntervalWithCollisionDetection,
+		'intervalExt':IntervalExt
 	}[args.goal](args)
