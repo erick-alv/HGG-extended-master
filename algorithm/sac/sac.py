@@ -232,7 +232,7 @@ class SAC(object):
             )
         return {
             'Pi_q_loss': policy_loss.item(),
-            'Pi_l2_loss': 0.,#todo use l2 value for pi loss?? In normal SAC this is not used
+            'Pi_l2_loss': 0.,
             'Q_loss': ((q1_loss + q2_loss)/2.).item()
         }
 
@@ -245,9 +245,9 @@ class SAC(object):
             return np.random.uniform(-1, 1, size=self.args.acts_dims)
         if self.args.goal_based: obs = goal_based_process(obs)
 
-        # eps-greedy exploration TODO do we also need this with SAC
-        if explore and np.random.uniform() <= self.args.eps_act:
-            return np.random.uniform(-1, 1, size=self.args.acts_dims)
+        # eps-greedy exploration not using in SAC
+        #if explore and np.random.uniform() <= self.args.eps_act:
+        #    return np.random.uniform(-1, 1, size=self.args.acts_dims)
 
         obs = torch.from_numpy(obs).unsqueeze(0).to(self.device).float()
         action = self.get_action(obs, deterministic=not explore)
@@ -270,25 +270,26 @@ class SAC(object):
             return action, info
         return action
 
-    def step_batch(self, obs):#todo if this is called from test or evaluation should be set to deterministic=True
+    def step_batch(self, obs):#!!!!Important, this assume is called when deterministic beahviour is needed
         if not isinstance(obs, np.ndarray):
             obs = np.array(obs)
         obs = torch.from_numpy(obs).to(self.device).float()
-        actions = self.get_action(obs)
+        actions = self.get_action(obs, deterministic=True)
         return actions
 
     def get_q_pi(self, obs):
         if not isinstance(obs, np.ndarray):
             obs = np.array(obs)
         obs = torch.from_numpy(obs).to(self.device).float()
-        action = self.get_action(obs)#todo should also be determinitic
+        action = self.get_action(obs, deterministic=True)
         action = torch.from_numpy(action).to(self.device).float()
         q_pi = torch.min(
             self.soft_q_net1(obs, action),
             self.soft_q_net2(obs, action)
-        )[:, 0]#todo see why 0
+        )
+        q_pi = q_pi[:, 0]
         q_pi = q_pi.detach().cpu().numpy()
-        value = np.clip(q_pi, -1.0 / (1.0 - self.args.gamma), 0)#todo THE VALUE was positive ans should be negative see if always is so
+        value = np.clip(q_pi, -1.0 / (1.0 - self.args.gamma), 0)
         return value
 
     #train pi and train q not implemented, since apparently not used
