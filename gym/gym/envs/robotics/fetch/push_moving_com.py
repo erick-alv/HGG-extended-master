@@ -27,7 +27,7 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.obstacle_direction = 1
         #limits are not 100% percent accurate; cahnging the range and margin parameters from the XML help to improve
         #this accuracy
-        self.obstacle_upper_limit = 1.335
+        self.obstacle_upper_limit = 1.34
         self.obstacle_lower_limit = 1.25
 
 
@@ -153,7 +153,7 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         dims = np.array([0.1, 0.03, 0.025])
         o1 = np.concatenate((pos, dims.copy()))
         o2 = np.array([1.3, 0.5, 0.44, 0.25, 0.01, 0.04])
-        o3 = np.array([1.44, 0.7, 0.44, 0.02, 0.19, 0.04])
+        o3 = np.array([1.44, 0.645, 0.44, 0.02, 0.135, 0.04])
         obs['real_obstacle_info'] = np.array([o1, o2, o3])
         return obs
 
