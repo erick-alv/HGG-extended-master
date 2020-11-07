@@ -43,7 +43,7 @@
 		</body>
 
 		<body pos="1.44 0.7 0.44" name="obstacle3">
-			<geom name="o3" pos="0 0 0" size="0.02 0.19 0.04" type="box" rgba="0. 0.5 0.6 1" mass="2000" material="table_mat"></geom>
+			<geom name="o3" pos="0 0 0" size="0.02 0.19 0.04" type="box" solref="0.04 1" rgba="0.8 0.8 0 1" mass="2000" material="table_mat"></geom>
 		</body>
 
 

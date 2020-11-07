@@ -437,69 +437,31 @@ class MultipleDistReal(MultipleObstacle):#in same principle the same but for eve
 
 class MultipleDist(MultipleObstacle):
     def update(self, obstacle_latent_list, obstacle_size_latent_list):
-        #obstacle_size_latent will be actually empty
-        #todo for now we suppose that obstacles keep their relationship
-        #todo for now this will just work for double obstacle array
-        #divide corresponding to y axis
-
-
-
+        #todo handle case when obstacle not present
+        if not isinstance(obstacle_latent_list, np.ndarray):
+            obstacle_array = np.array(obstacle_latent_list)
+        else:
+            obstacle_array = obstacle_latent_list
 
         if not isinstance(obstacle_size_latent_list, np.ndarray):
-            obstacle_array = np.array(obstacle_latent_list)
             obstacle_array_size = np.array(obstacle_size_latent_list)
         else:
-            obstacle_array = obstacle_size_latent_list
             obstacle_array_size = obstacle_size_latent_list
 
-        #shape of obstacle size latent (B, N, D); B number of samples; N number of obstacles, D dimension of attribute
-        #must be done in this way since now it recognizes multiple obstacles, somtimes different numbers
-        #sorted = [np.zeros_like(ar) for ar in obstacle_array]
-        #sorted = np.array(sorted)
-        #sorted_size = [np.zeros_like(ar) for ar in obstacle_array_size]
-        #sorted_size = np.array(sorted_size)
-        N = 0
-        y_acc = 0.
-        n_acc = 0
-        for index, batch_els in enumerate(obstacle_array):
-            #sorted_x_indices = np.argsort(batch_els[:, 0])
-            #sorted_x = batch_els[sorted_x_indices]
-            #sorted_x_size = obstacle_array_size[index][sorted_x_indices]
-            #sorted_y_indices = np.argsort(sorted_x[:, 1])
-            #sorted_y = sorted_x[sorted_y_indices]
-            #sorted_y_size = sorted_x_size[sorted_y_indices]
-            #sorted[index] = sorted_y
-            #sorted_size[index] = sorted_y_size
-            if len(batch_els) > N:
-                N = len(batch_els)
-            n_acc += len(batch_els)
-            y_acc += np.sum(batch_els[:, 1])
-        y_mean = y_acc/n_acc
-
-
-
-        obstacle_array = sorted.copy()
-        obstacle_array_size = sorted_size.copy()
-
-        #(B, N, D) -> (N, B, D)
-        B = len(obstacle_array)
-        #max N
-
-        #obstacle_array = np.transpose(obstacle_array, axes=[1, 0, 2])
-        #N, B, D = obstacle_array.shape
-
-        #each object info is organized as [x,y,z,size_x,size_y, size_z]
-        el = obstacle_array[:][ 0:N, 0]
-        #for
-
+        # shape of obstacle size latent (B, N, D); B number of samples; N number of obstacles, D dimension of attribute
+        # (B, N, D) -> (N, B, D)
+        obstacle_array = np.transpose(obstacle_array, axes=[1, 0, 2])
+        obstacle_array_size = np.transpose(obstacle_array_size, axes=[1, 0, 2])
+        N, B, D = obstacle_array.shape
+        # each object info is organized as [x,y,z,size_x,size_y, size_z]
         a_xs = np.amin(obstacle_array[0:N, :, 0], axis=1)
         b_xs = np.amax(obstacle_array[0:N, :, 0], axis=1)
         a_ys = np.amin(obstacle_array[0:N, :, 1], axis=1)
         b_ys = np.amax(obstacle_array[0:N, :, 1], axis=1)
-        s_xs = np.mean(obstacle_array[0:N, :, 3], axis=1)
-        s_ys = np.mean(obstacle_array[0:N, :, 4], axis=1)
+        s_xs = np.mean(obstacle_array_size[0:N, :, 0], axis=1)
+        s_ys = np.mean(obstacle_array_size[0:N, :, 1], axis=1)
 
-        if self.none_vals_yet:#assume everything else is
+        if self.none_vals_yet:  # assume everything else is
             self.max_x = b_xs + s_xs
             self.min_x = a_xs - s_xs
             self.max_y = b_ys + s_ys

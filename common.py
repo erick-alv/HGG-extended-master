@@ -207,8 +207,9 @@ def load_field_parameters(args):
 		if args.vae_type == 'space' or 'bbox':
 			#model space is trained to create measures in range [-1, 1], a bit more space is given for the calculations
 			args.field_center = [0., 0.]
-			args.field_size = [1.05, 1.05]
-			if args.env in ['FetchPushLabyrinth-v1', 'FetchPushObstacleFetchEnv-v1', 'FetchPushMovingObstacleEnv-v1']:
+			args.field_size = [1.0, 1.0]
+			if args.env in ['FetchPushLabyrinth-v1', 'FetchPushObstacleFetchEnv-v1', 'FetchPushMovingObstacleEnv-v1',
+							'FetchPushMovingComEnv-v1']:
 				args.real_field_center = [1.3, 0.75]
 				args.real_field_size = [0.25, 0.25]
 			elif args.env in ['FetchPushMovingDoubleObstacleEnv-v1']:
@@ -237,6 +238,8 @@ def load_dist_estimator(args, env):
 		args.dist_estimator = DistMovEstReal()
 	elif args.dist_estimator_type == 'multipleReal':
 		args.dist_estimator = MultipleDistReal()
+	elif args.dist_estimator_type == 'multiple':
+		args.dist_estimator = MultipleDist()
 	else:
 		raise Exception('logic for dist estimator type not implemented yet')
 

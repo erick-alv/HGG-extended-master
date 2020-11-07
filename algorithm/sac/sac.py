@@ -305,7 +305,7 @@ class SAC(object):
     def save(self, filename, global_step = None):
         fname = copy.copy(filename)
         if global_step is not None:
-            fname = fname+'_'+global_step
+            fname = fname+'_'+str(global_step)
 
         #not save target network since it should have same values when storing
         save_dict = {}

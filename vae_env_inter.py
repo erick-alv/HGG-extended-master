@@ -229,10 +229,18 @@ def latents_from_images(images, args):
             images = torch.from_numpy(images).float().to(args.device)
             images /= 255.
             images = images.permute([0, 3, 1, 2])
+            #todo handle case more than one properly; todo
             #todo cahnge the index through inference
-            goal_index = 0
-            #todo it could be obstacle indices, and then we have to also see if they are present
-            obstacle_idx = [4]
+            if args.env in ['FetchPushMovingObstacleEnv-v1']:
+                #TODO !! with NEW bbox this is not valid
+                raise Warning("With current BBox this is not valid anymore")
+                goal_index = 0
+                # todo it could be obstacle indices, and then we have to also see if they are present
+                obstacle_idx = [4]
+            elif args.env in ['FetchPushMovingComEnv-v1']:
+                goal_index = 1
+                obstacle_idx = [0, 2, 4]
+
 
             #(B, K, D)
             z_pres, z_depth, z_scale, z_pos = args.vae_model.encode(images)
@@ -245,6 +253,7 @@ def latents_from_images(images, args):
         obstacles_pos = z_pos[:, obstacle_idx, :]
         obstacles_size = z_scale[:, obstacle_idx, :]
         indices_goal_present = z_pres[:, goal_index, 0] > 0.8
+        #todo handle case when obstacle not present
         indices_goal_not_present = np.logical_not(indices_goal_present)
         #set those goals far away
         goal_pos[indices_goal_not_present] = np.array([100., 100.])#todo these goals should be avoided as hgg so this needs also to be passed
