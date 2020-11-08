@@ -155,5 +155,6 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         o2 = np.array([1.3, 0.5, 0.44, 0.25, 0.01, 0.04])
         o3 = np.array([1.44, 0.645, 0.44, 0.02, 0.135, 0.04])
         obs['real_obstacle_info'] = np.array([o1, o2, o3])
+        obs['real_size_goal'] = np.array([0.03, 0.03, 0.02])
         return obs
 

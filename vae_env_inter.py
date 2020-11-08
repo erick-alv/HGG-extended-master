@@ -232,9 +232,7 @@ def latents_from_images(images, args):
             #todo handle case more than one properly; todo
             #todo cahnge the index through inference
             if args.env in ['FetchPushMovingObstacleEnv-v1']:
-                #TODO !! with NEW bbox this is not valid
-                raise Warning("With current BBox this is not valid anymore")
-                goal_index = 0
+                goal_index = 1
                 # todo it could be obstacle indices, and then we have to also see if they are present
                 obstacle_idx = [4]
             elif args.env in ['FetchPushMovingComEnv-v1']:

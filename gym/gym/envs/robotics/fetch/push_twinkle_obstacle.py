@@ -153,6 +153,7 @@ class FetchTwinkleObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
             obs['real_obstacle_info'] = ob.copy()
         else:
             obs['real_obstacle_info'] = np.array([0., 0., 0., 0.])
+            obs['real_size_goal'] = np.array([0.03, 0.03, 0.02])
         return obs
 
 '''if __name__ == '__main__':

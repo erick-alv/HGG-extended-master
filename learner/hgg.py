@@ -216,7 +216,6 @@ class MatchSampler:
 			self.match_lib.add(0, graph_id['achieved'][i], 1, 0)
 		for i in range(len(achieved_pool)):
 			if self.args.vae_dist_help or self.args.dist_estimator_type is not None:
-				#allow a bit of error?? see if this could be problematic# for now not
 				i1 = achieved_pool[i][:, 0] > self.args.real_field_center[0] + self.args.real_field_size[0]
 				i2 = achieved_pool[i][:, 0] < self.args.real_field_center[0] - self.args.real_field_size[0]
 				i3 = achieved_pool[i][:, 1] > self.args.real_field_center[1] + self.args.real_field_size[1]

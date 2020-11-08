@@ -34,10 +34,12 @@ class Tester:
 				self.info.append('MaxDistance')
 				self.info.append('MinDistance')
 
+		self.coll_tol = 0 #this attribute is just used for tests after training
+
 
 	def test_acc(self, key, env, agent):
 		if self.args.goal == 'intervalCollision':
-			envs_collision = [2 for _ in range(len(self.env_List))]
+			envs_collision = [self.coll_tol for _ in range(len(self.env_List))]
 		if (self.args.vae_dist_help or self.args.transform_dense) and (self.calls % 40 == 0 or self.calls in [0, 1, 2, 5, 8, 10]):
 			eps_idx = [0, 5, 8, 10, 15, 20, self.test_rollouts-1]
 			ex_logs = [LoggerExtra(self.args.logger.my_log_dir, 'results_it_{}_ep_{}_test'.format(self.calls, i))

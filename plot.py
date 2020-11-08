@@ -143,9 +143,16 @@ if __name__ == "__main__":
                 config = r"G-HGG ($n = 10571$)"
         elif args.naming == 6:
             if 'hgg-vae' in clean_path:
+
                 config = "HGG-VAE"
+
             elif 'hgg-bbox' in clean_path:
                 config = "HGG-Bbox"
+                if '082' in curr_path:
+                    config = '082-'+config
+                elif '084' in curr_path:
+                    config = '084-' + config
+
             elif 'hgg-optimal' in clean_path:
                 config = "HGG-optimal-case"
             elif 'hgg-space' in clean_path:

@@ -130,6 +130,7 @@ class FetchPushMovingDoubleObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         ob1 = np.concatenate((pos1, dims.copy()))
         ob2 = np.concatenate((pos2, dims.copy()))
         obs['real_obstacle_info'] = np.array([ob1, ob2])
+        obs['real_size_goal'] = np.array([0.045, 0.045, 0.025])
         return obs
 
 '''if __name__ == '__main__':

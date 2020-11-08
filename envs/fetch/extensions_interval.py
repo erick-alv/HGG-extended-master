@@ -1,78 +1,69 @@
 from .interval import IntervalGoalEnv
+import numpy as np
+
+#todo first run jsut the algorithm with the minimizer of collision along side to see what Q values it does create
+#A space visualizer V value will be needed that(heat map)
 
 class IntervalExt(IntervalGoalEnv):
     def __init__(self, args):
         IntervalGoalEnv.__init__(self, args)
+        self.counter = 0
 
     def get_obs(self):
         obs = super(IntervalExt, self).get_obs()
-        sim = self.env.env.sim
-        exists_collision = False
-        #todo generalize this for other environments
-        for i in range(sim.data.ncon):
-            contact = sim.data.contact[i]
-            if (contact.geom1 == 23 and contact.geom2 == 24) or (contact.geom1 == 24 and contact.geom2 == 23):
-                exists_collision = True
+        if self.args.vae_dist_help:
+            extra_goal_state = np.concatenate([obs['achieved_goal_latent'],
+                                               obs['achieved_goal_size_latent']])
 
-        obs['collision_check'] = exists_collision
+            obstacle_l = obs['obstacle_latent']
+            obstacle_s_l = obs['obstacle_size_latent']
+            if len(obstacle_l.shape) > 1:
+                extra_obstacle_state = np.ravel(np.concatenate([obstacle_l, obstacle_s_l], axis=1))
+            else:
+                extra_obstacle_state = np.concatenate([obstacle_l, obstacle_s_l])
+        else:
+            extra_goal_state = np.concatenate([obs['achieved_goal'],
+                                               obs['real_size_goal']])
+
+            obstacle_info = obs['real_obstacle_info']
+            if len(obstacle_info.shape) > 1:
+                extra_obstacle_state = np.ravel(obstacle_info)
+            else:
+                extra_obstacle_state = obstacle_info
+
+        if self.counter == 0:
+            self.single_step_extra_goal_state_size = len(extra_goal_state)
+            self.single_step_extra_obstacle_state_size = len(extra_obstacle_state)
+            self.start_index_extra_observation = len(obs['observation'])
+            extra_goal_state = np.concatenate([extra_goal_state, extra_goal_state])
+            extra_obstacle_state = np.concatenate([extra_obstacle_state, extra_obstacle_state])
+        else:
+            #the first entries will always have the more recent representations
+            prev_obs = self.last_obs.copy()
+            begin_index = self.start_index_extra_observation
+            end_index = self.start_index_extra_observation+self.single_step_extra_goal_state_size
+            prev_goal_state = prev_obs['observation'][begin_index: end_index]
+
+            begin_index = self.start_index_extra_observation+2*self.single_step_extra_goal_state_size
+            end_index = self.start_index_extra_observation \
+                        + 2*self.single_step_extra_goal_state_size \
+                        + self.single_step_extra_obstacle_state_size
+            prev_obstacle_state = prev_obs['observation'][begin_index: end_index]
+
+            #the previous ones are pushed to the back
+            extra_goal_state = np.concatenate([extra_goal_state, prev_goal_state])
+            extra_obstacle_state = np.concatenate([extra_obstacle_state, prev_obstacle_state])
+
+        new_state = np.concatenate([obs['observation'], extra_goal_state, extra_obstacle_state])
+        obs['observation'] = new_state
+
         return obs
 
-    def get_obs(self):
-        if (hasattr(self.args, 'transform_dense') and self.args.transform_dense) or \
-                (hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help):
-            obs = self.env.env._get_obs()
-            obs['desired_goal_latent'] = self.desired_goal_latent.copy()
-            obs['achieved_goal_latent'] = self.achieved_goal_latent.copy()
-            # obs['achieved_goal_image'] = self.achieved_goal_image.copy()
-            obs['obstacle_latent'] = self.obstacle_latent.copy()
-            obs['obstacle_size_latent'] = self.obstacle_size_latent.copy()
-            return obs
-        else:
-            return self.env.env._get_obs()
+    def step(self, action):#just here makes sense to increment step
+        self.counter += 1
+        ret = super(IntervalExt, self).step(action)
+        return ret
 
-    def step(self, action):#just under step we can assure that a transitions in time has ocuured therefore here increment counter
-        # imaginary infinity horizon (without done signal)
-        obs, reward, done, info = self.env.step(action)
-        if (hasattr(self.args, 'transform_dense') and self.args.transform_dense) or \
-                (hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help):
-            if self.args.vae_type == 'monet' or self.args.vae_type == 'space' or self.args.vae_type == 'bbox':
-                achieved_image = take_image_objects(self, self.args.img_size)
-                if self.args.vae_type == 'space' or self.args.vae_type == 'bbox':
-                    lg, lg_s, lo, lo_s = latents_from_images(np.array([achieved_image]), self.args)
-                else:
-                    lg, lo, lo_s = latents_from_images(np.array([achieved_image]), self.args)
-                self.achieved_goal_latent = lg[0].copy()
-                self.obstacle_latent = lo[0].copy()
-                self.obstacle_size_latent = lo_s[0].copy()
-            else:
-                achieved_goal_image = take_goal_image(self, self.args.img_size)
-                latents_goal = goal_latent_from_images(np.array([achieved_goal_image]), self.args)
-                self.achieved_goal_latent = latents_goal[0].copy()
-
-                obstacle_image = take_obstacle_image(self, self.args.img_size)
-                latents_obstacle, latents_o_size = obstacle_latent_from_images(np.array([obstacle_image]), self.args)
-                self.obstacle_latent = latents_obstacle[0].copy()
-                self.obstacle_size_latent = latents_o_size[0].copy()
-            # self.achieved_goal_image = achieved_goal_image.copy()
-
-            if hasattr(self.args, 'transform_dense') and self.args.transform_dense:
-                reward = -self.args.compute_reward_dense(self.obstacle_latent.copy(), self.obstacle_size_latent.copy(),
-                                                         self.achieved_goal_latent.copy(),
-                                                         self.desired_goal_latent.copy(),
-                                                         range_x=[-1., 1.], range_y=[-1., 1.])
-                if not np.isscalar(reward):
-                    reward = reward[0]
-            info = self.process_info(obs, reward, info)
-
-        else:
-            info = self.process_info(obs, reward, info)
-            reward = self.compute_reward((obs['achieved_goal'], self.last_obs['achieved_goal']), obs['desired_goal'])
-        obs = self.get_obs()
-        self.last_obs = obs.copy()
-        return obs, reward, False, info
-
-    def reset(self):
-        self.env.reset()
-        self.reset_ep()
-        self.last_obs = self.get_obs().copy()
-        return self.last_obs.copy()
+    def reset_ep(self):
+        self.counter = 0
+        super(IntervalExt, self).reset_ep()

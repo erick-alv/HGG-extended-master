@@ -9,7 +9,7 @@ from memory_profiler import profile
 import gc
 import psutil
 
-def goal_concat(obs, goal):
+def goal_concat(obs, goal):#todo will this require that the observation is modified coorespondingly
 	return np.concatenate([obs, goal], axis=0)
 
 def goal_based_process(obs):

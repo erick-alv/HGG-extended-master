@@ -175,6 +175,7 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         dims = np.array([0.09, 0.03, 0.025])
         ob = np.concatenate((pos, dims.copy()))
         obs['real_obstacle_info'] = ob.copy()
+        obs['real_size_goal'] = np.array([0.045, 0.045, 0.025])
         return obs
 
 '''if __name__ == '__main__':
