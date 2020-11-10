@@ -16,19 +16,19 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.adapt_dict["field"] = [1.3, 0.75, 0.6, 0.25, 0.25, 0.2]
 
         #centers of the interval where goal and initial position will be sampld
-        self.target_goal_center = np.array([1.3, 0.55, 0.425])
-        self.object_center = np.array([1.5, 0.56, 0.425])
+        self.target_goal_center = np.array([1.405, 0.66, 0.421])
+        self.object_center = np.array([1.095, 0.67, 0.421])
 
 
         #for moving
-        self.vel_lims = [0.8, 1.5]
+        self.vel_lims = [0.8, 1.3]
         self.current_obstacle_vel = 2.1
         self.initial_obstacle_direction = 1
         self.obstacle_direction = 1
         #limits are not 100% percent accurate; cahnging the range and margin parameters from the XML help to improve
         #this accuracy
-        self.obstacle_upper_limit = 1.34
-        self.obstacle_lower_limit = 1.25
+        self.obstacle_upper_limit = 1.55
+        self.obstacle_lower_limit = 1.36
 
 
         initial_qpos = {
@@ -40,7 +40,7 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         fetch_env.FetchEnv.__init__(
             self, MODEL_XML_PATH, has_object=True, block_gripper=True, n_substeps=20,
             gripper_extra_height=0.0, target_in_the_air=False, target_offset=0.0,
-            obj_range=0.02, target_range=0.02, distance_threshold=0.05,
+            obj_range=0.0, target_range=0.02, distance_threshold=0.05,
             initial_qpos=initial_qpos, reward_type=reward_type)
         utils.EzPickle.__init__(self)
         self.obstacle_slider_idx = self.sim.model.joint_names.index('obstacle:joint')
@@ -119,7 +119,7 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
     def _set_gripper_during_setup(self):
         # Move end effector into position.
         orig_pos = self.sim.data.get_site_xpos('robot0:grip')
-        gripper_target = np.array([-0.239, -0.1941, -0.326 + self.gripper_extra_height]) + orig_pos
+        gripper_target = np.array([-0.7999, -0.081, -0.326 + self.gripper_extra_height]) + orig_pos
         gripper_rotation = np.array([1., 0., 1., 0.])
         self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
         self.sim.data.set_mocap_quat('robot0:mocap', gripper_rotation)
@@ -152,8 +152,8 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         pos = self.sim.data.body_xpos[body_id].copy()
         dims = np.array([0.1, 0.03, 0.025])
         o1 = np.concatenate((pos, dims.copy()))
-        o2 = np.array([1.3, 0.5, 0.44, 0.25, 0.01, 0.04])
-        o3 = np.array([1.44, 0.645, 0.44, 0.02, 0.135, 0.04])
+        o2 = np.array([1.3, 0.59, 0.44, 0.3, 0.02, 0.04])
+        o3 = np.array([1.16, 0.745, 0.44, 0.02, 0.136, 0.04])
         obs['real_obstacle_info'] = np.array([o1, o2, o3])
         obs['real_size_goal'] = np.array([0.03, 0.03, 0.02])
         return obs

@@ -104,7 +104,8 @@ if __name__ == '__main__':
             #env.env.env._rotate(["cylinder"], 0., 10. * timestep, 0.)
             #env.env.env._change_color(["cylinder"], 0.1, 0.1 * timestep, 0.1)
 
-            action = env.action_space.sample()
+            #action = env.action_space.sample()
+            action = np.array([-1., -1., 0., 0.])
             '''if timestep < 8:
                 o, _, _, info = env.step([-1., 0, 0., 0.])
             elif timestep < 14:

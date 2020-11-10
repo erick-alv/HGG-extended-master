@@ -30,7 +30,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 		parser.add_argument('--goal', help='method of goal generation', type=str, default='reach', choices=['vanilla', 'reach'])
 	else:
 		parser.add_argument('--goal', help='method of goal generation', type=str, default='interval',
-							choices=['vanilla', 'fixobj', 'interval', 'intervalCollision','intervalExt', 'custom'])
+							choices=['vanilla', 'fixobj', 'interval', 'intervalCollision','intervalExt', 'intervalColl', 'custom'])
 		if args.env[:5]=='Fetch':
 			parser.add_argument('--init_offset', help='initial offset in fetch environments', type=np.float32, default=1.0)
 		elif args.env[:4]=='Hand':
@@ -286,7 +286,7 @@ def load_dist_estimator(args, env):
 	if args.dist_estimator_type == 'normal' or args.dist_estimator_type == 'realCoords' or args.dist_estimator_type == 'multiple' or args.dist_estimator_type == 'multipleReal':
 		args.dist_estimator.initialize_internal_distance_graph([args.field_center[0], args.field_center[1],
 																args.field_size[0], args.field_size[1]],
-															   num_vertices=[100, 100], size_increase=0.0)
+															   num_vertices=[100, 100], size_increase=0.0001)#todo!! use object uct sizes
 		args.dist_estimator.graph.plot_graph(save_path='env_graph_created', elev=90, azim=0)
 
 
