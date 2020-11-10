@@ -45,18 +45,18 @@ class Player:
               [np.array([-0.8, 0., 0., 0.]) for _ in range(2)] +\
               [np.array([-0.5, -0.5, 0., 0.]) for _ in range(20)] +\
               [np.array([0., 0., 0., 0.]) for _ in range(80)]'''
-        acs = [np.array([0., 1., 0., 0.]) for _ in range(25)] + [np.array([0., 0., 0., 0.]) for _ in range(110)]
+        #acs = [np.array([0., 1., 0., 0.]) for _ in range(25)] + [np.array([0., 0., 0., 0.]) for _ in range(110)]
         for t in range(self.test_rollouts):
             ob = env.reset()
-            env.env.env._move_object(position=[1.13, 0.75, 0.425])
+            #env.env.env._move_object(position=[1.13, 0.75, 0.425])
 
             obs.append(goal_based_process(ob))
             trajectory_goals = [ob['achieved_goal'].copy()]
-            trajectory_goals_latents = [ob['achieved_goal_latent'].copy()]
+            #trajectory_goals_latents = [ob['achieved_goal_latent'].copy()]
 
             trajectory_obstacles = [ob['real_obstacle_info'].copy()]
-            trajectory_obstacles_latents = [ob['obstacle_latent'].copy()]
-            trajectory_obstacles_latents_sizes = [ob['obstacle_size_latent'].copy()]
+            #trajectory_obstacles_latents = [ob['obstacle_latent'].copy()]
+            #trajectory_obstacles_latents_sizes = [ob['obstacle_size_latent'].copy()]
 
             tr_env_images = [take_env_image(self.env, args.img_size)]
 
@@ -64,18 +64,18 @@ class Player:
 
 
             for timestep in range(self.args.timesteps):
-                #actions = self.my_step_batch(obs)
+                actions = self.my_step_batch(obs)
                 #actions = [env.action_space.sample() for _ in range(len(obs))]
-                actions = [acs[timestep]]
+                #actions = [acs[timestep]]
                 obs, infos = [], []
                 ob, _, _, info = env.step(actions[0])
                 obs.append(goal_based_process(ob))
                 trajectory_goals.append(ob['achieved_goal'].copy())
-                trajectory_goals_latents.append(ob['achieved_goal_latent'].copy())
+                #trajectory_goals_latents.append(ob['achieved_goal_latent'].copy())
 
                 trajectory_obstacles.append(ob['real_obstacle_info'].copy())
-                trajectory_obstacles_latents.append(ob['obstacle_latent'].copy())
-                trajectory_obstacles_latents_sizes.append(ob['obstacle_size_latent'].copy())
+                #trajectory_obstacles_latents.append(ob['obstacle_latent'].copy())
+                #trajectory_obstacles_latents_sizes.append(ob['obstacle_size_latent'].copy())
 
                 tr_env_images.append(take_env_image(self.env, args.img_size))
 
@@ -90,14 +90,14 @@ class Player:
                 latent_ind_y = 1
 
                 plt.plot(steps, np.array(trajectory_goals)[:, 0], label='real')
-                plt.plot(steps, map_x_table(np.array(trajectory_goals_latents)[:, latent_ind_x]), label='latent')
+                #plt.plot(steps, map_x_table(np.array(trajectory_goals_latents)[:, latent_ind_x]), label='latent')
                 plt.title('positions_x_goals')
                 plt.legend(loc=4)
                 plt.savefig("{}it_{}_positions_x_goals.png".format(args.logger.my_log_dir, t))
                 plt.close()
 
                 plt.plot(steps, np.array(trajectory_goals)[:, 1], label='real')
-                plt.plot(steps, map_y_table(np.array(trajectory_goals_latents)[:, latent_ind_y]), label='latent')
+                #plt.plot(steps, map_y_table(np.array(trajectory_goals_latents)[:, latent_ind_y]), label='latent')
                 plt.title('positions_y_goals')
                 plt.legend(loc=4)
                 plt.savefig("{}it_{}_positions_y_goals.png".format(args.logger.my_log_dir, t))

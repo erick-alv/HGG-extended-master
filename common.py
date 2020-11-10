@@ -286,7 +286,7 @@ def load_dist_estimator(args, env):
 	if args.dist_estimator_type == 'normal' or args.dist_estimator_type == 'realCoords' or args.dist_estimator_type == 'multiple' or args.dist_estimator_type == 'multipleReal':
 		args.dist_estimator.initialize_internal_distance_graph([args.field_center[0], args.field_center[1],
 																args.field_size[0], args.field_size[1]],
-															   num_vertices=[100, 100], size_increase=0.0001)#todo!! use object uct sizes
+															   num_vertices=[100, 100], size_increase=obs['real_size_goal'][0])#todo use real or other depending of va
 		args.dist_estimator.graph.plot_graph(save_path='env_graph_created', elev=90, azim=0)
 
 
