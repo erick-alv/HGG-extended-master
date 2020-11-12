@@ -39,8 +39,9 @@ class VanillaGoalEnv():
 			'Success@green': self.process_info_success # is_success in the last step
 		}
 
-	def compute_reward(self, achieved, goal):
-		dis = goal_distance(achieved[0], goal)
+	#expects whole observation dictionary
+	def compute_reward(self, observation_current, observation_old, goal):
+		dis = goal_distance(observation_current['achieved_goal'], goal)
 		return -1.0 if dis>self.distance_threshold else 0.0
 
 	def compute_distance(self, achieved, goal):
@@ -101,13 +102,14 @@ class VanillaGoalEnv():
 				self.obstacle_size_latent = latents_o_size[0].copy()
 				#self.achieved_goal_image = achieved_goal_image.copy()
 
-
-			info = self.process_info(obs, reward, info)
-
-		else:
-			info = self.process_info(obs, reward, info)
-			reward = self.compute_reward((obs['achieved_goal'], self.last_obs['achieved_goal']), obs['desired_goal'])
 		obs = self.get_obs()
+
+		#The order is important, since a children class migth have a reward dependant from modification in obs
+		# todo should this use the reward from below??
+		info = self.process_info(obs, reward, info)
+		#for compatibility passing last obs but actually none of the used reward functions use it
+		reward = self.compute_reward(obs, self.last_obs, obs['desired_goal'])
+
 		self.last_obs = obs.copy()
 		return obs.copy(), reward, False, info
 

@@ -22,8 +22,6 @@ def check_collisions(a_bbox, b_bboxes):
     d_bools = np.logical_or(d1_bools, d2_bools)
     return np.logical_not(d_bools)
 
-    pass
-
 class IntervalExt(IntervalGoalEnv):
     def __init__(self, args):
         IntervalGoalEnv.__init__(self, args)
@@ -117,7 +115,7 @@ class IntervalColl(IntervalExt):
         goal_bbox = obs['observation'][begin_index: end_index]
         #goal object is not in visible range
         if goal_bbox[0] == 100. and goal_bbox[1] == 100.:
-            obs['coll'] = 0
+            obs['coll'] = 0.
         else:
 
             begin_index = self.start_index_extra_observation + 2 * self.single_step_extra_goal_state_size
@@ -153,6 +151,26 @@ class IntervalColl(IntervalExt):
             plt.show()'''
 
             cols = check_collisions(goal_bbox, obstacle_bboxes)
-            ncols = np.sum(cols.astype(np.uint))
+            ncols = np.sum(cols.astype(np.float))
             obs['coll'] = ncols
         return obs
+
+class IntervalRewSub(IntervalColl):
+    def __init__(self, args):
+        IntervalColl.__init__(self, args)
+
+    def compute_reward(self, observation_current, observation_old, goal):
+        rew = super(IntervalRewSub, self).compute_reward(observation_current, observation_old, goal)
+        if observation_current['coll'] > 0.:
+            rew += -0.5#todo is -0.5 ok?; the idea is to create negative reward for collision but different so it can differentiate between negative reward for not reaching goal and negative reward for collision
+        return rew
+
+class IntervalRewVec(IntervalColl):
+    def __init__(self, args):
+        IntervalColl.__init__(self, args)
+
+    def compute_reward(self, observation_current, observation_old, goal):
+        rew = super(IntervalRewSub, self).compute_reward(observation_current, observation_old, goal)
+        collisision_value = -1. if observation_current['coll'] > 0. else 0.
+        rew = np.array([rew, collisision_value])
+        return rew

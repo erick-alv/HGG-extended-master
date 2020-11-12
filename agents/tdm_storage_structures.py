@@ -93,12 +93,6 @@ class ReplayBuffer_TDM(ReplayBuffer_Episodic):
                         rem_steps = np.random.randint(0, self.args.max_tau + 1)
                     else:
                         rem_steps = batch['rem_steps'][-1]
-                '''
-                todo SEE IF leave this way appart
-                raw_obs, _ = rem_latent(batch['next_obs'][-1], self.args.latent_dim)
-                raw_goal, _ = rem_latent(goal, self.args.latent_dim)
-                reward = self.training_env.env.env.compute_reward(from_raw_get_achieved(raw_obs),
-                                                                  raw_goal, info=None)'''
 
                 reward = self.training_env.env.env.compute_reward(achieved_g, expected_g, info =None)
                 done = reward >=0 and rem_steps > 0#todo use latent as well??

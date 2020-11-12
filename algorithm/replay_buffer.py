@@ -9,7 +9,7 @@ from memory_profiler import profile
 import gc
 import psutil
 
-def goal_concat(obs, goal):#todo will this require that the observation is modified coorespondingly
+def goal_concat(obs, goal):#todo will this require that the observation is modified coorespondingly if goal is expanded
 	return np.concatenate([obs, goal], axis=0)
 
 def goal_based_process(obs):
@@ -136,34 +136,7 @@ class ReplayBuffer_Episodic:
 		path = self.args.dirpath + 'replaybuf/' + filename
 		with open('{}.pkl'.format(path), 'wb') as f:
 			pickle.dump(save_dict, f)
-	'''def make_folder_if_not(folderpath):
-		try:
-			os.makedirs(folderpath)
-		except FileExistsError:
-			pass
-		except:
-			print("Unexpected error:", sys.exc_info()[0])
-			raise
-	make_folder_if_not(path+'/steps')
-	with open(path+'/steps/steps_file', 'wb') as f:
-		pickle.dump(self.steps, f)
-	make_folder_if_not(path + '/steps')
-	for k in self.buffer.keys():
-		pass
-	path = path
-	make_folder_if_not(path)
-	make_folder_if_not('{}/buffer/'.format(path))
-	d = {}
-	for k in self.buffer.keys():
-		d[k] = []
-	with open('{}/buffer/{}.pkl'.format(path, 'buffer_struct'), 'wb') as f:
-		pickle.dump(d, f)
-	del d
-	for k in self.buffer.keys():
-		make_folder_if_not('{}/buffer/{}'.format(path, k))
-		for i, el in enumerate(self.buffer[k]):
-			with open('{}/buffer/{}/{}_el.pkl'.format(path, k, i), 'wb') as f:
-				pickle.dump(el, f)'''
+
 
 	#@profile(precision=4)
 	def load_checkpoint(self,filename):
@@ -178,24 +151,6 @@ class ReplayBuffer_Episodic:
 			self.counter = save_dict['counter']
 			self.steps_counter = save_dict['steps_counter']
 			del save_dict
-			'''if self.energy == 'energy':
-				self.energy_sum = save_dict['energy_sum']
-				self.energy_offset = save_dict['energy_offset']
-				self.energy_max  = save_dict['energy_max']
-				self.buffer_energy = save_dict['buffer_energy']
-				self.buffer_energy_sum = save_dict['buffer_energy_sum']
-		with open('{}/buffer/{}.pkl'.format(path, 'buffer_struct'), 'rb') as f:
-			d = pickle.load(f)
-			for k in d.keys():
-				self.buffer[k] = []
-			del d
-		for k in self.buffer.keys():
-			list_files = os.listdir('{}/buffer/{}/'.format(path, k))
-			list_files.sort()
-			for fname in enumerate(list_files):
-				with open('{}/buffer/{}/{}'.format(path, k, fname), 'rb') as f:
-					el = pickle.load(f)
-					self.buffer[k].append(el)'''
 
 	def store_trajectory(self, trajectory):
 		episode = trajectory.ep
@@ -300,20 +255,7 @@ class ReplayBuffer_Episodic:
 				if plain:
 					rew = self.buffer['rews'][idx][step][0]
 				else:
-					if self.args.transform_dense:
-						if 'desired' in used_goal_key:
-							goal_latent = self.buffer['obs'][idx][used_goal_step]['desired_goal_latent']
-						else:
-							goal_latent = self.buffer['obs'][idx][used_goal_step]['achieved_goal_latent']
-						rew = -self.args.compute_reward_dense(
-							self.buffer['obs'][idx][step + 1]['obstacle_latent'].copy(),
-							self.buffer['obs'][idx][step + 1]['obstacle_size_latent'].copy(),
-							self.buffer['obs'][idx][step + 1]['achieved_goal_latent'].copy(),
-							goal_latent, range_x=[-1., 1.], range_y=[-1., 1.])
-						if not np.isscalar(rew):
-							rew = rew[0]
-					else:
-						rew = self.args.compute_reward((achieved, achieved_old), goal)
+					rew = self.args.compute_reward(self.buffer['obs'][idx][step + 1], self.buffer['obs'][idx][step], goal)
 				done = self.buffer['done'][idx][step]
 
 				batch['obs'].append(copy.deepcopy(obs))
@@ -330,170 +272,3 @@ class ReplayBuffer_Episodic:
 						batch[key].append(copy.deepcopy(self.buffer[key][idx][step]))
 
 		return batch
-
-	'''def sample_batch_ddpg(self, batch_size=-1, normalizer=False, plain=False,using_goal_as_field=False):
-		assert int(normalizer) + int(plain) <= 1
-		if batch_size==-1: batch_size = self.args.batch_size
-		if using_goal_as_field:
-			batch = dict(obs=[], obs_next=[], goals=[], acts=[], rews=[], done=[])
-		else:
-			batch = dict(obs=[], obs_next=[], acts=[], rews=[], done=[])
-		if self.args.goal_type == 'latent':
-			goal_key = 'goal_latent'
-			goal_her_key = 'state_latent'
-		elif self.args.goal_type == 'goal_space':
-			goal_key = 'desired_goal'
-			goal_her_key = 'achieved_goal'
-		elif self.args.goal_type == 'state':
-			goal_key = 'goal_state'
-			goal_her_key = 'observation'
-		elif self.args.goal_type == 'concat':
-			raise Exception('not implemented yet')
-		else:
-			raise Exception('goal obs type not valid')
-		if self.args.observation_type == 'latent':
-			state_key = 'state_latent'
-		elif self.args.observation_type == 'real':
-			state_key = 'observation'
-		elif self.args.observation_type == 'concat':
-			raise Exception('not implemented yet')
-		else:
-			raise Exception('observation type not valid')
-
-		for i in range(batch_size):
-			if self.energy:
-				idx = self.energy_sample()
-			else:
-				idx = np.random.randint(self.length)
-			step = np.random.randint(self.steps[idx])
-
-			if self.args.goal_based:
-				if plain:
-					# no additional tricks
-					goal = self.buffer['obs'][idx][step][goal_key]
-					goal_gspace = self.buffer['obs'][idx][step]['desired_goal']
-				elif normalizer:
-					# uniform sampling for normalizer update
-					goal = self.buffer['obs'][idx][step][goal_her_key]#her key is actually achieved state key
-					goal_gspace = self.buffer['obs'][idx][step]['achieved_goal']
-				else:
-					# upsampling by HER trick
-					if (self.args.her!='none') and (np.random.uniform()<=self.args.her_ratio):
-						if self.args.her=='match':
-							goal = self.args.goal_sampler.sample()
-							goal_pool = np.array([obs['achieved_goal'] for obs in self.buffer['obs'][idx][step+1:]])
-							step_her = (step+1) + np.argmin(np.sum(np.square(goal_pool-goal),axis=1))
-							goal = self.buffer['obs'][idx][step_her][goal_her_key]
-							goal_gspace = self.buffer['obs'][idx][step_her]['desired_goal']
-						else:
-							steps_her = {
-								'final': [self.steps[idx]],
-								'future': np.random.randint(step+1, self.steps[idx]+1, size=10)
-							}[self.args.her]
-							for i, step_her in enumerate(
-									steps_her):  # verify that hindsight goal is visible and object is not below table
-								hindsight_state_dict = self.buffer['obs'][idx][step_her]
-								max_behind = min(4, step_her - step)
-								prev_visibles = all([self.buffer['obs'][idx][step_her - t]['gripper_visible']
-													 for t in range(max_behind)])
-								if prev_visibles and not hindsight_state_dict['object_below_table']:
-									goal = self.buffer['obs'][idx][step_her][goal_her_key].copy()
-									goal_gspace = self.buffer['obs'][idx][step_her]['achieved_goal'].copy()
-									break
-								if i == len(steps_her) - 1:
-									# not use hindsight goal, but real one
-									goal = self.buffer['obs'][idx][step][goal_key]
-									goal_gspace = self.buffer['obs'][idx][step]['desired_goal']
-					else:
-						goal = self.buffer['obs'][idx][step][goal_key]
-						goal_gspace = self.buffer['obs'][idx][step]['desired_goal']
-
-				achieved = self.buffer['obs'][idx][step+1]['achieved_goal']
-				achieved_old = self.buffer['obs'][idx][step]['achieved_goal']
-				if using_goal_as_field:
-					obs = self.buffer['obs'][idx][step][state_key]
-					obs_next = self.buffer['obs'][idx][step + 1][state_key]
-					batch['obs'].append(copy.deepcopy(obs))
-					batch['obs_next'].append(copy.deepcopy(obs_next))
-					batch['goals'].append(copy.deepcopy(goal))
-				else:
-					obs = goal_concat(self.buffer['obs'][idx][step][state_key], goal)
-					obs_next = goal_concat(self.buffer['obs'][idx][step+1][state_key], goal)
-					batch['obs'].append(copy.deepcopy(obs))
-					batch['obs_next'].append(copy.deepcopy(obs_next))
-				act = self.buffer['acts'][idx][step]
-				rew = self.args.compute_reward((achieved, achieved_old), goal_gspace)
-				#done = self.buffer['done'][idx][step]
-				done = [not (rew == -1.0)]#todo see if affect hgg, probably not
-				batch['acts'].append(copy.deepcopy(act))
-				batch['rews'].append(copy.deepcopy([rew]))
-				batch['done'].append(copy.deepcopy(done))
-			else:
-				for key in ['obs', 'acts', 'rews', 'done']:
-					if key=='obs':
-						batch['obs'].append(copy.deepcopy(self.buffer[key][idx][step]))
-						batch['obs_next'].append(copy.deepcopy(self.buffer[key][idx][step+1]))
-					else:
-						batch[key].append(copy.deepcopy(self.buffer[key][idx][step]))
-
-		return batch
-
-	def sample_for_distance(self, last_eps, goal_key, goal_her_key, state_key, batch_size=-1):
-		if batch_size==-1: batch_size = self.args.batch_size
-		batch = dict(obs=[], obs_next=[], goals=[], acts=[], dis=[], done=[])
-		possible_idx = [(self.counter-1-i) % self.args.buffer_size for i in range(last_eps)]
-
-		for i in range(batch_size):
-			idx = np.random.randint(len(possible_idx))
-			idx = possible_idx[idx]
-			step = np.random.randint(self.steps[idx])
-			# upsampling by HER trick
-			if (self.args.her!='none') and (np.random.uniform()<=self.args.her_ratio):
-				steps_her = {
-					'final': [self.steps[idx]],
-					'future': np.random.randint(step+1, self.steps[idx]+1, size=10)
-				}[self.args.her]
-				for i, step_her in enumerate(steps_her):#verify that hindsight goal is visible and object is not below table
-					hindsight_state_dict = self.buffer['obs'][idx][step_her]
-					max_behind = min(4, step_her-step)
-					prev_visibles = all([self.buffer['obs'][idx][step_her - t]['gripper_visible']
-										 for t in range(max_behind)])
-					if prev_visibles and not hindsight_state_dict['object_below_table']:
-						goal = self.buffer['obs'][idx][step_her][goal_her_key].copy()
-						goal_gspace = self.buffer['obs'][idx][step_her]['achieved_goal'].copy()
-						break
-					if i == len(steps_her)-1:
-						#not use hindsight goal, but real one
-						goal = self.buffer['obs'][idx][step][goal_key]
-						goal_gspace = self.buffer['obs'][idx][step]['desired_goal']
-
-				# todo delete this condition, just for one case
-				#goal[1] = 0.0
-				#if not (goal_gspace[0] > self.buffer['obs'][idx][step_her]['init_pos'] + 0.3 or
-				#		goal_gspace[0] < self.buffer['obs'][idx][step_her]['init_pos'] - 0.3):
-				#	goal = self.buffer['obs'][idx][step][goal_key]
-				#	goal_gspace = self.buffer['obs'][idx][step]['desired_goal']
-			else:
-				goal = self.buffer['obs'][idx][step][goal_key]
-				goal_gspace = self.buffer['obs'][idx][step]['desired_goal']
-
-			achieved = self.buffer['obs'][idx][step+1]['achieved_goal']
-			achieved_old = self.buffer['obs'][idx][step]['achieved_goal']
-
-
-			obs = self.buffer['obs'][idx][step][state_key]
-			obs_next = self.buffer['obs'][idx][step + 1][state_key]
-			batch['obs'].append(copy.deepcopy(obs))
-			batch['obs_next'].append(copy.deepcopy(obs_next))
-			batch['goals'].append(copy.deepcopy(goal))
-			act = self.buffer['acts'][idx][step]
-			rew = self.args.compute_reward((achieved, achieved_old), goal_gspace)
-			#done = self.buffer['done'][idx][step]
-			done = [not (rew == -1.0)]
-			dis = 1.0 if not done[0] else 0.0
-
-			batch['acts'].append(copy.deepcopy(act))
-			batch['dis'].append(copy.deepcopy([dis]))
-			batch['done'].append(copy.deepcopy(done))
-
-		return batch'''
