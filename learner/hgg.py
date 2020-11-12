@@ -167,7 +167,8 @@ class MatchSampler:
 
 	def sample(self, idx):
 		if self.args.env[:5]=='Fetch':
-			return self.add_noise(self.pool[idx])
+			#return self.add_noise(self.pool[idx])
+			return self.pool[idx].copy()#todo not added noise since it was creating goals intersecting other objects
 		else:
 			return self.pool[idx].copy()
 

@@ -294,6 +294,11 @@ class FetchEnv(robot_env.RobotEnv):
             id = id[0].item()
             self.sim.model.geom_rgba[id][3] = alpha_val
 
+    def _get_visibility_rgba(self, name):
+        id = np.where(self.sim.model.geom_bodyid == self.sim.model.body_name2id(name))
+        id = id[0].item()
+        return self.sim.model.geom_rgba[id].copy()
+
     def _set_visibility_with_id(self, id, alpha_val):
         self.sim.model.geom_rgba[id][3] = alpha_val
 
@@ -326,7 +331,7 @@ class FetchEnv(robot_env.RobotEnv):
             position = np.array(position)
         object_qpos = self.sim.data.get_joint_qpos('object0:joint')
         object_qpos[:3] = position[:3]
-        object_qpos[3:] = [1, 0, 0, 0]
+        object_qpos[3:] = [1., 0., 0., 0.]
         self.sim.data.set_joint_qpos('object0:joint', object_qpos)
         for _ in range(1):
             self.sim.step()

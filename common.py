@@ -243,6 +243,8 @@ def load_dist_estimator(args, env):
 	else:
 		raise Exception('logic for dist estimator type not implemented yet')
 
+	size_goal_box = np.array([0., 0.])
+	counter = 0
 	for rs in range(5):
 		if args.dist_estimator_type == 'normal' or args.dist_estimator_type == 'multiple':
 			obstacle_latents = []
@@ -262,6 +264,7 @@ def load_dist_estimator(args, env):
 		else:
 			raise Exception('logic for dist estimator type not implemented yet')
 
+
 		for timestep in range(args.timesteps):
 			# get action from the ddpg policy
 			action = env.action_space.sample()
@@ -269,10 +272,17 @@ def load_dist_estimator(args, env):
 			if args.dist_estimator_type == 'normal' or args.dist_estimator_type == 'multiple':
 				obstacle_latents.append(obs['obstacle_latent'].copy())
 				obstacle_size_latents.append(obs['obstacle_size_latent'].copy())
+				if obs['achieved_goal_latent'][0] != 100.:
+					size_goal_box += obs['achieved_goal_size_latent']
+					counter +=1
 			elif args.dist_estimator_type == 'realCoords' or args.dist_estimator_type == 'multipleReal':
 				obstacle_real.append(obs['real_obstacle_info'])
+				size_goal_box += obs['real_size_goal'][:2]
+				counter +=1
 			else:
 				raise Exception('logic for dist estimator type not implemented yet')
+
+
 
 		if args.dist_estimator_type == 'normal' or args.dist_estimator_type == 'multiple':
 			args.dist_estimator.update(obstacle_latents, obstacle_size_latents)
@@ -283,10 +293,11 @@ def load_dist_estimator(args, env):
 
 		#since this are just randomly not increase
 		args.dist_estimator.update_calls = 0
+	size_goal_box /= counter
 	if args.dist_estimator_type == 'normal' or args.dist_estimator_type == 'realCoords' or args.dist_estimator_type == 'multiple' or args.dist_estimator_type == 'multipleReal':
 		args.dist_estimator.initialize_internal_distance_graph([args.field_center[0], args.field_center[1],
 																args.field_size[0], args.field_size[1]],
-															   num_vertices=[100, 100], size_increase=obs['real_size_goal'][0])#todo use real or other depending of va
+															   num_vertices=[100, 100], size_increase=size_goal_box[0])#todo use real or other depending of va
 		args.dist_estimator.graph.plot_graph(save_path='env_graph_created', elev=90, azim=0)
 
 

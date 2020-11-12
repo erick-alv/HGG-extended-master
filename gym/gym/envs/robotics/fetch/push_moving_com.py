@@ -16,8 +16,8 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.adapt_dict["field"] = [1.3, 0.75, 0.6, 0.25, 0.25, 0.2]
 
         #centers of the interval where goal and initial position will be sampld
-        self.target_goal_center = np.array([1.405, 0.66, 0.421])
-        self.object_center = np.array([1.095, 0.67, 0.421])
+        self.target_goal_center = np.array([1.405, 0.67, 0.421])
+        self.object_center = np.array([1.095, 0.68, 0.421])
 
 
         #for moving
@@ -28,7 +28,7 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         #limits are not 100% percent accurate; cahnging the range and margin parameters from the XML help to improve
         #this accuracy
         self.obstacle_upper_limit = 1.55
-        self.obstacle_lower_limit = 1.36
+        self.obstacle_lower_limit = 1.366
 
 
         initial_qpos = {
@@ -40,7 +40,7 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         fetch_env.FetchEnv.__init__(
             self, MODEL_XML_PATH, has_object=True, block_gripper=True, n_substeps=20,
             gripper_extra_height=0.0, target_in_the_air=False, target_offset=0.0,
-            obj_range=0.0, target_range=0.02, distance_threshold=0.05,
+            obj_range=0.0, target_range=0.01, distance_threshold=0.05,
             initial_qpos=initial_qpos, reward_type=reward_type)
         utils.EzPickle.__init__(self)
         self.obstacle_slider_idx = self.sim.model.joint_names.index('obstacle:joint')
@@ -155,6 +155,6 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         o2 = np.array([1.3, 0.59, 0.44, 0.3, 0.02, 0.04])
         o3 = np.array([1.16, 0.745, 0.44, 0.02, 0.136, 0.04])
         obs['real_obstacle_info'] = np.array([o1, o2, o3])
-        obs['real_size_goal'] = np.array([0.03, 0.03, 0.02])
+        obs['real_size_goal'] = np.array([0.04, 0.04, 0.02])
         return obs
 

@@ -183,12 +183,30 @@ class VanillaGoalEnv():
 			if self.args.vae_type == 'monet' or self.args.vae_type == 'space' or self.args.vae_type == 'bbox':
 				self.env.env._move_object(position=value.copy())
 				desired_goal_image = take_image_objects(self, self.args.img_size)
-				self.env.env._move_object(position=obs['achieved_goal'].copy())
+
 				if self.args.vae_type == 'space' or self.args.vae_type == 'bbox':
 					lg, lg_s, lo, lo_s = latents_from_images(np.array([desired_goal_image]), self.args)
+					'''try:
+						assert lg[0][0] != 100.
+					except:
+						im = Image.fromarray(desired_goal_image.copy().astype(np.uint8))
+						im.save('failed_on_this.png')
+						print('failed!!!')
+						print("these are the coordinates: {}".format(value))
+						object_qpos = self.env.env.sim.data.get_joint_qpos('object0:joint')
+						assert object_qpos.shape == (7,)
+						print('q_pos: {}'.format(object_qpos))
+						v_rgba = self.env.env._get_visibility_rgba('object0')
+						print('visibility rgba is: {}'.format(v_rgba))
+
+						im = Image.fromarray(take_image_objects(self, self.args.img_size).copy().astype(np.uint8))
+						im.save('failed_on_this_take2.png')'''
 					self.desired_goal_size_latent = lg_s[0].copy()
 				else:
 					lg, lo, lo_s = latents_from_images(np.array([desired_goal_image]), self.args)
+				#reset agent to orginal position
+				self.env.env._move_object(position=obs['achieved_goal'].copy())
+				#store latent in variable
 				self.desired_goal_latent = lg[0].copy()
 			else:
 				self.env.env._move_object(position=value.copy())

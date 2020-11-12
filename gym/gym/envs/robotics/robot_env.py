@@ -64,6 +64,7 @@ class RobotEnv(gym.GoalEnv):
         action = np.clip(action, self.action_space.low, self.action_space.high)
         self._set_action(action)
         self.sim.step()
+
         self._step_callback()
         obs = self._get_obs()
 

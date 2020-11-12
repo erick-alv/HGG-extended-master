@@ -621,14 +621,14 @@ def preprocess_bounding_boxes(data_set_masks):
                 b_box_info[b, k] = np.array([bbox_size_x, bbox_size_y, bbox_center_x, bbox_center_y, 1.])
     return b_box_info
 
-def train(model, optimizer, device, log_interval_epoch, log_interval_batch,  batch_size):
+def train(model, optimizer, device, log_interval_epoch, log_interval_batch, batch_size, num_epochs):
     model.train()
     train_loss = 0
     data_set = np.load('../data/FetchGenerativeEnv-v1/all_set_with_masks.npy')
     data_size = len(data_set)
     #bbox_labels = np.load('../data/FetchGenerativeEnv-v1/all_set_with_masks_bbox.npy')
     global_step = 0
-    for epoch in range(300):
+    for epoch in range(num_epochs):
         #creates indexes and shuffles them. So it can acces the data
         idx_set = np.arange(data_size)
         np.random.shuffle(idx_set)
@@ -666,7 +666,7 @@ def train(model, optimizer, device, log_interval_epoch, log_interval_batch,  bat
                 print('Loss: ', loss.item() / len(data))
 
             global_step += 1
-        if epoch % log_interval_epoch == 0:
+        if epoch % log_interval_epoch == 0 or epoch == num_epochs -1:
             visualize_masks(input_ims, imgs_with_mask, orig_masks, ims_with_masks_recs,
                             'recs_{}_{}.png'.format(epoch, batch_idx), z_pres=z_pres)
             save_checkpoint(model, optimizer, '../data/FetchGenerativeEnv-v1/model_bbox', epoch=epoch)
@@ -767,7 +767,7 @@ if __name__ == '__main__':
     torch.manual_seed(seed)
     model = Bbox(5, device).to(device)
     optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
-    train(model, optimizer, device, log_interval_epoch=10, log_interval_batch=400, batch_size=16)#4)
+    train(model, optimizer, device, log_interval_epoch=10, log_interval_batch=400, batch_size=16, num_epochs=500)#4)
 
 
     '''seed = 1

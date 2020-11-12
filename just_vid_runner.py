@@ -98,6 +98,7 @@ if __name__ == '__main__':
         prev_obs.append(o)
         #env_images.append(take_image_objects(env, args.img_size))
         env_images.append(take_env_image(env, args.img_size))
+        actions = [[0., 1., 0., 0.]]*4 + [[1., -1., 0., 0.]]*100
         for timestep in range(100):
 
             #env.env.env._rotate(["cube"], 0., 10. * timestep, 10. * timestep)
@@ -105,7 +106,8 @@ if __name__ == '__main__':
             #env.env.env._change_color(["cylinder"], 0.1, 0.1 * timestep, 0.1)
 
             #action = env.action_space.sample()
-            action = np.array([-1., -1., 0., 0.])
+            #action = np.array([-1., -1., 0., 0.])
+            action = actions[timestep]
             '''if timestep < 8:
                 o, _, _, info = env.step([-1., 0, 0., 0.])
             elif timestep < 14:
