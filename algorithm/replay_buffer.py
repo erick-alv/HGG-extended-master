@@ -261,7 +261,10 @@ class ReplayBuffer_Episodic:
 				batch['obs'].append(copy.deepcopy(obs))
 				batch['obs_next'].append(copy.deepcopy(obs_next))
 				batch['acts'].append(copy.deepcopy(act))
-				batch['rews'].append(copy.deepcopy([rew]))
+				if isinstance(rew, np.ndarray) and len(rew.shape) > 0:
+					batch['rews'].append(copy.deepcopy(rew))
+				else:
+					batch['rews'].append(copy.deepcopy([rew]))
 				batch['done'].append(copy.deepcopy(done))
 			else:
 				for key in ['obs', 'acts', 'rews', 'done']:

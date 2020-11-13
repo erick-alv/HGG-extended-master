@@ -170,7 +170,43 @@ class IntervalRewVec(IntervalColl):
         IntervalColl.__init__(self, args)
 
     def compute_reward(self, observation_current, observation_old, goal):
-        rew = super(IntervalRewSub, self).compute_reward(observation_current, observation_old, goal)
-        collisision_value = -1. if observation_current['coll'] > 0. else 0.
-        rew = np.array([rew, collisision_value])
+        rew = super(IntervalRewVec, self).compute_reward(observation_current, observation_old, goal)
+        collision_value = -1. if observation_current['coll'] > 0. else 0.
+        rew = np.array([rew, collision_value])
         return rew
+
+
+
+class IntervalTestColDetRewSub(IntervalRewSub):
+    def __init__(self, args):
+        IntervalGoalEnv.__init__(self, args)
+
+    def get_obs(self):
+        obs = super(IntervalTestColDetRewSub, self).get_obs()
+        sim = self.env.env.sim
+        exists_collision = False
+        #todo generalize this for other environments
+        for i in range(sim.data.ncon):
+            contact = sim.data.contact[i]
+            if (contact.geom1 == 23 and contact.geom2 == 24) or (contact.geom1 == 24 and contact.geom2 == 23):
+                exists_collision = True
+
+        obs['collision_check'] = exists_collision
+        return obs
+
+class IntervalTestColDetRewVec(IntervalRewVec):
+    def __init__(self, args):
+        IntervalGoalEnv.__init__(self, args)
+
+    def get_obs(self):
+        obs = super(IntervalTestColDetRewVec, self).get_obs()
+        sim = self.env.env.sim
+        exists_collision = False
+        #todo generalize this for other environments
+        for i in range(sim.data.ncon):
+            contact = sim.data.contact[i]
+            if (contact.geom1 == 23 and contact.geom2 == 24) or (contact.geom1 == 24 and contact.geom2 == 23):
+                exists_collision = True
+
+        obs['collision_check'] = exists_collision
+        return obs
