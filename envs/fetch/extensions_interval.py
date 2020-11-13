@@ -171,7 +171,7 @@ class IntervalRewVec(IntervalColl):
 
     def compute_reward(self, observation_current, observation_old, goal):
         rew = super(IntervalRewVec, self).compute_reward(observation_current, observation_old, goal)
-        collision_value = -1. if observation_current['coll'] > 0. else 0.
+        collision_value = -10. if observation_current['coll'] > 0. else 0.
         rew = np.array([rew, collision_value])
         return rew
 

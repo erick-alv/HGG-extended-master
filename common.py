@@ -140,6 +140,13 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	torch.manual_seed(1)
 	device = torch.device("cuda" if cuda else "cpu")
 	args.device = device
+
+	if args.goal in ['intervalRewVec', 'intervalTestColDetRewVec']:
+		args.reward_dims = 2
+	else:
+		args.reward_dims = 1
+	args.colls_test_check_envs = ['intervalTestColDetRewVec', 'intervalCollision','intervalTestColDetRewSub']
+
 	return args
 
 def load_vaes(args):
@@ -302,10 +309,7 @@ def load_dist_estimator(args, env):
 															   num_vertices=[100, 100], size_increase=size_goal_box[0])#todo use real or other depending of va
 		args.dist_estimator.graph.plot_graph(save_path='env_graph_created', elev=90, azim=0)
 
-	if args.goal in ['intervalRewVec', 'IntervalTestColDetRewVec']:
-		args.reward_dims = 2
-	else:
-		args.reward_dims = 1
+
 
 
 def experiment_setup(args):

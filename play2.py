@@ -41,10 +41,6 @@ class Player:
         # play policy on env
         env = self.env
         acc_sum, obs = 0.0, []
-        '''acs = [np.array([-0.05, 1., 0., 0.]) for _ in range(8)] + \
-              [np.array([-0.8, 0., 0., 0.]) for _ in range(2)] +\
-              [np.array([-0.5, -0.5, 0., 0.]) for _ in range(20)] +\
-              [np.array([0., 0., 0., 0.]) for _ in range(80)]'''
         #acs = [np.array([0., 1., 0., 0.]) for _ in range(25)] + [np.array([0., 0., 0., 0.]) for _ in range(110)]
         for t in range(self.test_rollouts):
             ob = env.reset()

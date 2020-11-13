@@ -38,23 +38,10 @@ class Tester:
 
 
 	def test_acc(self, key, env, agent):
-		if self.args.goal == 'intervalCollision':
+		if self.args.goal in self.args.colls_test_check_envs:
 			envs_collision = [self.coll_tol for _ in range(len(self.env_List))]
 		if (self.args.vae_dist_help or self.args.transform_dense) and (self.calls % 40 == 0 or self.calls in [0, 1, 2, 5, 8, 10]):
 			eps_idx = [0, 5, 8, 10, 15, 20, self.test_rollouts-1]
-			ex_logs = [LoggerExtra(self.args.logger.my_log_dir, 'results_it_{}_ep_{}_test'.format(self.calls, i))
-					   for i in eps_idx]
-			for i in range(len(eps_idx)):
-				ex_logs[i].add_item('Step')
-				ex_logs[i].add_item('Success')
-				ex_logs[i].add_item('RealDirectDistance')
-				ex_logs[i].add_item('RealPathDistance')
-				ex_logs[i].add_item('RealDirectToPrevDistance')
-				ex_logs[i].add_item('LatentDirectDistance')
-				ex_logs[i].add_item('LatentPathDistance')
-				ex_logs[i].add_item('LatentDirectToPrevDistance')
-
-
 			acc_sum, obs = 0.0, []
 			prev_obs = []
 			env_images = [[] for _ in eps_idx]
@@ -74,7 +61,7 @@ class Tester:
 					ob, _, _, info = env[i].step(actions[i])
 					obs.append(goal_based_process(ob))
 					#this should be used just for testing after training
-					if self.args.goal == 'intervalCollision':
+					if self.args.goal in self.args.colls_test_check_envs:
 						if envs_collision[i] <= 0 or ob['collision_check']:
 							envs_collision[i] -= 1
 							info['Success'] = 0.0
@@ -83,26 +70,6 @@ class Tester:
 
 					if i in eps_idx:
 						t = eps_idx.index(i)
-						ex_logs[t].add_record('Step', timestep)
-						ex_logs[t].add_record('Success', info['Success'])
-						ex_logs[t].add_record('RealDirectDistance', info['Distance'])
-						rpd = calculate_distance_real(np.array([1.3, 0.75]), obstacle_radius=np.array(0.13),
-												 current_pos=ob['achieved_goal'][:2], goal_pos=ob['desired_goal'][:2],
-												 range_x=None, range_y=None)
-						ex_logs[t].add_record('RealPathDistance', rpd)
-						rddpr = env[i].compute_distance(ob['achieved_goal'][:2], prev_obs[i]['achieved_goal'][:2])
-						ex_logs[t].add_record('RealDirectToPrevDistance', rddpr)
-						ldd = env[i].compute_distance(ob['achieved_goal_latent'], ob['desired_goal_latent'])
-						ex_logs[t].add_record('LatentDirectDistance', ldd)
-						'''lpd = calculate_distance(ob['obstacle_latent'], obstacle_radius=ob['obstacle_size_latent'],
-												 current_pos=ob['achieved_goal_latent'],
-												 goal_pos=ob['desired_goal_latent'],
-												 range_x=[-1., 1.], range_y=[-1., 1.])
-						ex_logs[t].add_record('LatentPathDistance', lpd)'''
-						lddpr = env[i].compute_distance(ob['achieved_goal_latent'], prev_obs[i]['achieved_goal_latent'])
-						ex_logs[t].add_record('LatentDirectToPrevDistance', lddpr)
-						ex_logs[t].save_csv()
-
 						env_images[t].append(take_env_image(env[i], self.args.img_size))
 						latent_points[t].append(ob['achieved_goal_latent'])
 					prev_obs[i] = copy.deepcopy(ob)
@@ -111,7 +78,6 @@ class Tester:
 									 filename='rollout_it_{}_ep_{}_test'.format(self.calls, t))
 				name = "{}rollout_latent_coords_it_{}_ep_{}_test".format(self.args.logger.my_log_dir, self.calls, t)
 				show_points(points_list=np.array(latent_points[i]), save_file=name, space_of='latent')
-			del ex_logs
 			
 		else:
 			acc_sum, obs = 0.0, []
@@ -123,7 +89,7 @@ class Tester:
 				for i in range(self.test_rollouts):
 					ob, _, _, info = env[i].step(actions[i])
 					obs.append(goal_based_process(ob))
-					if self.args.goal == 'intervalCollision':
+					if self.args.goal in self.args.colls_test_check_envs:
 						if envs_collision[i] <= 0 or ob['collision_check']:
 							envs_collision[i] -= 1
 							info['Success'] = 0.0
