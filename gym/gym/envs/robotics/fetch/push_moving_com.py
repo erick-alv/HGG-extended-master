@@ -16,19 +16,19 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.adapt_dict["field"] = [1.3, 0.75, 0.6, 0.25, 0.25, 0.2]
 
         #centers of the interval where goal and initial position will be sampld
-        self.target_goal_center = np.array([1.405, 0.67, 0.421])
+        self.target_goal_center = np.array([1.405, 0.7, 0.421])
         self.object_center = np.array([1.095, 0.68, 0.421])
-
+        #self.object_center = np.array([1.25, 0.825, 0.421])
 
         #for moving
-        self.vel_lims = [0.8, 1.3]
+        self.vel_lims = [0.7, 1.]
         self.current_obstacle_vel = 2.1
         self.initial_obstacle_direction = 1
         self.obstacle_direction = 1
-        #limits are not 100% percent accurate; cahnging the range and margin parameters from the XML help to improve
-        #this accuracy
-        self.obstacle_upper_limit = 1.55
-        self.obstacle_lower_limit = 1.366
+        #the object must be in the middle from both limits in the xml
+        self.obstacle_upper_limit = 1.45
+        self.obstacle_lower_limit = 1.36
+        self.pos_dif = (self.obstacle_upper_limit - self.obstacle_lower_limit) / 2.
 
 
         initial_qpos = {
@@ -45,7 +45,7 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         utils.EzPickle.__init__(self)
         self.obstacle_slider_idx = self.sim.model.joint_names.index('obstacle:joint')
 
-    def test_setup(self, new_vel_lims=[1.4, 1.8]):
+    def test_setup(self, new_vel_lims=[1., 1.2]):
         '''
         changes the parameter for further tests after training an agent
         '''
@@ -76,14 +76,14 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         current_qpos = qpos[self.obstacle_slider_idx]
 
         if self.obstacle_direction == 1:
-            if current_qpos >= 0.05:
+            if current_qpos >= self.pos_dif:
                 new_pos = current_qpos - self.current_obstacle_vel * dt
                 self.set_obstacle_slide_pos(new_pos)
                 self.obstacle_direction = -1
             else:
                 extra_dist = self.current_obstacle_vel * dt
-                if current_qpos + extra_dist >= 0.05:
-                    new_pos = 0.05
+                if current_qpos + extra_dist >= self.pos_dif:
+                    new_pos = self.pos_dif
                     self.set_obstacle_slide_pos(new_pos)
                     self.obstacle_direction = -1
                 else:
@@ -91,14 +91,14 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
                     self.set_obstacle_slide_pos(new_pos)
 
         else:
-            if current_qpos <= -0.05:
+            if current_qpos <= -self.pos_dif:
                 new_pos = current_qpos + self.current_obstacle_vel * dt
                 self.set_obstacle_slide_pos(new_pos)
                 self.obstacle_direction = 1
             else:
                 extra_dist = self.current_obstacle_vel * dt
-                if current_qpos - extra_dist <= -0.05:
-                    new_pos = -0.05
+                if current_qpos - extra_dist <= -self.pos_dif:
+                    new_pos = -self.pos_dif
                     self.set_obstacle_slide_pos(new_pos)
                     self.obstacle_direction = 1
                 else:
@@ -150,10 +150,10 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         obs = super(FetchPushMovingComEnv, self)._get_obs()
         body_id = self.sim.model.body_name2id('obstacle')
         pos = self.sim.data.body_xpos[body_id].copy()
-        dims = np.array([0.1, 0.03, 0.025])
+        dims = np.array([0.09, 0.03, 0.025])
         o1 = np.concatenate((pos, dims.copy()))
-        o2 = np.array([1.3, 0.59, 0.44, 0.3, 0.02, 0.04])
-        o3 = np.array([1.16, 0.745, 0.44, 0.02, 0.136, 0.04])
+        o2 = np.array([1.3, 0.58, 0.44, 0.3, 0.02, 0.04])
+        o3 = np.array([1.158, 0.73, 0.44, 0.02, 0.15, 0.04])
         obs['real_obstacle_info'] = np.array([o1, o2, o3])
         obs['real_size_goal'] = np.array([0.04, 0.04, 0.02])
         return obs

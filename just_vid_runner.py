@@ -98,7 +98,8 @@ if __name__ == '__main__':
         prev_obs.append(o)
         #env_images.append(take_image_objects(env, args.img_size))
         env_images.append(take_env_image(env, args.img_size))
-        actions = [[0., 1., 0., 0.]]*4 + [[1., -1., 0., 0.]]*100
+        #actions = [[-0.001, 0.77, 0., 0.]]*3 + [[.1, -.1, 0., 0.]]*100
+        actions = [[0., .9, 0., 0.]]*10+ [[1., 0., 0., 0.]]*5 + [[0., -1., 0., 0.]]*8+[[1., 0., 0., 0.]]*5 +[[1., 0., 0., 0.]]*100
         for timestep in range(100):
 
             #env.env.env._rotate(["cube"], 0., 10. * timestep, 10. * timestep)

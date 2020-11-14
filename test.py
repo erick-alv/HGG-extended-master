@@ -22,10 +22,8 @@ class Tester:
 			self.test_rollouts = 100
 
 			self.env_List = []
-			self.env_test_List = []
 			for _ in range(self.test_rollouts):
 				self.env_List.append(make_env(args))
-				self.env_test_List.append(make_env(args))
 
 			self.acc_record = {}
 			self.acc_record[self.args.goal] = []
