@@ -85,7 +85,8 @@ class DDPG:
 			else:
 				return_value = self.q_t
 			target = tf.stop_gradient(self.rews_ph+self.args.gamma*return_value)
-			self.q_loss = tf.reduce_mean(tf.square(self.q-target))
+			diff = self.q-target
+			self.q_loss = tf.reduce_mean(tf.square(diff))
 			self.q_optimizer = tf.train.AdamOptimizer(self.args.q_lr)
 			self.q_train_op = self.q_optimizer.minimize(self.q_loss, var_list=get_vars('main/value'))
 

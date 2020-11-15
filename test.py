@@ -38,12 +38,13 @@ class Tester:
 	def test_acc(self, key, env, agent):
 		if self.args.goal in self.args.colls_test_check_envs:
 			envs_collision = [self.coll_tol for _ in range(len(self.env_List))]
-		if (self.args.vae_dist_help or self.args.transform_dense) and (self.calls % 40 == 0 or self.calls in [0, 1, 2, 5, 8, 10]):
+		if self.calls % 40 == 0 or self.calls in [0, 1, 2, 5, 8, 10]:
 			eps_idx = [0, 5, 8, 10, 15, 20, self.test_rollouts-1]
 			acc_sum, obs = 0.0, []
 			prev_obs = []
 			env_images = [[] for _ in eps_idx]
-			latent_points = [[] for _ in eps_idx]
+			if self.args.vae_dist_help:
+				latent_points = [[] for _ in eps_idx]
 			for i in range(self.test_rollouts):
 				o = env[i].reset()
 				obs.append(goal_based_process(o))
@@ -51,7 +52,8 @@ class Tester:
 				if i in eps_idx:
 					t = eps_idx.index(i)
 					env_images[t].append(take_env_image(env[i], self.args.img_size))
-					latent_points[t].append(o['achieved_goal_latent'])
+					if self.args.vae_dist_help:
+						latent_points[t].append(o['achieved_goal_latent'])
 			for timestep in range(self.args.timesteps):
 				actions = agent.step_batch(obs)
 				obs, infos = [], []
@@ -69,13 +71,15 @@ class Tester:
 					if i in eps_idx:
 						t = eps_idx.index(i)
 						env_images[t].append(take_env_image(env[i], self.args.img_size))
-						latent_points[t].append(ob['achieved_goal_latent'])
+						if self.args.vae_dist_help:
+							latent_points[t].append(ob['achieved_goal_latent'])
 					prev_obs[i] = copy.deepcopy(ob)
 			for i, t in enumerate(eps_idx):
 				create_rollout_video(np.array(env_images[i]), args=self.args,
 									 filename='rollout_it_{}_ep_{}_test'.format(self.calls, t))
 				name = "{}rollout_latent_coords_it_{}_ep_{}_test".format(self.args.logger.my_log_dir, self.calls, t)
-				show_points(points_list=np.array(latent_points[i]), save_file=name, space_of='latent')
+				if self.args.vae_dist_help:
+					show_points(points_list=np.array(latent_points[i]), save_file=name, space_of='latent')
 			
 		else:
 			acc_sum, obs = 0.0, []

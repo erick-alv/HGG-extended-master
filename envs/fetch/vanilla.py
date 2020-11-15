@@ -185,7 +185,9 @@ class VanillaGoalEnv():
 			if self.args.vae_type == 'monet' or self.args.vae_type == 'space' or self.args.vae_type == 'bbox':
 				self.env.env._move_object(position=value.copy())
 				desired_goal_image = take_image_objects(self, self.args.img_size)
-
+				'''obs_during = self.env.env._get_obs()  # just to see if set correctly
+				im = Image.fromarray(desired_goal_image.copy().astype(np.uint8))
+				im.save('it_is_there.png')'''
 				if self.args.vae_type == 'space' or self.args.vae_type == 'bbox':
 					lg, lg_s, lo, lo_s = latents_from_images(np.array([desired_goal_image]), self.args)
 					'''try:
@@ -208,6 +210,9 @@ class VanillaGoalEnv():
 					lg, lo, lo_s = latents_from_images(np.array([desired_goal_image]), self.args)
 				#reset agent to orginal position
 				self.env.env._move_object(position=obs['achieved_goal'].copy())
+				'''obs_after = self.env.env._get_obs()#just to see if resert correctly
+				im = Image.fromarray(take_image_objects(self, self.args.img_size).copy().astype(np.uint8))
+				im.save('it_is_back.png')'''
 				#store latent in variable
 				self.desired_goal_latent = lg[0].copy()
 			else:

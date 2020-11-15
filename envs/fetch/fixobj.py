@@ -19,6 +19,7 @@ class FixedObjectGoalEnv(VanillaGoalEnv):
 				object_qpos = self.sim.data.get_joint_qpos('object0:joint')
 				assert object_qpos.shape == (7,)
 				object_qpos[:2] = object_xpos
+				object_qpos[2] = self.object_center[2]
 				#object_qpos[3:] = np.array([1., 0., 0., 0.])
 			else:
 				object_xpos = self.initial_gripper_xpos[:2].copy()

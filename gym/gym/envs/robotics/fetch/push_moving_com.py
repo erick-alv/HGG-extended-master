@@ -16,8 +16,8 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.adapt_dict["field"] = [1.3, 0.75, 0.6, 0.25, 0.25, 0.2]
 
         #centers of the interval where goal and initial position will be sampld
-        self.target_goal_center = np.array([1.405, 0.7, 0.421])
-        self.object_center = np.array([1.095, 0.68, 0.421])
+        self.target_goal_center = np.array([1.405, 0.7, 0.425])
+        self.object_center = np.array([1.095, 0.68, 0.425])
         #self.object_center = np.array([1.25, 0.825, 0.421])
 
         #for moving
@@ -31,11 +31,12 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.pos_dif = (self.obstacle_upper_limit - self.obstacle_lower_limit) / 2.
 
 
+        #!!! set the position of object) :correctly
         initial_qpos = {
             'robot0:slide0': 0.405,
             'robot0:slide1': 0.48,
             'robot0:slide2': 0.0,
-            'object0:joint': [1.3, 0.93, 0.42505, 1., 0., 0., 0.],  # origin 0.53
+            'object0:joint': [1.095, 0.68, 0.425, 1., 0., 0., 0.],  # origin 0.53
         }
         fetch_env.FetchEnv.__init__(
             self, MODEL_XML_PATH, has_object=True, block_gripper=True, n_substeps=20,
@@ -119,7 +120,7 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
     def _set_gripper_during_setup(self):
         # Move end effector into position.
         orig_pos = self.sim.data.get_site_xpos('robot0:grip')
-        gripper_target = np.array([-0.7999, -0.081, -0.326 + self.gripper_extra_height]) + orig_pos
+        gripper_target = np.array([-0.83, -0.081, -0.248 + self.gripper_extra_height]) + orig_pos
         gripper_rotation = np.array([1., 0., 1., 0.])
         self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
         self.sim.data.set_mocap_quat('robot0:mocap', gripper_rotation)

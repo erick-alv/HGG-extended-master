@@ -333,7 +333,11 @@ class FetchEnv(robot_env.RobotEnv):
         object_qpos[:3] = position[:3]
         object_qpos[3:] = [1., 0., 0., 0.]
         self.sim.data.set_joint_qpos('object0:joint', object_qpos)
-        for _ in range(1):
+        '''for _ in range(10):
             self.sim.step()
-        self._step_callback()
+        self._step_callback()'''
+        self.sim.forward()
+        '''for _ in range(10):
+            self.sim.step()
+        a = 1'''
 
