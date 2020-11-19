@@ -463,13 +463,15 @@ def _gen_rectangle():
         pos_obstacle[1] += np.random.uniform(-env.obj_range, env.obj_range, size=1)
         occuped_area_x = [pos_obstacle[0] - long_length, pos_obstacle[0] + long_length]
         occuped_area_y = [pos_obstacle[1] - short_length, pos_obstacle[1] + short_length]
+        bbox = [pos_obstacle[0], pos_obstacle[1], long_length, short_length]
     else:
         pos_obstacle[0] += np.random.uniform(-env.obj_range, env.obj_range, size=1)
         pos_obstacle[1] += np.random.uniform(-env.obj_range + reduce_factor, env.obj_range - reduce_factor, size=1)
         occuped_area_x = [pos_obstacle[0] - short_length, pos_obstacle[0] + short_length]
         occuped_area_y = [pos_obstacle[1] - long_length, pos_obstacle[1] + long_length]
+        bbox = [pos_obstacle[0], pos_obstacle[1], short_length, long_length]
     pos_obstacle[2] = 0.4 + height_obstacle
-    return size, rot_z, pos_obstacle, occuped_area_x, occuped_area_y
+    return size, rot_z, pos_obstacle, occuped_area_x, occuped_area_y, bbox
 
 def gen_all_data_mixed(env, args):
     for n in ['rectangle', 'rectangle1', 'rectangle2', 'cylinder', 'cylinder1', 'cube', 'cube1']:
