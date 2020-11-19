@@ -16,7 +16,7 @@ from PIL import Image
 from vae_env_inter import take_env_image, take_image_objects
 from j_vae.distance_estimation import calculate_distance, DistMovEst, DistMovEstReal, MultipleDist, MultipleDistReal
 from SPACE.main_space import load_space_model
-
+import matplotlib.pyplot as plt
 def get_args(do_just_test=False):#this parameter is just used for the name
 	parser = get_arg_parser()
 
@@ -32,7 +32,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 		parser.add_argument('--goal', help='method of goal generation', type=str, default='interval',
 							choices=['vanilla', 'fixobj', 'interval', 'intervalCollision','intervalExt',
 									 'intervalColl', 'intervalRewSub', 'intervalRewVec', 'intervalTestColDetRewVec',
-									 'intervalTestColDetRewSub','custom'])
+									 'intervalTestColDetRewSub','custom', 'intervalEnvCollStop', 'intervalSelfCollStop'])
 		if args.env[:5]=='Fetch':
 			parser.add_argument('--init_offset', help='initial offset in fetch environments', type=np.float32, default=1.0)
 		elif args.env[:4]=='Hand':
@@ -161,6 +161,7 @@ def load_vaes(args):
 	elif args.vae_type == 'bbox':
 		args.vae_model = load_Bbox(path='data/FetchGenerativeEnv-v1/model_bbox',img_size=args.img_size, latent_size=0,
 								   device='cuda:0', num_slots=5)#latent size is not being used for now
+		args.vae_model.eval()
 		return
 
 	if args.vae_type == 'sb':
@@ -308,6 +309,7 @@ def load_dist_estimator(args, env):
 																args.field_size[0], args.field_size[1]],
 															   num_vertices=[100, 100], size_increase=size_goal_box[0])#todo use real or other depending of va
 		args.dist_estimator.graph.plot_graph(save_path='env_graph_created', elev=90, azim=0)
+	plt.clf()
 
 
 

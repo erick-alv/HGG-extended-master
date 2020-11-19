@@ -3,8 +3,8 @@ from .fixobj import FixedObjectGoalEnv
 from .interval import IntervalGoalEnv
 from .custom import CustomGoalEnv
 from .interval_with_contact_detection import IntervalWithCollisionDetection
-from .extensions_interval import IntervalExt, IntervalColl, IntervalRewSub, IntervalRewVec, IntervalTestColDetRewSub,\
-	IntervalTestColDetRewVec
+from .extensions_interval import IntervalExt, IntervalColl, IntervalRewSub, IntervalRewVec, IntervalTestCollDetRewSub,\
+	IntervalTestCollDetRewVec, IntervalEnvCollStop, IntervalSelfCollStop
 
 
 
@@ -20,7 +20,10 @@ def make_env(args):
 		'intervalColl':IntervalColl,
 		'intervalRewSub':IntervalRewSub,
 		'intervalRewVec': IntervalRewVec,
-		'intervalTestColDetRewSub':IntervalTestColDetRewSub,
-		'intervalTestColDetRewVec':IntervalTestColDetRewVec
+		'intervalTestColDetRewSub':IntervalTestCollDetRewSub,
+		'intervalTestColDetRewVec':IntervalTestCollDetRewVec,
+		'intervalEnvCollStop':IntervalEnvCollStop,
+		'intervalSelfCollStop':IntervalSelfCollStop
+
 
 	}[args.goal](args)

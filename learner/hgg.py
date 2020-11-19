@@ -472,6 +472,17 @@ class HGGLearner:
 
 		return goal_list if len(goal_list)>0 else None
 
+
+def check_conditions_after_step(obs, args):
+	if 'coll_stop' in obs.keys():
+		if obs['coll_stop']:
+			return True
+		else:
+			return False
+	else:
+		return False
+
+
 class HGGLearner_VAEs(HGGLearner):
 	def __init__(self, args):
 		self.args = args
@@ -491,6 +502,7 @@ class HGGLearner_VAEs(HGGLearner):
 		self.stop = False
 		self.learn_calls = 0
 		self.success_n = 0
+
 
 	def learn(self, args, env, env_test, agent, buffer, write_goals=0, epoch=None, cycle=None):
 		# Actual learning cycle takes place here!
@@ -565,26 +577,13 @@ class HGGLearner_VAEs(HGGLearner):
 				trajectory_goals_latents.append(obs['achieved_goal_latent'].copy())
 				trajectory_obstacles_latents.append(obs['obstacle_latent'].copy())
 				trajectory_obstacles_latents_sizes.append(obs['obstacle_size_latent'].copy())
-				## just for video
-				#tr_env_images.append(take_env_image(self.env_List[i], args.img_size))
-				##
 				if timestep==args.timesteps-1: done = True#this makes that the last obs is as done
 				current.store_step(action, obs, reward, done)
 				if done: break
+				stop_trajectory = check_conditions_after_step(obs, args)
+				if stop_trajectory:
+					break
 			## just for video
-			'''if (self.learn_calls%100==0 and i == args.episodes-1) or \
-					(info['Success'] == 1.0 and self.success_n%100 == 0):
-				self.goal_env_List[i].goal = explore_goal.copy()
-				self.goal_env_List[i].env.env._move_object(position=explore_goal.copy())
-				tr_goal = take_goal_image(self.goal_env_List[i], args.img_size)
-				if info['Success'] == 1.0:
-					create_rollout_video(tr_env_images, goal_image=tr_goal, args=args,
-										 filename='success_rollout_it{}'.format(self.learn_calls))
-					self.success_n +=1
-				else:
-					create_rollout_video(tr_env_images, goal_image=tr_goal, args=args,
-									 filename='last_rollout_it{}'.format(self.learn_calls))'''
-			##
 			achieved_trajectories.append(np.array(trajectory))
 			achieved_init_states.append(init_state)
 			achieved_trajectory_goals_latents.append(np.array(trajectory_goals_latents))

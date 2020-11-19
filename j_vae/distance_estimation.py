@@ -281,6 +281,7 @@ class DistMovEst:
         size_x = self.max_x - self.x_mid
         size_y = self.max_y - self.y_mid
         obstacles.append([self.x_mid, self.y_mid, size_x, size_y])
+        self.obstacles = obstacles
         graph = DistanceGraph2D(args=None, field=field, num_vertices=num_vertices,
                                 obstacles=obstacles, size_increase=size_increase)
         graph.compute_cs_graph()
@@ -337,6 +338,7 @@ class DistMovEstReal(DistMovEst):
         size_x = self.max_x - self.x_mid
         size_y = self.max_y - self.y_mid
         obstacles.append([self.x_mid, self.y_mid, size_x, size_y])
+        self.obstacles = obstacles
         graph = DistanceGraph2D(args=None, field=field, num_vertices=num_vertices,
                                 obstacles=obstacles, size_increase=size_increase)
         graph.compute_cs_graph()
@@ -374,6 +376,7 @@ class MultipleObstacle(DistMovEst):
             size_x = self.max_x[i] - self.x_mid[i]
             size_y = self.max_y[i] - self.y_mid[i]
             obstacles.append([self.x_mid[i], self.y_mid[i], size_x, size_y])
+        self.obstacles = obstacles
         graph = DistanceGraph2D(args=None, field=field, num_vertices=num_vertices,
                                 obstacles=obstacles, size_increase=size_increase)
         graph.compute_cs_graph()

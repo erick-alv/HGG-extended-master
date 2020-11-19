@@ -44,6 +44,10 @@
 			<geom name="o2" pos="0 0 0" size="0.3 0.02 0.04"  type="box" solref="0.01 1"
 				  rgba="0.5 0. 0.5 1" mass="2000" material="table_mat" contype="1" conaffinity="0"></geom>
 		</body>
+		<!--body pos="1.025 1.025 0.4" name="obstacle2">
+			<geom name="o2" pos="0 0 0" size="0.01 0.01 0.01" type="sphere" solref="0.01 1"
+				  rgba="0.5 0. 0.5 1" mass="2000" material="table_mat" contype="1" conaffinity="0"></geom>
+		</body-->
 
 		<body pos="1.158 0.73 0.44" name="obstacle3">
 			<geom name="o3" pos="0 0 0" size="0.02 0.15 0.04" type="box" solref="0.01 1"

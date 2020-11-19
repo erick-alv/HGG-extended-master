@@ -154,6 +154,47 @@ class IntervalColl(IntervalExt):
             ncols = np.sum(cols.astype(np.float))
             obs['coll'] = ncols
         return obs
+    
+class IntervalSelfCollStop(IntervalColl):
+    def __init__(self, args):
+        IntervalColl.__init__(self, args)
+        
+    def get_obs(self):
+        obs = super(IntervalSelfCollStop, self).get_obs()
+        if obs['coll'] > 0.:
+            obs['coll_stop'] = True
+        else:
+            obs['coll_stop'] = False
+        return obs
+
+    def compute_reward(self, observation_current, observation_old, goal):
+        rew = super(IntervalSelfCollStop, self).compute_reward(observation_current, observation_old, goal)
+        if observation_current['coll_stop']:
+            rew = -1.
+        return rew
+    
+class IntervalEnvCollStop(IntervalExt):
+    def __init__(self, args):
+        IntervalExt.__init__(self, args)
+
+    def get_obs(self):
+        obs = super(IntervalEnvCollStop, self).get_obs()
+        sim = self.env.env.sim
+        exists_collision = False
+        #todo generalize this for other environments
+        for i in range(sim.data.ncon):
+            contact = sim.data.contact[i]
+            if (contact.geom1 == 23 and contact.geom2 == 24) or (contact.geom1 == 24 and contact.geom2 == 23):
+                exists_collision = True
+
+        obs['coll_stop'] = exists_collision
+        return obs
+
+    def compute_reward(self, observation_current, observation_old, goal):
+        rew = super(IntervalEnvCollStop, self).compute_reward(observation_current, observation_old, goal)
+        if observation_current['coll_stop']:
+            rew = -1.
+        return rew
 
 class IntervalRewSub(IntervalColl):
     def __init__(self, args):
@@ -177,12 +218,12 @@ class IntervalRewVec(IntervalColl):
 
 
 
-class IntervalTestColDetRewSub(IntervalRewSub):
+class IntervalTestCollDetRewSub(IntervalRewSub):
     def __init__(self, args):
-        IntervalGoalEnv.__init__(self, args)
+        IntervalRewSub.__init__(self, args)
 
     def get_obs(self):
-        obs = super(IntervalTestColDetRewSub, self).get_obs()
+        obs = super(IntervalTestCollDetRewSub, self).get_obs()
         sim = self.env.env.sim
         exists_collision = False
         #todo generalize this for other environments
@@ -194,12 +235,12 @@ class IntervalTestColDetRewSub(IntervalRewSub):
         obs['collision_check'] = exists_collision
         return obs
 
-class IntervalTestColDetRewVec(IntervalRewVec):
+class IntervalTestCollDetRewVec(IntervalRewVec):
     def __init__(self, args):
-        IntervalGoalEnv.__init__(self, args)
+        IntervalRewVec.__init__(self, args)
 
     def get_obs(self):
-        obs = super(IntervalTestColDetRewVec, self).get_obs()
+        obs = super(IntervalTestCollDetRewVec, self).get_obs()
         sim = self.env.env.sim
         exists_collision = False
         #todo generalize this for other environments
