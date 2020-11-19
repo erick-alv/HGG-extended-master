@@ -761,13 +761,13 @@ def rec_dataset(model, dataset_path):
                     'recs_test.png', z_pres=z_pres)
 
 if __name__ == '__main__':
-    '''device = 'cuda:0'
+    device = 'cuda:0'
     #one less since background mask is not used
     seed=1
     torch.manual_seed(seed)
     model = Bbox(5, device).to(device)
     optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
-    train(model, optimizer, device, log_interval_epoch=10, log_interval_batch=400, batch_size=16, num_epochs=500)#4)'''
+    train(model, optimizer, device, log_interval_epoch=10, log_interval_batch=400, batch_size=16, num_epochs=500)#4)
 
 
     '''seed = 1
@@ -777,7 +777,7 @@ if __name__ == '__main__':
 
 
 
-    data_set = np.load('../data/FetchGenerativeEnv-v1/all_set.npy')
+    '''data_set = np.load('../data/FetchGenerativeEnv-v1/all_set.npy')
     #just take half the data
     data_set = data_set[:19200]
     device = 'cuda:0'
@@ -814,7 +814,7 @@ if __name__ == '__main__':
             ims = np.concatenate([np.expand_dims(data_np, axis=1), masks], axis=1)
             new_data_set[batch_idx*batch_size:batch_idx*batch_size + batch_size] = ims
             #show_im(np.concatenate([i for i in ims[0]], axis=0))
-    np.save('../data/FetchGenerativeEnv-v1/all_set_with_masks.npy', new_data_set)
+    np.save('../data/FetchGenerativeEnv-v1/all_set_with_masks.npy', new_data_set)'''
     '''new_data_set = np.load('../data/FetchGenerativeEnv-v1/all_set_with_masks.npy')
     bbox_info = preprocess_bounding_boxes(new_data_set[:, 1:, :, :, 0:1].copy())
     np.save('../data/FetchGenerativeEnv-v1/all_set_with_masks_bbox.npy', bbox_info)'''
