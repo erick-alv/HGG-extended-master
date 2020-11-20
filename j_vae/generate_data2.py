@@ -571,6 +571,7 @@ def bbox_to_image_coordinates(bbox, args):
     new_bbox = [x_min, y_min, x_max, y_max]
     if new_bbox == [0., 0., 0., 0.]:
         a = 1
+    assert new_bbox != [0., 0., 0., 0.]
     return new_bbox
 
 def gen_all_data_mixed(env, args):
@@ -600,9 +601,8 @@ def gen_all_data_mixed(env, args):
     occuped_areas_y = []
     max_els = 4
 
-    number_rectangles = np.random.choice(a=[0, 1, 2, 3], p = [0.3, 0.2, 0.3, 0.2])
-    if number_rectangles == 4 or number_rectangles == 5:#this is done just to aument the possibility to have less els
-        number_rectangles = 0
+    #number_rectangles = np.random.choice(a=[0, 1, 2, 3], p = [0.3, 0.2, 0.3, 0.2])
+    number_rectangles = np.random.choice(a=[1, 2, 3], p=[0.4, 0.3, 0.3])
     rem_els = max_els - number_rectangles
     for i in range(number_rectangles):
         if i == 0:
@@ -667,6 +667,8 @@ def gen_all_data_mixed(env, args):
 
             bboxes.append(bbox_to_image_coordinates(bbox, args))
             els_labels.append(int_codes_objects['cube'])
+    assert len(bboxes) > 0
+    assert len(bboxes) == len(els_labels )
     return bboxes, els_labels
 
 
