@@ -566,12 +566,20 @@ def bbox_to_image_coordinates(bbox, args):
     y_max = map_coords_y(y_max)
     y_max = np.clip(y_max, a_min=0., a_max=args.img_size)
     #here the y coordinates are flipped since images use other direction
-    y_max = args.img_size - y_max
-    y_min = args.img_size - y_min
     new_bbox = [x_min, y_min, x_max, y_max]
-    if new_bbox == [0., 0., 0., 0.]:
-        a = 1
-    assert new_bbox != [0., 0., 0., 0.]
+    if (new_bbox[0] == 0. and new_bbox[2] == 0.) or (new_bbox[1] == 0. and new_bbox[3] == 0.) \
+            or (new_bbox[0] == args.img_size and new_bbox[2] == args.img_size) \
+            or (new_bbox[1] == args.img_size and new_bbox[3] == args.img_size):
+        return None
+    try:
+        assert y_max != y_min
+        assert y_max > y_min
+        assert x_max != x_min
+        assert x_max > x_min
+        assert new_bbox != [0., 0., 0., 0.]
+    except:
+        print('nooo')
+
     return new_bbox
 
 def gen_all_data_mixed(env, args):
@@ -612,7 +620,11 @@ def gen_all_data_mixed(env, args):
         else:
             rect_name = 'rectangle2'
 
-        size, rot_z, pos_obstacle, occuped_area_x_rectangle, occuped_area_y_rectangle, bbox = _gen_rectangle()
+        while True:
+            size, rot_z, pos_obstacle, occuped_area_x_rectangle, occuped_area_y_rectangle, bbox = _gen_rectangle()
+            bbox = bbox_to_image_coordinates(bbox, args)
+            if bbox is not None:
+                break
         env.env.env._set_size(names_list=[rect_name], size=size)
         env.env.env._rotate([rect_name], 0., 0., rot_z)
         env.env.env._set_position(names_list=[rect_name], position=pos_obstacle)
@@ -620,7 +632,7 @@ def gen_all_data_mixed(env, args):
         occuped_areas_x.append(occuped_area_x_rectangle)
         occuped_areas_y.append(occuped_area_y_rectangle)
 
-        bboxes.append(bbox_to_image_coordinates(bbox, args))
+        bboxes.append(bbox)
         els_labels.append(int_codes_objects['rectangle'])
 
     #generate other objects
@@ -635,7 +647,11 @@ def gen_all_data_mixed(env, args):
             elif i == 1:
                 cyl_name = 'cylinder1'
 
-            size_cyl, rot_x_cyl, rot_y_cyl, pos_cyl, oc_x_cyl, oc_y_cyl, bbox = _gen_cylinder(occuped_areas_x, occuped_areas_y)
+            while True:
+                size_cyl, rot_x_cyl, rot_y_cyl, pos_cyl, oc_x_cyl, oc_y_cyl, bbox = _gen_cylinder(occuped_areas_x, occuped_areas_y)
+                bbox = bbox_to_image_coordinates(bbox, args)
+                if bbox is not None:
+                    break
             env.env.env._set_size(names_list=[cyl_name], size=size_cyl)
             env.env.env._rotate([cyl_name], rot_x_cyl, rot_y_cyl, 0.)
             env.env.env._set_position(names_list=[cyl_name], position=pos_cyl)
@@ -643,7 +659,7 @@ def gen_all_data_mixed(env, args):
             occuped_areas_x.append(oc_x_cyl)
             occuped_areas_y.append(oc_y_cyl)
 
-            bboxes.append(bbox_to_image_coordinates(bbox, args))
+            bboxes.append(bbox)
             els_labels.append(int_codes_objects['cylinder'])
 
     if rem_els > 0:
@@ -656,7 +672,12 @@ def gen_all_data_mixed(env, args):
             elif i == 1:
                 cube_name = 'cube1'
 
-            size_cube, rot_x_cube, rot_y_cube, rot_z_cube, pos_cube, oc_x_cube, oc_y_cube, bbox = _gen_cube(occuped_areas_x, occuped_areas_y)
+            while True:
+                size_cube, rot_x_cube, rot_y_cube, rot_z_cube, pos_cube, oc_x_cube, oc_y_cube, bbox = _gen_cube(occuped_areas_x, occuped_areas_y)
+                bbox = bbox_to_image_coordinates(bbox, args)
+                if bbox is not None:
+                    break
+
             env.env.env._set_size(names_list=[cube_name], size=size_cube)
             env.env.env._rotate([cube_name], rot_x_cube, rot_y_cube, rot_z_cube)
             env.env.env._set_position(names_list=[cube_name], position=pos_cube)
@@ -665,7 +686,7 @@ def gen_all_data_mixed(env, args):
             occuped_areas_x.append(oc_x_cube)
             occuped_areas_y.append(oc_y_cube)
 
-            bboxes.append(bbox_to_image_coordinates(bbox, args))
+            bboxes.append(bbox)
             els_labels.append(int_codes_objects['cube'])
     assert len(bboxes) > 0
     assert len(bboxes) == len(els_labels )
