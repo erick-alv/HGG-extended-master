@@ -68,7 +68,7 @@
 		</body>
 
 		<body name="lookat" pos="1.3 .75 0.2"><!-- inside table so there is no collision-->
-			<geom size="0.05 0.05 0.05" type="sphere" rgba="1 0 1 0"></geom>
+			<geom size="0.005 0.005 0.005" type="sphere" rgba="1 0 1 0"></geom>
 		</body>
 		<body name="camera rig" pos="1.3 .75 2.5">
 			<camera name="cam_top" mode="targetbody" target="lookat" pos="0 0 0" fovy="15"></camera>

@@ -8,6 +8,9 @@ from vae_env_inter import take_env_image, take_obstacle_image, take_goal_image, 
 from PIL import Image
 from j_vae.common_data import train_file_name, puck_size, obstacle_size, z_table_height_obstacle, min_obstacle_size,\
     max_obstacle_size,z_table_height_goal
+from scipy.spatial.transform import Rotation
+import csv
+import io
 
 
 
@@ -373,6 +376,15 @@ def _get_pos(ar_x, ar_y, center, range_left, range_right, range_up, range_down, 
     while True:
         t += 1
         pos = _gen_pos()
+        '''try:
+            assert pos[0] >= 1.025
+            assert pos[0] <= 1.575
+            assert pos[1] >= 0.475
+            assert pos[1] <= 1.025
+        except:
+            print('pos:, {} \ncenter:, {} \nrange_left:, {} \nrange right:, {} \nrange up:, {} \nrange down:, {} \nsize:, {} \n'.
+                format(pos, center, range_left, range_right, range_up, range_down, size))
+            exit()'''
         if not is_inside_ocuped_areas(pos, [size[0]+0.01, size[1]+0.01]):
             return pos
         if t >= 100:
@@ -406,7 +418,36 @@ def _gen_cylinder(ocuped_areas_x, ocuped_areas_y):
     if pos is None:
         return None, None
     else:
-        return size, rot_x, rot_y, pos, [pos[0] - size[0], pos[0] + size[0]], [pos[1] - size[1], pos[1] + size[1]]
+        # generate bounding box
+        # First as if object would be at origin
+        s_x_v = np.zeros(3)
+        s_x_v[0] = size[0]
+        s_y_v = np.zeros(3)
+        s_y_v[1] = size[0]
+        s_z_v = np.zeros(3)
+        s_z_v[2] = size[1]
+        vertices = []
+        for xmz in [-1, 1]:
+            for ymz in [-1, 1]:
+                for zmz in [-1, 1]:
+                    vertices.append(0. + xmz * s_x_v + ymz * s_y_v + zmz * s_z_v)
+        # rotation matrix
+        # todo verify if here is also necessary to cahnge rot_z and rot_x
+        r = Rotation.from_rotvec(np.pi / 180 * np.array([0., rot_y, rot_x]))
+        for i, v in enumerate(vertices):
+            #todo correct rotation
+            #tr_p = r.apply(v + pos)
+            #vertices[i] = tr_p
+            vertices[i] = r.apply(v) + pos
+        vertices = np.array(vertices)
+        bbox_min_x = np.min(vertices[:, 0])
+        bbox_max_x = np.max(vertices[:, 0])
+        dist_x = np.abs(bbox_max_x - bbox_min_x)
+        bbox_min_y = np.min(vertices[:, 1])
+        bbox_max_y = np.max(vertices[:, 1])
+        dist_y = np.abs(bbox_max_y - bbox_min_y)
+        bbox = [(bbox_max_x + bbox_min_x) / 2., (bbox_max_y + bbox_min_y) / 2., dist_x / 2., dist_y / 2.]
+        return size, rot_x, rot_y, pos, [pos[0] - size[0], pos[0] + size[0]], [pos[1] - size[1], pos[1] + size[1]], bbox
 
 def _gen_cube(ocuped_areas_x, ocuped_areas_y):
     #size
@@ -433,9 +474,39 @@ def _gen_cube(ocuped_areas_x, ocuped_areas_y):
     if pos is None:
         return None, None
     else:
+        # generate bounding box
+        # First as if object would be at origin
+        s_x_v = np.zeros(3)
+        s_x_v[0] = size[0]
+        s_y_v = np.zeros(3)
+        s_y_v[1] = size[1]
+        s_z_v = np.zeros(3)
+        s_z_v[2] = size[2]
+        vertices = []
+        for xmz in [-1, 1]:
+            for ymz in [-1, 1]:
+                for zmz in [-1, 1]:
+                    vertices.append(0.+xmz*s_x_v+ymz*s_y_v+zmz*s_z_v)
+        #rotation matrix
+        #todo verify if here is also necessary to cahnge rot_z and rot_x
+        r = Rotation.from_rotvec(np.pi / 180 * np.array([rot_z, rot_y, rot_x]))
+        for i, v in enumerate(vertices):
+            #todo correct rotation
+            #tr_p = r.apply(v + pos)
+            #vertices[i] = tr_p
+            vertices[i] = r.apply(v) + pos
+        vertices = np.array(vertices)
+        bbox_min_x = np.min(vertices[:, 0])
+        bbox_max_x = np.max(vertices[:, 0])
+        dist_x = np.abs(bbox_max_x - bbox_min_x)
+        bbox_min_y = np.min(vertices[:, 1])
+        bbox_max_y = np.max(vertices[:, 1])
+        dist_y = np.abs(bbox_max_y - bbox_min_y)
+        bbox = [(bbox_max_x + bbox_min_x)/2., (bbox_max_y + bbox_min_y)/2., dist_x/2., dist_y/2.]
+
 
         return size, rot_x, rot_y, rot_z, pos, [pos[0] - size[0], pos[0] + size[0]], \
-               [pos[1] - size[1], pos[1] + size[1]]
+               [pos[1] - size[1], pos[1] + size[1]], bbox
 
 def _gen_rectangle():
     # size obstacle
@@ -473,6 +544,35 @@ def _gen_rectangle():
     pos_obstacle[2] = 0.4 + height_obstacle
     return size, rot_z, pos_obstacle, occuped_area_x, occuped_area_y, bbox
 
+from j_vae.latent_space_transformations import interval_map_function
+def bbox_to_image_coordinates(bbox, args):
+    x_min = bbox[0] - bbox[2]
+    x_max = bbox[0] + bbox[2]
+    y_min = bbox[1] - bbox[3]
+    y_max = bbox[1] + bbox[3]
+
+
+    # the distances to the edges seen in the image are 0.025
+    #map_coords_x = interval_map_function(1.025, 1.575, 0., args.img_size)
+    #map_coords_y = interval_map_function(0.475, 1.025,  0., args.img_size)
+    map_coords_x = interval_map_function(1.027, 1.573, 0., args.img_size)
+    map_coords_y = interval_map_function(0.477, 1.023, 0., args.img_size)
+    x_min = map_coords_x(x_min)
+    x_min = np.clip(x_min, a_min=0., a_max=args.img_size)
+    x_max = map_coords_x(x_max)
+    x_max = np.clip(x_max, a_min=0., a_max=args.img_size)
+    y_min = map_coords_y(y_min)
+    y_min = np.clip(y_min, a_min=0., a_max=args.img_size)
+    y_max = map_coords_y(y_max)
+    y_max = np.clip(y_max, a_min=0., a_max=args.img_size)
+    #here the y coordinates are flipped since images use other direction
+    y_max = args.img_size - y_max
+    y_min = args.img_size - y_min
+    new_bbox = [x_min, y_min, x_max, y_max]
+    if new_bbox == [0., 0., 0., 0.]:
+        a = 1
+    return new_bbox
+
 def gen_all_data_mixed(env, args):
     for n in ['rectangle', 'rectangle1', 'rectangle2', 'cylinder', 'cylinder1', 'cube', 'cube1']:
         env.env.env._set_position(names_list=[n], position=[10., 10., 0.])
@@ -482,6 +582,8 @@ def gen_all_data_mixed(env, args):
     for i in range(len(colors)):
         color_count[i] = 0
 
+
+
     def select_and_change_color(obj_name):
         color_ind = np.random.randint(0, len(colors))
         while color_count[color_ind] >= 1:
@@ -490,6 +592,9 @@ def gen_all_data_mixed(env, args):
         env.env.env._change_color([obj_name], r, g, b)
         color_count[color_ind] +=1
 
+    int_codes_objects = {'rectangle': 1, 'cylinder': 2, 'cube': 3}
+    bboxes = []
+    els_labels = []
 
     occuped_areas_x = []
     occuped_areas_y = []
@@ -507,13 +612,16 @@ def gen_all_data_mixed(env, args):
         else:
             rect_name = 'rectangle2'
 
-        size, rot_z, pos_obstacle, occuped_area_x_rectangle, occuped_area_y_rectangle = _gen_rectangle()
+        size, rot_z, pos_obstacle, occuped_area_x_rectangle, occuped_area_y_rectangle, bbox = _gen_rectangle()
         env.env.env._set_size(names_list=[rect_name], size=size)
         env.env.env._rotate([rect_name], 0., 0., rot_z)
         env.env.env._set_position(names_list=[rect_name], position=pos_obstacle)
         select_and_change_color(rect_name)
         occuped_areas_x.append(occuped_area_x_rectangle)
         occuped_areas_y.append(occuped_area_y_rectangle)
+
+        bboxes.append(bbox_to_image_coordinates(bbox, args))
+        els_labels.append(int_codes_objects['rectangle'])
 
     #generate other objects
 
@@ -527,13 +635,16 @@ def gen_all_data_mixed(env, args):
             elif i == 1:
                 cyl_name = 'cylinder1'
 
-            size_cyl, rot_x_cyl, rot_y_cyl, pos_cyl, oc_x_cyl, oc_y_cyl = _gen_cylinder(occuped_areas_x, occuped_areas_y)
+            size_cyl, rot_x_cyl, rot_y_cyl, pos_cyl, oc_x_cyl, oc_y_cyl, bbox = _gen_cylinder(occuped_areas_x, occuped_areas_y)
             env.env.env._set_size(names_list=[cyl_name], size=size_cyl)
             env.env.env._rotate([cyl_name], rot_x_cyl, rot_y_cyl, 0.)
             env.env.env._set_position(names_list=[cyl_name], position=pos_cyl)
             select_and_change_color(cyl_name)
             occuped_areas_x.append(oc_x_cyl)
             occuped_areas_y.append(oc_y_cyl)
+
+            bboxes.append(bbox_to_image_coordinates(bbox, args))
+            els_labels.append(int_codes_objects['cylinder'])
 
     if rem_els > 0:
         max_n_cubes = min(1, rem_els)
@@ -545,7 +656,7 @@ def gen_all_data_mixed(env, args):
             elif i == 1:
                 cube_name = 'cube1'
 
-            size_cube, rot_x_cube, rot_y_cube, rot_z_cube, pos_cube, oc_x_cube, oc_y_cube = _gen_cube(occuped_areas_x, occuped_areas_y)
+            size_cube, rot_x_cube, rot_y_cube, rot_z_cube, pos_cube, oc_x_cube, oc_y_cube, bbox = _gen_cube(occuped_areas_x, occuped_areas_y)
             env.env.env._set_size(names_list=[cube_name], size=size_cube)
             env.env.env._rotate([cube_name], rot_x_cube, rot_y_cube, rot_z_cube)
             env.env.env._set_position(names_list=[cube_name], position=pos_cube)
@@ -554,41 +665,10 @@ def gen_all_data_mixed(env, args):
             occuped_areas_x.append(oc_x_cube)
             occuped_areas_y.append(oc_y_cube)
 
-    '''case = np.random.randint(0, 4)
-    if case == 0:
-        #just cylinder
-        #env.env.env._set_position(names_list=['cube'], position=p2)
-        oc_x, oc_y = _gen_cylinder(occuped_areas_x, occuped_areas_y)
-        if oc_x is None:
-            print('no pos created; genrating just obstacle')
-            #env.env.env._set_position(names_list=['cylinder'], position=p1)
-    elif case == 1:
-        #just cube
-        #env.env.env._set_position(names_list=['cylinder'], position=p1)
-        oc_x, oc_y = _gen_cube(occuped_areas_x, occuped_areas_y)
-        if oc_x is None:
-            print('no pos created; genrating just obstacle')
-            #env.env.env._set_position(names_list=['cube'], position=p2)
-    elif case == 2:
-        #both
-        oc_x, oc_y = _gen_cylinder(occuped_areas_x, occuped_areas_y)
-        if oc_x is None:
-            print('no pos created for cyl in both; generating just cube, perhaps')
-            #env.env.env._set_position(names_list=['cylinder'], position=p1)
-        else:
-            occuped_areas_x.append(oc_x)
-            occuped_areas_y.append(oc_y)
+            bboxes.append(bbox_to_image_coordinates(bbox, args))
+            els_labels.append(int_codes_objects['cube'])
+    return bboxes, els_labels
 
-        oc_x_c, oc_y_c = _gen_cube(occuped_areas_x, occuped_areas_y)
-        if oc_x_c is None:
-            print('no pos created for cube in both; generating just obstacle')
-            #env.env.env._set_position(names_list=['cube'], position=p2)
-
-    else:
-        #no other objects
-        #env.env.env._set_position(names_list=['cylinder'], position=p1)
-        #env.env.env._set_position(names_list=['cube'], position=p2)
-        pass'''
 
 
 
@@ -679,6 +759,17 @@ if __name__ == "__main__":
             for func in gen_setup_env_ops[args.env]:
                 func(env, args)
 
+            if args.enc_type == 'all':
+                field_names = ['im_name', 'bbox', 'labels']
+                csv_file_path = env_data_dir + 'all_set.csv'
+                with open(csv_file_path, 'w') as csv_file:
+                    writer = csv.DictWriter(csv_file, fieldnames=field_names)
+                    writer.writeheader()
+                #makes folder for images
+                images_dir = env_data_dir + 'images/'
+                make_dir(images_dir, clear=True)
+
+
             #loop through(moving object and making)
             train_data = np.empty([args.count, args.img_size, args.img_size, 3])
             i = 0
@@ -717,9 +808,24 @@ if __name__ == "__main__":
                             break
                 elif args.enc_type == 'all':
                     for func in during_loop_ops[args.env]:
-                        func(env, args)
+                        bboxes, els_labels = func(env, args)
                     rgb_array = take_objects_image_training(env, img_size=args.img_size)
                     train_data[i] = rgb_array.copy()
+                    im = Image.fromarray(rgb_array.copy().astype(np.uint8))
+                    im.save('{}{}.png'.format(images_dir, i))
+                    buffer_bboxes = io.BytesIO()
+                    np.savetxt(buffer_bboxes, np.array(bboxes))
+                    buffer_labels = io.BytesIO()
+                    np.savetxt(buffer_labels, np.array(els_labels))
+
+
+                    values = {'im_name':'{}.png'.format(i),
+                              'bbox':buffer_bboxes.getvalue().decode('utf-8'),
+                              'labels':buffer_labels.getvalue().decode('utf-8')}
+                    with open(csv_file_path, 'a') as csv_file:
+                        writer = csv.DictWriter(csv_file, fieldnames=field_names)
+                        writer.writerow(values)
+
                     i += 1
 
 
@@ -728,7 +834,8 @@ if __name__ == "__main__":
                     im.show()
                     im.close()'''
             # store files
-            np.save(data_file, train_data)
+            if not args.enc_type == 'all':
+                np.save(data_file, train_data)
         else:
             train_data = np.load(data_file)
             all_idx = np.arange(len(train_data)).tolist()
