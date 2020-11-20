@@ -89,9 +89,9 @@ if __name__ == '__main__':
     indices = torch.randperm(len(dataset)).tolist()
     dataset_train = torch.utils.data.Subset(dataset, indices[:200])
     dataset_test = torch.utils.data.Subset(dataset, indices[200:])
-    data_loader_train = torch.utils.data.DataLoader(dataset_train, batch_size=8, shuffle=True,
+    data_loader_train = torch.utils.data.DataLoader(dataset_train, batch_size=4, shuffle=True,
                                                     collate_fn=lambda x: list(zip(*x)))
-    data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=8, shuffle=False,
+    data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=4, shuffle=False,
                                                    collate_fn=lambda x: list(zip(*x)))
     '''for _ in range(3):
         images, labels = next(iter(data_loader_train))
