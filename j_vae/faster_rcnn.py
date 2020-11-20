@@ -113,7 +113,7 @@ if __name__ == '__main__':
     optimizer_save_path = '../data/FetchGenerativeEnv-v1/optimizer_rcnn.pth'
 
     params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.SGD(params, lr=0.01)
+    optimizer = torch.optim.SGD(params, lr=1e-4)
     torch.save(model.state_dict(), model_save_path)
     torch.save(optimizer.state_dict(), optimizer_save_path)
     model.train()
