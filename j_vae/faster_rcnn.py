@@ -89,8 +89,8 @@ if __name__ == '__main__':
     dataset = wheatdataset(root, folder='images', transforms=torchvision.transforms.ToTensor())
     torch.manual_seed(1)
     indices = torch.randperm(len(dataset)).tolist()
-    dataset_train = torch.utils.data.Subset(dataset, indices[:200])
-    dataset_test = torch.utils.data.Subset(dataset, indices[200:])
+    dataset_train = torch.utils.data.Subset(dataset, indices[:4000])
+    dataset_test = torch.utils.data.Subset(dataset, indices[4000:])
     data_loader_train = torch.utils.data.DataLoader(dataset_train, batch_size=4, shuffle=True,
                                                     collate_fn=lambda x: list(zip(*x)))
     data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=4, shuffle=False,
@@ -116,11 +116,11 @@ if __name__ == '__main__':
     optimizer_save_path_ep = '../data/FetchGenerativeEnv-v1/optimizer_rcnn_epoch_{}.pth'
 
     params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.SGD(params, lr=1e-4)
+    optimizer = torch.optim.SGD(params, lr=1e-6)
     torch.save(model.state_dict(), model_save_path)
     torch.save(optimizer.state_dict(), optimizer_save_path)
     model.train()
-    total_epoches = 10
+    total_epoches = 20
 
     for epoch in tqdm(range(total_epoches)):
         model.train()
