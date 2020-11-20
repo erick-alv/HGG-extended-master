@@ -70,11 +70,12 @@ def view(images,labels,k,fname, std=1,mean=0):
         inp=np.clip(inp,0,1)
         ax = figure.add_subplot(2,2, i + 1)
         ax.imshow(images[i].cpu().numpy().transpose((1,2,0)))
-        if 'scores' in labels[i].keys():#when visualizing socres was not given but hen in general is always a parameter
+        '''if 'scores' in labels[i].keys():#when visualizing socres was not given but hen in general is always a parameter
             recon_indices = labels[i]['scores'].cpu().numpy() >= 0.75
             l = labels[i]['boxes'].cpu().numpy()[recon_indices]
         else:
-            l=labels[i]['boxes'].cpu().numpy()
+            l=labels[i]['boxes'].cpu().numpy()'''
+        l = labels[i]['boxes'].cpu().numpy()
         l[:,2]=l[:,2]-l[:,0]
         l[:,3]=l[:,3]-l[:,1]
         for j in range(len(l)):
