@@ -57,7 +57,7 @@ class wheatdataset(torch.utils.data.Dataset):
 
 
 from matplotlib import patches
-def view(images,labels,k,std=1,mean=0):
+def view(images,labels,k,fname, std=1,mean=0):
     figure = plt.figure(figsize=(30,30))
     images=list(images)
     labels=list(labels)
@@ -68,12 +68,17 @@ def view(images,labels,k,std=1,mean=0):
         inp=np.clip(inp,0,1)
         ax = figure.add_subplot(2,2, i + 1)
         ax.imshow(images[i].cpu().numpy().transpose((1,2,0)))
-        l=labels[i]['boxes'].cpu().numpy()
+        if 'scores' in labels[i].keys():#when visualizing socres was not given but hen in general is always a parameter
+            recon_indices = labels[i]['scores'].cpu().numpy() >= 0.75
+            l = labels[i]['boxes'].cpu().numpy()[recon_indices]
+        else:
+            l=labels[i]['boxes'].cpu().numpy()
         l[:,2]=l[:,2]-l[:,0]
         l[:,3]=l[:,3]-l[:,1]
         for j in range(len(l)):
             ax.add_patch(patches.Rectangle((l[j][0],l[j][1]),l[j][2],l[j][3],linewidth=5,edgecolor='black',facecolor='none'))
-    plt.show()
+    plt.savefig(fname)
+    plt.close()
 
 
 
@@ -82,11 +87,11 @@ if __name__ == '__main__':
     dataset = wheatdataset(root, folder='images', transforms=torchvision.transforms.ToTensor())
     torch.manual_seed(1)
     indices = torch.randperm(len(dataset)).tolist()
-    dataset_train = torch.utils.data.Subset(dataset, indices[:500])
-    dataset_test = torch.utils.data.Subset(dataset, indices[500:])
-    data_loader_train = torch.utils.data.DataLoader(dataset_train, batch_size=4, shuffle=True,
+    dataset_train = torch.utils.data.Subset(dataset, indices[:200])
+    dataset_test = torch.utils.data.Subset(dataset, indices[200:])
+    data_loader_train = torch.utils.data.DataLoader(dataset_train, batch_size=8, shuffle=True,
                                                     collate_fn=lambda x: list(zip(*x)))
-    data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=4, shuffle=False,
+    data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=8, shuffle=False,
                                                    collate_fn=lambda x: list(zip(*x)))
     '''for _ in range(3):
         images, labels = next(iter(data_loader_train))
@@ -96,16 +101,26 @@ if __name__ == '__main__':
 
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    num_classes = 2  # 1 class (person) + background
+    num_classes = 4  # 1 class (person) + background
     in_features = model.roi_heads.box_predictor.cls_score.in_features
 
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
     model = model.to(device)
+    model = model.double()
+
+
+    model_save_path = '../data/FetchGenerativeEnv-v1/model_rcnn.pth'
+    optimizer_save_path = '../data/FetchGenerativeEnv-v1/optimizer_rcnn.pth'
 
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.SGD(params, lr=0.01)
+    torch.save(model.state_dict(), model_save_path)
+    torch.save(optimizer.state_dict(), optimizer_save_path)
+    model.train()
+    total_epoches = 10
 
-    for epoch in tqdm(range(10)):
+    for epoch in tqdm(range(total_epoches)):
+        model.train()
         for images, targets in tqdm(data_loader_train):
             images = list(image.to(device) for image in images)
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
@@ -116,8 +131,17 @@ if __name__ == '__main__':
 
             optimizer.zero_grad()
             optimizer.step()
-
         print("Loss = {:.4f} ".format(losses.item()))
+        if epoch % 5 == 0 or epoch == total_epoches - 1:
+            images, targets = next(iter(data_loader_test))
+            images = list(image.to(device) for image in images)
+            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+            model.eval()
+            with torch.no_grad():
+                output = model(images)
+                view(images, output, min(4, len(images)), fname='results/rcnn_epoch_{}.png'.format(epoch))
 
-    torch.save(model.state_dict(), './model.pth')
+
+    torch.save(model.state_dict(), model_save_path)
+    torch.save(optimizer.state_dict(), optimizer_save_path)
 
