@@ -87,8 +87,8 @@ if __name__ == '__main__':
     dataset = wheatdataset(root, folder='images', transforms=torchvision.transforms.ToTensor())
     torch.manual_seed(1)
     indices = torch.randperm(len(dataset)).tolist()
-    dataset_train = torch.utils.data.Subset(dataset, indices[:200])
-    dataset_test = torch.utils.data.Subset(dataset, indices[200:])
+    dataset_train = torch.utils.data.Subset(dataset, indices[:100])
+    dataset_test = torch.utils.data.Subset(dataset, indices[100:])
     data_loader_train = torch.utils.data.DataLoader(dataset_train, batch_size=4, shuffle=True,
                                                     collate_fn=lambda x: list(zip(*x)))
     data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=4, shuffle=False,
