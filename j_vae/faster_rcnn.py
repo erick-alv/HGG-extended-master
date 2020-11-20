@@ -131,7 +131,7 @@ if __name__ == '__main__':
 
             optimizer.zero_grad()
             optimizer.step()
-        print("Loss = {:.4f} ".format(losses.item()))
+            print("Loss = {:.4f} ".format(losses.item()))
         if epoch % 5 == 0 or epoch == total_epoches - 1:
             images, targets = next(iter(data_loader_test))
             images = list(image.to(device) for image in images)
