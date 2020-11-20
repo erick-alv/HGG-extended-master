@@ -553,10 +553,8 @@ def bbox_to_image_coordinates(bbox, args):
 
 
     # the distances to the edges seen in the image are 0.025
-    #map_coords_x = interval_map_function(1.025, 1.575, 0., args.img_size)
-    #map_coords_y = interval_map_function(0.475, 1.025,  0., args.img_size)
-    map_coords_x = interval_map_function(1.027, 1.573, 0., args.img_size)
-    map_coords_y = interval_map_function(0.477, 1.023, 0., args.img_size)
+    map_coords_x = interval_map_function(1.025, 1.575, 0., args.img_size)
+    map_coords_y = interval_map_function(0.475, 1.025,  0., args.img_size)
     x_min = map_coords_x(x_min)
     x_min = np.clip(x_min, a_min=0., a_max=args.img_size)
     x_max = map_coords_x(x_max)
@@ -565,7 +563,7 @@ def bbox_to_image_coordinates(bbox, args):
     y_min = np.clip(y_min, a_min=0., a_max=args.img_size)
     y_max = map_coords_y(y_max)
     y_max = np.clip(y_max, a_min=0., a_max=args.img_size)
-    #here the y coordinates are flipped since images use other direction
+
     new_bbox = [x_min, y_min, x_max, y_max]
     if (new_bbox[0] == 0. and new_bbox[2] == 0.) or (new_bbox[1] == 0. and new_bbox[3] == 0.) \
             or (new_bbox[0] == args.img_size and new_bbox[2] == args.img_size) \
@@ -580,6 +578,10 @@ def bbox_to_image_coordinates(bbox, args):
     except:
         print('nooo')
 
+    # here the y coordinates are flipped since images use other direction
+    new_y_max = args.img_size - y_min
+    new_y_min = args.img_size - y_max
+    new_bbox = [x_min, new_y_min, x_max, new_y_max]
     return new_bbox
 
 def gen_all_data_mixed(env, args):

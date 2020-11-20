@@ -59,27 +59,26 @@ class wheatdataset(torch.utils.data.Dataset):
 
 
 from matplotlib import patches
-def view(images,labels,k,fname, std=1,mean=0):
+def view(images,labels,k,fname):
     figure = plt.figure(figsize=(30,30))
     images=list(images)
     labels=list(labels)
     for i in range(k):
         out=torchvision.utils.make_grid(images[i])
-        inp=out.cpu().numpy().transpose((1,2,0))
-        inp=np.array(std)*inp+np.array(mean)
-        inp=np.clip(inp,0,1)
         ax = figure.add_subplot(2,2, i + 1)
         ax.imshow(images[i].cpu().numpy().transpose((1,2,0)))
-        '''if 'scores' in labels[i].keys():#when visualizing socres was not given but hen in general is always a parameter
-            recon_indices = labels[i]['scores'].cpu().numpy() >= 0.75
-            l = labels[i]['boxes'].cpu().numpy()[recon_indices]
+        if 'scores' in labels[i].keys():#when visualizing scores was not given but then in general is always a parameter
+            keep = torchvision.ops.nms(boxes=labels[i]['boxes'], scores=labels[i]['scores'], iou_threshold=0.3)
+            boxes_l = labels[i]['boxes'][keep]
+            l = boxes_l.cpu().numpy()
         else:
-            l=labels[i]['boxes'].cpu().numpy()'''
-        l = labels[i]['boxes'].cpu().numpy()
-        l[:,2]=l[:,2]-l[:,0]
-        l[:,3]=l[:,3]-l[:,1]
+            l=labels[i]['boxes'].cpu().numpy()
+        #l[:,2]=l[:,2]-l[:,0]
+        #l[:,3]=l[:,3]-l[:,1]
         for j in range(len(l)):
-            ax.add_patch(patches.Rectangle((l[j][0],l[j][1]),l[j][2],l[j][3],linewidth=5,edgecolor='black',facecolor='none'))
+            #ax.add_patch(patches.Rectangle((l[j][0],l[j][1]),l[j][2],l[j][3],linewidth=5,edgecolor='black',facecolor='none'))
+            ax.add_patch(patches.Rectangle((l[j][0],l[j][1]),np.abs(l[j][2]-l[j][0]),
+                                           np.abs(l[j][3]-l[j][1]),linewidth=5,edgecolor='black',facecolor='none'))
     plt.savefig(fname)
     plt.close()
 
@@ -90,15 +89,14 @@ if __name__ == '__main__':
     dataset = wheatdataset(root, folder='images', transforms=torchvision.transforms.ToTensor())
     torch.manual_seed(1)
     indices = torch.randperm(len(dataset)).tolist()
-    dataset_train = torch.utils.data.Subset(dataset, indices[:100])
-    dataset_test = torch.utils.data.Subset(dataset, indices[100:])
+    dataset_train = torch.utils.data.Subset(dataset, indices[:200])
+    dataset_test = torch.utils.data.Subset(dataset, indices[200:])
     data_loader_train = torch.utils.data.DataLoader(dataset_train, batch_size=4, shuffle=True,
                                                     collate_fn=lambda x: list(zip(*x)))
     data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=4, shuffle=False,
                                                    collate_fn=lambda x: list(zip(*x)))
-    '''for _ in range(3):
-        images, labels = next(iter(data_loader_train))
-        view(images, labels, 4)'''
+    '''images, labels = next(iter(data_loader_train))
+    view(images, labels, 4, fname='results/rcnn_test.png')'''
 
     from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
@@ -114,6 +112,8 @@ if __name__ == '__main__':
 
     model_save_path = '../data/FetchGenerativeEnv-v1/model_rcnn.pth'
     optimizer_save_path = '../data/FetchGenerativeEnv-v1/optimizer_rcnn.pth'
+    model_save_path_ep = '../data/FetchGenerativeEnv-v1/model_rcnn_epoch_{}.pth'
+    optimizer_save_path_ep = '../data/FetchGenerativeEnv-v1/optimizer_rcnn_epoch_{}.pth'
 
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.SGD(params, lr=1e-4)
@@ -143,8 +143,9 @@ if __name__ == '__main__':
             with torch.no_grad():
                 output = model(images)
                 view(images, output, min(4, len(images)), fname='results/rcnn_epoch_{}.png'.format(epoch))
+            torch.save(model.state_dict(), model_save_path_ep.format(epoch))
+            torch.save(optimizer.state_dict(), optimizer_save_path_ep.format(epoch))
 
 
     torch.save(model.state_dict(), model_save_path)
     torch.save(optimizer.state_dict(), optimizer_save_path)
-
