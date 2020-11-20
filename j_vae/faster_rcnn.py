@@ -35,6 +35,8 @@ class wheatdataset(torch.utils.data.Dataset):
 
             if strIsNaN(boxesstr):
                 #empty image
+                print('error')
+                exit()
                 boxes = np.array([[0., 0., 0., 0.]])
                 labels = np.array([0]).astype(int)
             else:
