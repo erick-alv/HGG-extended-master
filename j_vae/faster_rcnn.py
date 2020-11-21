@@ -81,7 +81,7 @@ def view(images,labels,k,fname):
         ax = figure.add_subplot(2,2, i + 1)
         ax.imshow(images[i].cpu().numpy().transpose((1,2,0)))
         if 'scores' in labels[i].keys():#when visualizing scores was not given but then in general is always a parameter
-            keep = torchvision.ops.nms(boxes=labels[i]['boxes'], scores=labels[i]['scores'], iou_threshold=0.3)
+            keep = torchvision.ops.nms(boxes=labels[i]['boxes'], scores=labels[i]['scores'], iou_threshold=0.4)
             boxes_l = labels[i]['boxes'][keep]
             l = boxes_l.cpu().numpy()
         else:
@@ -102,11 +102,13 @@ if __name__ == '__main__':
     dataset = wheatdataset(root, folder='images', transforms=torchvision.transforms.ToTensor())
     torch.manual_seed(1)
     indices = torch.randperm(len(dataset)).tolist()
+    #dataset_train = torch.utils.data.Subset(dataset, indices[:50])#todo change to 2100
+    #dataset_test = torch.utils.data.Subset(dataset, indices[210:])#todo change to 2100
     dataset_train = torch.utils.data.Subset(dataset, indices[:2100])
     dataset_test = torch.utils.data.Subset(dataset, indices[2100:])
-    data_loader_train = torch.utils.data.DataLoader(dataset_train, batch_size=10, shuffle=True,
+    data_loader_train = torch.utils.data.DataLoader(dataset_train, batch_size=4, shuffle=True,
                                                     collate_fn=lambda x: list(zip(*x)))
-    data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=10, shuffle=False,
+    data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=4, shuffle=False,
                                                    collate_fn=lambda x: list(zip(*x)))
     '''images, labels = next(iter(data_loader_train))
     view(images, labels, 4, fname='results/rcnn_test.png')'''
@@ -139,9 +141,13 @@ if __name__ == '__main__':
     for epoch in tqdm(range(total_epoches)):
         model.train()
         loss_acc = 0
+        it = 0
         for images, targets in tqdm(data_loader_train):
+            it +=1
             images = list(image.to(device) for image in images)
+
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+            #view(images, targets, min(4, len(images)), fname='results/rcnn_epoch_{}_it_{}.png'.format(epoch, it))
             loss_dict = model(images, targets)
             losses = sum(loss for loss in loss_dict.values())
             losses.backward()
