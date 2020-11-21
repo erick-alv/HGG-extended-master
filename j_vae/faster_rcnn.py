@@ -178,9 +178,9 @@ if __name__ == '__main__':
     indices = torch.randperm(len(dataset)).tolist()
     dataset = torch.utils.data.Subset(dataset, indices[:-1000])#todo change to 2100
     dataset_test = torch.utils.data.Subset(dataset_test, indices[-1000:])#todo change to 2100
-    data_loader_train = torch.utils.data.DataLoader(dataset, batch_size=4, shuffle=True,
+    data_loader_train = torch.utils.data.DataLoader(dataset, batch_size=2, shuffle=True,
                                                     collate_fn=lambda x: list(zip(*x)))
-    data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=4, shuffle=False,
+    data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=2, shuffle=False,
                                                    collate_fn=lambda x: list(zip(*x)))
 
     model = get_model_instance_segmentation(4)
@@ -208,10 +208,10 @@ if __name__ == '__main__':
     torch.save(optimizer.state_dict(), optimizer_save_path)
     torch.save(lr_scheduler.state_dict(), scheduler_save_path)
     model.train()
-    total_epoches = 20
+    total_epoches = 80
 
     for epoch in tqdm(range(total_epoches)):
-        train_one_epoch(model, optimizer, data_loader_train, device, epoch, 10)
+        train_one_epoch(model, optimizer, data_loader_train, device, epoch, 40)
         if epoch % 5 == 0 or epoch == total_epoches - 1:
             images, targets = next(iter(data_loader_test))
             images = list(image.to(device) for image in images)
