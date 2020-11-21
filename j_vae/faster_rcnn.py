@@ -208,7 +208,7 @@ if __name__ == '__main__':
     torch.save(optimizer.state_dict(), optimizer_save_path)
     torch.save(lr_scheduler.state_dict(), scheduler_save_path)
     model.train()
-    total_epoches = 80
+    total_epoches = 150
 
     for epoch in tqdm(range(total_epoches)):
         train_one_epoch(model, optimizer, data_loader_train, device, epoch, 40)
