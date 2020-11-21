@@ -104,9 +104,9 @@ if __name__ == '__main__':
     indices = torch.randperm(len(dataset)).tolist()
     dataset_train = torch.utils.data.Subset(dataset, indices[:2100])
     dataset_test = torch.utils.data.Subset(dataset, indices[2100:])
-    data_loader_train = torch.utils.data.DataLoader(dataset_train, batch_size=2, shuffle=True,
+    data_loader_train = torch.utils.data.DataLoader(dataset_train, batch_size=10, shuffle=True,
                                                     collate_fn=lambda x: list(zip(*x)))
-    data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=2, shuffle=False,
+    data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=10, shuffle=False,
                                                    collate_fn=lambda x: list(zip(*x)))
     '''images, labels = next(iter(data_loader_train))
     view(images, labels, 4, fname='results/rcnn_test.png')'''
