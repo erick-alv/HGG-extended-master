@@ -8,11 +8,35 @@ import matplotlib.pyplot as plt
 import warnings
 import io
 from tqdm import tqdm
+from matplotlib import patches
 warnings.filterwarnings('ignore')
 #%%
 
 def strIsNaN(s):
     return s != s
+
+def box_str_to_numpy(boxstr):
+    if strIsNaN(boxstr):
+        # empty image
+        raise Exception('no box can be empty')
+        exit()
+    else:
+        boxes = np.loadtxt(io.BytesIO(boxstr.encode('utf-8')))
+        if boxes.ndim == 1:
+            boxes = np.expand_dims(boxes, axis=0)
+    return boxes
+
+
+def label_str_to_numpy(labelstr):
+    if strIsNaN(labelstr):
+        # empty image
+        print('error')
+        exit()
+    else:
+        label = np.atleast_1d(np.loadtxt(io.BytesIO(labelstr.encode('utf-8'))).astype(int))
+    return label
+
+
 class wheatdataset(torch.utils.data.Dataset):
     def __init__(self,root,folder,transforms=None):
         self.transforms=[]
@@ -21,6 +45,8 @@ class wheatdataset(torch.utils.data.Dataset):
         self.root=root
         self.folder=folder
         box_data=pd.read_csv(os.path.join(root, "all_set.csv"))
+        box_data['bbox'] = box_data['bbox'].apply(box_str_to_numpy)
+        box_data['labels'] = box_data['labels'].apply(label_str_to_numpy)
         self.box_data = box_data
         self.imgs=list(os.listdir(os.path.join(root, self.folder)))
     def __len__(self):
@@ -31,34 +57,21 @@ class wheatdataset(torch.utils.data.Dataset):
         img = Image.open(img_path).convert("RGB")
         df=self.box_data[self.box_data['im_name']==self.imgs[idx]]
         if df.shape[0]!=0:
-            boxesstr=df['bbox'].values[0]
+            boxes = df['bbox'].values[0]
+            labels = df['labels'].values[0]
 
-            if strIsNaN(boxesstr):
-                #empty image
-                print('error')
-                exit()
-                boxes = np.array([[0., 0., 0., 0.]])
-                labels = np.array([0]).astype(int)
-            else:
-                boxes = np.loadtxt(io.BytesIO(boxesstr.encode('utf-8')))
-                if boxes.ndim == 1:
-                    boxes = np.expand_dims(boxes, axis=0)
-                    labelsstr = df['labels'].values[0]
-                    labels = np.atleast_1d(np.loadtxt(io.BytesIO(labelsstr.encode('utf-8'))).astype(int))
-                else:
-                    labelsstr=df['labels'].values[0]
-                    labels=np.loadtxt(io.BytesIO(labelsstr.encode('utf-8'))).astype(int)
+
         for i in self.transforms:
             img=i(img)
 
         targets={}
-        targets['boxes']=torch.from_numpy(boxes).double()
+        targets['boxes']=torch.from_numpy(boxes).float()
         targets['labels']=torch.from_numpy(labels).type(torch.int64)
         #targets['id']=self.imgs[idx].split('.')[0]
-        return img.double(),targets
+        return img,targets
 
 
-from matplotlib import patches
+
 def view(images,labels,k,fname):
     figure = plt.figure(figsize=(30,30))
     images=list(images)
@@ -91,9 +104,9 @@ if __name__ == '__main__':
     indices = torch.randperm(len(dataset)).tolist()
     dataset_train = torch.utils.data.Subset(dataset, indices[:2100])
     dataset_test = torch.utils.data.Subset(dataset, indices[2100:])
-    data_loader_train = torch.utils.data.DataLoader(dataset_train, batch_size=6, shuffle=True,
+    data_loader_train = torch.utils.data.DataLoader(dataset_train, batch_size=2, shuffle=True,
                                                     collate_fn=lambda x: list(zip(*x)))
-    data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=6, shuffle=False,
+    data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=2, shuffle=False,
                                                    collate_fn=lambda x: list(zip(*x)))
     '''images, labels = next(iter(data_loader_train))
     view(images, labels, 4, fname='results/rcnn_test.png')'''
@@ -106,8 +119,9 @@ if __name__ == '__main__':
     in_features = model.roi_heads.box_predictor.cls_score.in_features
 
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+    model = model.float()
     model = model.to(device)
-    model = model.double()
+
 
 
     model_save_path = '../data/FetchGenerativeEnv-v1/model_rcnn.pth'
@@ -124,17 +138,18 @@ if __name__ == '__main__':
 
     for epoch in tqdm(range(total_epoches)):
         model.train()
+        loss_acc = 0
         for images, targets in tqdm(data_loader_train):
             images = list(image.to(device) for image in images)
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-            model = model.double()
             loss_dict = model(images, targets)
             losses = sum(loss for loss in loss_dict.values())
             losses.backward()
-
             optimizer.zero_grad()
             optimizer.step()
-            print("Loss = {:.4f} ".format(losses.item()))
+
+            loss_acc += losses.item()
+        print("Loss = {:.4f} ".format(loss_acc / len(dataset_train)))
         if epoch % 5 == 0 or epoch == total_epoches - 1:
             images, targets = next(iter(data_loader_test))
             images = list(image.to(device) for image in images)
