@@ -9,8 +9,7 @@ import warnings
 import io
 from tqdm import tqdm
 from matplotlib import patches
-warnings.filterwarnings('ignore')
-#%%
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 def strIsNaN(s):
     return s != s
@@ -113,7 +112,6 @@ if __name__ == '__main__':
     '''images, labels = next(iter(data_loader_train))
     view(images, labels, 4, fname='results/rcnn_test.png')'''
 
-    from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -121,7 +119,7 @@ if __name__ == '__main__':
     in_features = model.roi_heads.box_predictor.cls_score.in_features
 
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
-    model = model.float()
+    #model = model.float()
     model = model.to(device)
 
 
@@ -143,27 +141,31 @@ if __name__ == '__main__':
         loss_acc = 0
         it = 0
         for images, targets in tqdm(data_loader_train):
-            it +=1
             images = list(image.to(device) for image in images)
 
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-            #view(images, targets, min(4, len(images)), fname='results/rcnn_epoch_{}_it_{}.png'.format(epoch, it))
             loss_dict = model(images, targets)
             losses = sum(loss for loss in loss_dict.values())
             losses.backward()
             optimizer.zero_grad()
             optimizer.step()
+            it += 1
 
             loss_acc += losses.item()
         print("Loss = {:.4f} ".format(loss_acc / len(dataset_train)))
         if epoch % 5 == 0 or epoch == total_epoches - 1:
             images, targets = next(iter(data_loader_test))
             images = list(image.to(device) for image in images)
-            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
             model.eval()
             with torch.no_grad():
                 output = model(images)
                 view(images, output, min(4, len(images)), fname='results/rcnn_epoch_{}.png'.format(epoch))
+
+            images, targets = next(iter(data_loader_train))
+            images = list(image.to(device) for image in images)
+            with torch.no_grad():
+                output = model(images)
+                view(images, output, min(4, len(images)), fname='results/rcnn_epoch_{}_train.png'.format(epoch))
             torch.save(model.state_dict(), model_save_path_ep.format(epoch))
             torch.save(optimizer.state_dict(), optimizer_save_path_ep.format(epoch))
 
