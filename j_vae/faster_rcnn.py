@@ -10,6 +10,10 @@ import io
 from tqdm import tqdm
 from matplotlib import patches
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+import torchvision.transforms as T
+import j_vae.engine_utils as engine_utils
+import math
+import sys
 
 def strIsNaN(s):
     return s != s
@@ -48,6 +52,7 @@ class wheatdataset(torch.utils.data.Dataset):
         box_data['labels'] = box_data['labels'].apply(label_str_to_numpy)
         self.box_data = box_data
         self.imgs=list(os.listdir(os.path.join(root, self.folder)))
+
     def __len__(self):
         return len(self.imgs)
 
@@ -58,15 +63,25 @@ class wheatdataset(torch.utils.data.Dataset):
         if df.shape[0]!=0:
             boxes = df['bbox'].values[0]
             labels = df['labels'].values[0]
+        boxes = torch.from_numpy(boxes).float()
 
 
         for i in self.transforms:
             img=i(img)
 
+        image_id = torch.tensor([idx])
+        area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
+        # suppose all instances are not crowd
+        iscrowd = torch.zeros((len(boxes),), dtype=torch.int64)
+
         targets={}
-        targets['boxes']=torch.from_numpy(boxes).float()
+        targets['boxes']=boxes
         targets['labels']=torch.from_numpy(labels).type(torch.int64)
-        #targets['id']=self.imgs[idx].split('.')[0]
+        targets["image_id"] = image_id
+        targets["area"] = area
+        targets["iscrowd"] = iscrowd
+
+
         return img,targets
 
 
@@ -94,65 +109,109 @@ def view(images,labels,k,fname):
     plt.savefig(fname)
     plt.close()
 
+def get_model_instance_segmentation(num_classes):
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
 
+    # get number of input features for the classifier
+    in_features = model.roi_heads.box_predictor.cls_score.in_features
+    # replace the pre-trained head with a new one
+    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+    return model
+
+
+def get_transform(train):
+    transforms = []
+    transforms.append(T.ToTensor())
+    '''if train:
+        transforms.append(T.RandomHorizontalFlip(0.5))'''
+    return T.Compose(transforms)
+
+def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
+    model.train()
+    metric_logger = engine_utils.MetricLogger(delimiter="  ")
+    metric_logger.add_meter('lr', engine_utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    header = 'Epoch: [{}]'.format(epoch)
+
+    lr_scheduler = None
+    if epoch == 0:
+        warmup_factor = 1. / 1000
+        warmup_iters = min(1000, len(data_loader) - 1)
+
+        lr_scheduler = engine_utils.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
+
+    for images, targets in metric_logger.log_every(data_loader, print_freq, header):
+        images = list(image.to(device) for image in images)
+        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+
+        loss_dict = model(images, targets)
+
+        losses = sum(loss for loss in loss_dict.values())
+
+        # reduce losses over all GPUs for logging purposes
+        loss_dict_reduced = engine_utils.reduce_dict(loss_dict)
+        losses_reduced = sum(loss for loss in loss_dict_reduced.values())
+
+        loss_value = losses_reduced.item()
+
+        if not math.isfinite(loss_value):
+            print("Loss is {}, stopping training".format(loss_value))
+            print(loss_dict_reduced)
+            sys.exit(1)
+
+        optimizer.zero_grad()
+        losses.backward()
+        optimizer.step()
+
+        if lr_scheduler is not None:
+            lr_scheduler.step()
+
+        metric_logger.update(loss=losses_reduced, **loss_dict_reduced)
+        metric_logger.update(lr=optimizer.param_groups[0]["lr"])
+
+    return metric_logger
 
 if __name__ == '__main__':
     root = '../data/FetchGenerativeEnv-v1'
-    dataset = wheatdataset(root, folder='images', transforms=torchvision.transforms.ToTensor())
-    torch.manual_seed(1)
+    dataset = wheatdataset(root, folder='images', transforms=get_transform(train=True))
+    dataset_test = wheatdataset(root, folder='images', transforms=get_transform(train=False))
+    #torch.manual_seed(1)
     indices = torch.randperm(len(dataset)).tolist()
-    #dataset_train = torch.utils.data.Subset(dataset, indices[:50])#todo change to 2100
-    #dataset_test = torch.utils.data.Subset(dataset, indices[210:])#todo change to 2100
-    dataset_train = torch.utils.data.Subset(dataset, indices[:2100])
-    dataset_test = torch.utils.data.Subset(dataset, indices[2100:])
-    data_loader_train = torch.utils.data.DataLoader(dataset_train, batch_size=4, shuffle=True,
+    dataset = torch.utils.data.Subset(dataset, indices[:-1000])#todo change to 2100
+    dataset_test = torch.utils.data.Subset(dataset_test, indices[-1000:])#todo change to 2100
+    data_loader_train = torch.utils.data.DataLoader(dataset, batch_size=4, shuffle=True,
                                                     collate_fn=lambda x: list(zip(*x)))
     data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=4, shuffle=False,
                                                    collate_fn=lambda x: list(zip(*x)))
+
+    model = get_model_instance_segmentation(4)
+
     '''images, labels = next(iter(data_loader_train))
     view(images, labels, 4, fname='results/rcnn_test.png')'''
 
-
-    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    num_classes = 4  # 1 class (person) + background
-    in_features = model.roi_heads.box_predictor.cls_score.in_features
-
-    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
-    #model = model.float()
     model = model.to(device)
 
 
 
     model_save_path = '../data/FetchGenerativeEnv-v1/model_rcnn.pth'
     optimizer_save_path = '../data/FetchGenerativeEnv-v1/optimizer_rcnn.pth'
+    scheduler_save_path = '../data/FetchGenerativeEnv-v1/scheduler_rcnn.pth'
     model_save_path_ep = '../data/FetchGenerativeEnv-v1/model_rcnn_epoch_{}.pth'
     optimizer_save_path_ep = '../data/FetchGenerativeEnv-v1/optimizer_rcnn_epoch_{}.pth'
+    scheduler_save_path_ep = '../data/FetchGenerativeEnv-v1/scheduler_rcnn_epoch_{}.pth'
 
     params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.SGD(params, lr=1e-6)
+    optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
+
     torch.save(model.state_dict(), model_save_path)
     torch.save(optimizer.state_dict(), optimizer_save_path)
+    torch.save(lr_scheduler.state_dict(), scheduler_save_path)
     model.train()
     total_epoches = 20
 
     for epoch in tqdm(range(total_epoches)):
-        model.train()
-        loss_acc = 0
-        it = 0
-        for images, targets in tqdm(data_loader_train):
-            images = list(image.to(device) for image in images)
-
-            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-            loss_dict = model(images, targets)
-            losses = sum(loss for loss in loss_dict.values())
-            losses.backward()
-            optimizer.zero_grad()
-            optimizer.step()
-            it += 1
-
-            loss_acc += losses.item()
-        print("Loss = {:.4f} ".format(loss_acc / len(dataset_train)))
+        train_one_epoch(model, optimizer, data_loader_train, device, epoch, 10)
         if epoch % 5 == 0 or epoch == total_epoches - 1:
             images, targets = next(iter(data_loader_test))
             images = list(image.to(device) for image in images)
@@ -168,7 +227,9 @@ if __name__ == '__main__':
                 view(images, output, min(4, len(images)), fname='results/rcnn_epoch_{}_train.png'.format(epoch))
             torch.save(model.state_dict(), model_save_path_ep.format(epoch))
             torch.save(optimizer.state_dict(), optimizer_save_path_ep.format(epoch))
+            torch.save(lr_scheduler.state_dict(), scheduler_save_path_ep.format(epoch))
 
 
     torch.save(model.state_dict(), model_save_path)
     torch.save(optimizer.state_dict(), optimizer_save_path)
+    torch.save(lr_scheduler.state_dict(), scheduler_save_path)
