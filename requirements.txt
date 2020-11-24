@@ -27,7 +27,7 @@ glfw==1.8.5
 glob2==0.7
 google-pasta==0.1.8
 grpcio==1.25.0
--e git+https://github.com/erick-alv/HGG-extended-master.git@a7ec797f9f046384fc5cc7415352200edd598dd5#egg=gym&subdirectory=gym
+-e git+git@github.com:erick-alv/HGG-extended-master.git@b4d525673c33760a5ec581d95b2b8fb1dbae62d0#egg=gym&subdirectory=gym
 h5py==2.10.0
 hickle==4.0.0
 idna==2.8
@@ -95,6 +95,7 @@ python-dateutil==2.8.1
 python-utils==2.3.0
 pytz==2019.3
 PyWavelets==1.1.1
+PyYAML==5.3.1
 pyzmq==18.1.1
 qtconsole==4.7.4
 QtPy==1.9.0
@@ -134,6 +135,6 @@ webencodings==0.5.1
 Werkzeug==0.16.0
 widgetsnbextension==3.5.1
 wrapt==1.11.2
+yacs==0.1.6
 zipp==0.6.0
 zmq==0.0.0
-
