@@ -1,6 +1,3 @@
- # based on https://github.com/stelzner/monet
-# License: MIT
-# Author: Karl Stelzner
 from j_vae.common_data import train_file_name, vae_sb_weights_file_name
 import argparse
 import torch
@@ -11,19 +8,12 @@ from PIL import Image
 import os
 this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
 
-'''def double_conv(in_channels, out_channels):
+def double_conv(in_channels, out_channels):
     return nn.Sequential(
         nn.Conv2d(in_channels, out_channels, 3, padding=1),
         nn.BatchNorm2d(out_channels),
         nn.ReLU(inplace=True),
         nn.Conv2d(out_channels, out_channels, 3, padding=1),
-        nn.BatchNorm2d(out_channels),
-        nn.ReLU(inplace=True)dists
-    )'''
-
-def double_conv(in_channels, out_channels):
-    return nn.Sequential(
-        nn.Conv2d(in_channels, out_channels, 3, padding=1),
         nn.BatchNorm2d(out_channels),
         nn.ReLU(inplace=True)
     )
@@ -191,7 +181,7 @@ class DecoderNet(nn.Module):
         result = self.convs(inp)
         return result
 
-class Monet_VAE(nn.Module):
+class Monet2_VAE(nn.Module):
     def __init__(self, height, width, device, latent_size, num_blocks, channel_base, num_slots,
                  full_connected_size, color_channels, kernel_size, encoder_stride,decoder_stride,
                  conv_size1, conv_size2):
@@ -207,13 +197,23 @@ class Monet_VAE(nn.Module):
                                   full_connected_size=full_connected_size, input_channels=color_channels+1,
                                   kernel_size=kernel_size, encoder_stride=encoder_stride, conv_size1=conv_size1,
                                   conv_size2=conv_size2)
+        self.encoderBG = EncoderNet(width=width, height=height, device=device, latent_size=latent_size,
+                                  full_connected_size=full_connected_size, input_channels=color_channels + 1,
+                                  kernel_size=kernel_size, encoder_stride=encoder_stride, conv_size1=conv_size1,
+                                  conv_size2=conv_size2)
         self.decoder = DecoderNet(width=width, height=height, device=device, latent_size=latent_size,
                                   output_channels=color_channels+1, kernel_size=kernel_size, conv_size1=conv_size1,
                                   decoder_stride=decoder_stride)
+        self.decoderBG = DecoderNet(width=width, height=height, device=device, latent_size=latent_size,
+                                  output_channels=color_channels + 1, kernel_size=kernel_size, conv_size1=conv_size1,
+                                  decoder_stride=decoder_stride)
 
-    def _encoder_step(self, x, mask):
+    def _encoder_step(self, x, mask, slot_index):
         encoder_input = torch.cat((x, mask), 1)
-        mu, logvar = self.encoder(encoder_input)
+        if slot_index == 0:
+            mu, logvar = self.encoderBG(encoder_input)
+        else:
+            mu, logvar = self.encoder(encoder_input)
         return mu, logvar
 
     def get_masks(self, x):
@@ -241,7 +241,7 @@ class Monet_VAE(nn.Module):
         mu_s = []
         logvar_s = []
         for i, mask in enumerate(masks):
-            mu, logvar = self._encoder_step(x, mask)
+            mu, logvar = self._encoder_step(x, mask, i)
             mu_s.append(mu)
             logvar_s.append(logvar)
 
@@ -252,8 +252,11 @@ class Monet_VAE(nn.Module):
         eps = torch.randn_like(std)
         return (mu + eps * std)
 
-    def _decoder_step(self, z):
-        decoder_output = self.decoder(z)
+    def _decoder_step(self, z, slot_index):
+        if slot_index == 0:
+            decoder_output = self.decoderBG(z)
+        else:
+            decoder_output = self.decoder(z)
         x_recon = torch.sigmoid(decoder_output[:, :3])
         mask_pred = decoder_output[:, 3]
         return x_recon, mask_pred
@@ -263,7 +266,7 @@ class Monet_VAE(nn.Module):
             (masks[0].shape[0], self.color_channels, self.width, self.height)).to(self.device)
         x_recon_s, mask_pred_s = [], []
         for i in range(len(masks)):
-            x_recon, mask_pred = self._decoder_step(z_s[i])
+            x_recon, mask_pred = self._decoder_step(z_s[i], i)
             x_recon_s.append(x_recon)
             mask_pred_s.append(mask_pred)
             full_reconstruction += x_recon*masks[i]
@@ -341,7 +344,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
     #creates indexes and shuffles them. So it can acces the data
     idx_set = np.arange(data_size)
     np.random.shuffle(idx_set)
-    idx_set = idx_set[:12800]
+    idx_set = idx_set[:18]#todo
     idx_set = np.split(idx_set, len(idx_set) / batch_size)
     for batch_idx, idx_select in enumerate(idx_set):
         data = data_set[idx_select]
@@ -370,7 +373,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
 def numpify(tensor):
     return tensor.cpu().detach().numpy()
 
-def visualize_masks(imgs, masks, recons, file_name):
+def visualize_masks(imgs, masks, recons, x_recon_s, file_name):
     recons = np.clip(recons, 0., 1.)
     colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (0, 255, 255), (255, 0, 255), (255, 255, 0), (0, 0, 0), (0, 127, 255), (0,255, 127)]
     colors.extend([(c[0]//2, c[1]//2, c[2]//2) for c in colors])
@@ -385,8 +388,12 @@ def visualize_masks(imgs, masks, recons, file_name):
     imgs *= 255.0
     recons *= 255.0
     masks *= 255.0
+    x_recon_s *= 255.0
     masks_ims = [np.stack([masks[:, i, :, :]]*3, axis=1) for i in range(masks.shape[1])]
     masks_ims = [np.concatenate(np.transpose(m, (0, 2, 3, 1)), axis=1) for m in masks_ims]
+    x_recon_s = x_recon_s.reshape((masks.shape[0], masks.shape[1], 3, masks.shape[2], masks.shape[2] ))
+    x_recon_s_ims = [x_recon_s[:, i, :, :] for i in range(x_recon_s.shape[1])]
+    x_recon_s_ims = [np.concatenate(np.transpose(m, (0, 2, 3, 1)), axis=1) for m in x_recon_s_ims]
 
     imgs = np.transpose(imgs, (0, 2, 3, 1))
     imgs = np.concatenate(imgs, axis=1)
@@ -394,7 +401,7 @@ def visualize_masks(imgs, masks, recons, file_name):
     seg_maps = np.concatenate(seg_maps, axis=1)
     recons = np.transpose(recons, (0, 2, 3, 1))
     recons = np.concatenate(recons, axis=1)
-    all_list = [imgs, seg_maps, recons]+masks_ims
+    all_list = [imgs, seg_maps, recons]+masks_ims+x_recon_s_ims
     all_im_array = np.concatenate(all_list, axis=0)
     all_im = Image.fromarray(all_im_array.astype(np.uint8))
     all_im.save(file_name)
@@ -409,11 +416,11 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
 
     device = torch.device("cuda" if cuda else "cpu")
     if load:
-        model = Monet_VAE(height=img_size, width=img_size, device=device, latent_size=latent_size,
-                          num_blocks=num_blocks,
-                          channel_base=channel_base, num_slots=num_slots, full_connected_size=full_connected_size,
-                          color_channels=color_channels, kernel_size=kernel_size, encoder_stride=encoder_stride,
-                          decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2).to(device)
+        model = Monet2_VAE(height=img_size, width=img_size, device=device, latent_size=latent_size,
+                           num_blocks=num_blocks,
+                           channel_base=channel_base, num_slots=num_slots, full_connected_size=full_connected_size,
+                           color_channels=color_channels, kernel_size=kernel_size, encoder_stride=encoder_stride,
+                           decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2).to(device)
 
         #todo check which optimizer is better
         optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
@@ -423,11 +430,11 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
         epoch = checkpoint['epoch']
         start_epoch = epoch + 1
     else:
-        model = Monet_VAE(height=img_size, width=img_size, device=device, latent_size=latent_size,
-                          num_blocks=num_blocks,
-                          channel_base=channel_base, num_slots=num_slots, full_connected_size=full_connected_size,
-                          color_channels=color_channels, kernel_size=kernel_size, encoder_stride=encoder_stride,
-                          decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2).to(device)
+        model = Monet2_VAE(height=img_size, width=img_size, device=device, latent_size=latent_size,
+                           num_blocks=num_blocks,
+                           channel_base=channel_base, num_slots=num_slots, full_connected_size=full_connected_size,
+                           color_channels=color_channels, kernel_size=kernel_size, encoder_stride=encoder_stride,
+                           decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2).to(device)
         #for w in model.parameters():
         #    std_init = 0.01
         #    nn.init.normal_(w, mean=0., std=std_init)
@@ -474,7 +481,8 @@ def compare_with_data_set(model, device, filename_suffix, latent_size, train_fil
         data = data.permute([0, 3, 1, 2])
         mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
 
-        visualize_masks(imgs=numpify(data),masks=numpify(torch.cat(masks, dim=1)), recons=numpify(full_reconstruction),
+        visualize_masks(imgs=numpify(data),masks=numpify(torch.cat(masks, dim=1)),
+                        recons=numpify(full_reconstruction), x_recon_s=numpify(torch.cat(x_recon_s)),
                         file_name=this_file_dir+'results/reconstruction_{}.png'.format(filename_suffix))
 
 
@@ -486,10 +494,10 @@ def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1, num_blocks=5, c
     device = torch.device("cuda" if cuda else "cpu")
     kwargs = {'num_workers': 1, 'pin_memory': True} if cuda else {}
 
-    model = Monet_VAE(height=img_size, width=img_size, device=device, latent_size=latent_size, num_blocks=num_blocks,
-                      channel_base=channel_base, num_slots=num_slots,full_connected_size=full_connected_size,
-                      color_channels=color_channels,kernel_size=kernel_size, encoder_stride=encoder_stride,
-                      decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2).to(device)
+    model = Monet2_VAE(height=img_size, width=img_size, device=device, latent_size=latent_size, num_blocks=num_blocks,
+                       channel_base=channel_base, num_slots=num_slots, full_connected_size=full_connected_size,
+                       color_channels=color_channels, kernel_size=kernel_size, encoder_stride=encoder_stride,
+                       decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2).to(device)
     #todo see with which optimizer is better
     #optimizer = optim.Adam(model.parameters(), lr=1e-3)
     checkpoint = torch.load(path)
@@ -503,7 +511,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=32)
+    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=8)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=40)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
