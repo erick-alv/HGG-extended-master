@@ -4,7 +4,7 @@ from .interval import IntervalGoalEnv
 from .custom import CustomGoalEnv
 from .interval_with_contact_detection import IntervalWithCollisionDetection
 from .extensions_interval import IntervalExt, IntervalColl, IntervalRewSub, IntervalRewVec, IntervalTestCollDetRewSub,\
-	IntervalTestCollDetRewVec, IntervalEnvCollStop, IntervalSelfCollStop
+	IntervalTestCollDetRewVec, IntervalEnvCollStop, IntervalSelfCollStop, IntervalTestColl
 
 
 
@@ -20,8 +20,9 @@ def make_env(args):
 		'intervalColl':IntervalColl,
 		'intervalRewSub':IntervalRewSub,
 		'intervalRewVec': IntervalRewVec,
-		'intervalTestColDetRewSub':IntervalTestCollDetRewSub,
-		'intervalTestColDetRewVec':IntervalTestCollDetRewVec,
+		'intervalTestColl':IntervalTestColl,
+		'intervalTestCollDetRewSub':IntervalTestCollDetRewSub,
+		'intervalTestCollDetRewVec':IntervalTestCollDetRewVec,
 		'intervalEnvCollStop':IntervalEnvCollStop,
 		'intervalSelfCollStop':IntervalSelfCollStop
 

@@ -95,7 +95,7 @@ def view(images,labels,k,fname):
         ax = figure.add_subplot(2,2, i + 1)
         ax.imshow(images[i].cpu().numpy().transpose((1,2,0)))
         if 'scores' in labels[i].keys():#when visualizing scores was not given but then in general is always a parameter
-            keep = torchvision.ops.nms(boxes=labels[i]['boxes'], scores=labels[i]['scores'], iou_threshold=0.4)
+            keep = torchvision.ops.nms(boxes=labels[i]['boxes'], scores=labels[i]['scores'], iou_threshold=0.25)
             boxes_l = labels[i]['boxes'][keep]
             l = boxes_l.cpu().numpy()
         else:
@@ -116,6 +116,14 @@ def get_model_instance_segmentation(num_classes):
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     # replace the pre-trained head with a new one
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+    return model
+
+def load_faster_rcnn(path, device):
+
+    model = get_model_instance_segmentation(4)
+    model = model.to(device)
+    checkpoint = torch.load(path)
+    model.load_state_dict(checkpoint)
     return model
 
 
@@ -176,8 +184,8 @@ if __name__ == '__main__':
     dataset_test = wheatdataset(root, folder='images', transforms=get_transform(train=False))
     #torch.manual_seed(1)
     indices = torch.randperm(len(dataset)).tolist()
-    dataset = torch.utils.data.Subset(dataset, indices[:-1000])#todo change to 2100
-    dataset_test = torch.utils.data.Subset(dataset_test, indices[-1000:])#todo change to 2100
+    dataset = torch.utils.data.Subset(dataset, indices[:-50])#:-1000])#todo change to 2100
+    dataset_test = torch.utils.data.Subset(dataset_test, indices[-50:])#-1000:])#todo change to 2100
     data_loader_train = torch.utils.data.DataLoader(dataset, batch_size=2, shuffle=True,
                                                     collate_fn=lambda x: list(zip(*x)))
     data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=2, shuffle=False,
@@ -200,7 +208,20 @@ if __name__ == '__main__':
     optimizer_save_path_ep = '../data/FetchGenerativeEnv-v1/optimizer_rcnn_epoch_{}.pth'
     scheduler_save_path_ep = '../data/FetchGenerativeEnv-v1/scheduler_rcnn_epoch_{}.pth'
 
-    params = [p for p in model.parameters() if p.requires_grad]
+    checkpoint = torch.load(model_save_path_ep.format(45))
+    model.load_state_dict(checkpoint)
+    it = 0
+    test_iter = iter(data_loader_test)
+    while it < 10:
+        images, targets = next(test_iter)
+        images = list(image.to(device) for image in images)
+        model.eval()
+        with torch.no_grad():
+            output = model(images)
+            view(images, output, min(4, len(images)), fname='results/rcnn_epoch_test_{}.png'.format(it))
+        it +=1
+
+    '''params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
 
@@ -227,9 +248,9 @@ if __name__ == '__main__':
                 view(images, output, min(4, len(images)), fname='results/rcnn_epoch_{}_train.png'.format(epoch))
             torch.save(model.state_dict(), model_save_path_ep.format(epoch))
             torch.save(optimizer.state_dict(), optimizer_save_path_ep.format(epoch))
-            torch.save(lr_scheduler.state_dict(), scheduler_save_path_ep.format(epoch))
+            torch.save(lr_scheduler.state_dict(), scheduler_save_path_ep.format(epoch))'''
 
 
-    torch.save(model.state_dict(), model_save_path)
+    '''torch.save(model.state_dict(), model_save_path)
     torch.save(optimizer.state_dict(), optimizer_save_path)
-    torch.save(lr_scheduler.state_dict(), scheduler_save_path)
+    torch.save(lr_scheduler.state_dict(), scheduler_save_path)'''

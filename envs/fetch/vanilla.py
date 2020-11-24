@@ -81,9 +81,9 @@ class VanillaGoalEnv():
 		# imaginary infinity horizon (without done signal)
 		obs, reward, done, info = self.env.step(action)
 		if hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help:
-			if self.args.vae_type == 'monet' or self.args.vae_type == 'space' or self.args.vae_type == 'bbox':
+			if self.args.vae_type == 'monet' or self.args.vae_type == 'space' or self.args.vae_type == 'bbox' or self.args.vae_type=='faster_rcnn':
 				achieved_image = take_image_objects(self, self.args.img_size)
-				if self.args.vae_type == 'space' or self.args.vae_type == 'bbox':
+				if self.args.vae_type == 'space' or self.args.vae_type == 'bbox' or self.args.vae_type=='faster_rcnn':
 					lg, lg_s, lo, lo_s = latents_from_images(np.array([achieved_image]), self.args)
 					self.achieved_goal_size_latent = lg_s[0].copy()
 				else:
@@ -116,12 +116,12 @@ class VanillaGoalEnv():
 	def reset_ep(self):
 		if hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help:
 			obs = self.env.env._get_obs()
-			if self.args.vae_type == 'monet' or self.args.vae_type == 'space' or self.args.vae_type == 'bbox':
+			if self.args.vae_type == 'monet' or self.args.vae_type == 'space' or self.args.vae_type == 'bbox' or self.args.vae_type=='faster_rcnn':
 				self.env.env._move_object(position=obs['desired_goal'].copy())
 				desired_goal_image = take_image_objects(self, self.args.img_size)
 				self.env.env._move_object(position=obs['achieved_goal'].copy())
 				achieved_goal_image = take_image_objects(self, self.args.img_size)
-				if self.args.vae_type == 'space' or self.args.vae_type == 'bbox':
+				if self.args.vae_type == 'space' or self.args.vae_type == 'bbox' or self.args.vae_type=='faster_rcnn':
 					lg, lg_s, lo, lo_s = latents_from_images(np.array([desired_goal_image, achieved_goal_image]), self.args)
 					self.desired_goal_latent = lg[0].copy()
 					self.desired_goal_size_latent = lg_s[0].copy()
@@ -182,13 +182,13 @@ class VanillaGoalEnv():
 		self.env.env.goal = value.copy()
 		if hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help:
 			obs = self.env.env._get_obs()
-			if self.args.vae_type == 'monet' or self.args.vae_type == 'space' or self.args.vae_type == 'bbox':
+			if self.args.vae_type == 'monet' or self.args.vae_type == 'space' or self.args.vae_type == 'bbox' or self.args.vae_type=='faster_rcnn':
 				self.env.env._move_object(position=value.copy())
 				desired_goal_image = take_image_objects(self, self.args.img_size)
 				'''obs_during = self.env.env._get_obs()  # just to see if set correctly
 				im = Image.fromarray(desired_goal_image.copy().astype(np.uint8))
 				im.save('it_is_there.png')'''
-				if self.args.vae_type == 'space' or self.args.vae_type == 'bbox':
+				if self.args.vae_type == 'space' or self.args.vae_type == 'bbox' or self.args.vae_type=='faster_rcnn':
 					lg, lg_s, lo, lo_s = latents_from_images(np.array([desired_goal_image]), self.args)
 					'''try:
 						assert lg[0][0] != 100.

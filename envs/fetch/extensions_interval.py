@@ -154,7 +154,26 @@ class IntervalColl(IntervalExt):
             ncols = np.sum(cols.astype(np.float))
             obs['coll'] = ncols
         return obs
-    
+
+#todo MAKE A SUPER CLASS FOR THE TEST warppers so the code must not be repeated but inherited by using multiple parents
+class IntervalTestColl(IntervalExt):#this can be used as well for IntervalSelfCollStop, intervalEnvCollStop, IntervalExt, IntervalColl and interval
+    def __init__(self, args):
+        IntervalExt.__init__(self, args)
+
+    def get_obs(self):
+        obs = super(IntervalTestColl, self).get_obs()
+        sim = self.env.env.sim
+        exists_collision = False
+        #todo generalize this for other environments
+        for i in range(sim.data.ncon):
+            contact = sim.data.contact[i]
+            if (contact.geom1 == 23 and contact.geom2 == 24) or (contact.geom1 == 24 and contact.geom2 == 23):
+                exists_collision = True
+
+        obs['collision_check'] = exists_collision
+        return obs
+
+
 class IntervalSelfCollStop(IntervalColl):
     def __init__(self, args):
         IntervalColl.__init__(self, args)
@@ -173,6 +192,7 @@ class IntervalSelfCollStop(IntervalColl):
             rew = -1.
         return rew
     
+
 class IntervalEnvCollStop(IntervalExt):
     def __init__(self, args):
         IntervalExt.__init__(self, args)
@@ -196,6 +216,7 @@ class IntervalEnvCollStop(IntervalExt):
             rew = -1.
         return rew
 
+
 class IntervalRewSub(IntervalColl):
     def __init__(self, args):
         IntervalColl.__init__(self, args)
@@ -205,17 +226,6 @@ class IntervalRewSub(IntervalColl):
         if observation_current['coll'] > 0.:
             rew += -0.5#todo is -0.5 ok?; the idea is to create negative reward for collision but different so it can differentiate between negative reward for not reaching goal and negative reward for collision
         return rew
-
-class IntervalRewVec(IntervalColl):
-    def __init__(self, args):
-        IntervalColl.__init__(self, args)
-
-    def compute_reward(self, observation_current, observation_old, goal):
-        rew = super(IntervalRewVec, self).compute_reward(observation_current, observation_old, goal)
-        collision_value = -10. if observation_current['coll'] > 0. else 0.
-        rew = np.array([rew, collision_value])
-        return rew
-
 
 
 class IntervalTestCollDetRewSub(IntervalRewSub):
@@ -234,6 +244,18 @@ class IntervalTestCollDetRewSub(IntervalRewSub):
 
         obs['collision_check'] = exists_collision
         return obs
+
+
+class IntervalRewVec(IntervalColl):
+    def __init__(self, args):
+        IntervalColl.__init__(self, args)
+
+    def compute_reward(self, observation_current, observation_old, goal):
+        rew = super(IntervalRewVec, self).compute_reward(observation_current, observation_old, goal)
+        collision_value = -10. if observation_current['coll'] > 0. else 0.
+        rew = np.array([rew, collision_value])
+        return rew
+
 
 class IntervalTestCollDetRewVec(IntervalRewVec):
     def __init__(self, args):

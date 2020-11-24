@@ -11,6 +11,7 @@ from j_vae.train_vae_sb import load_Vae as load_Vae_SB
 from j_vae.train_vae import load_Vae
 from j_vae.train_monet import load_Vae as load_Monet
 from j_vae.Bbox import load_Model as load_Bbox
+from j_vae.faster_rcnn import load_faster_rcnn
 from j_vae.common_data import vae_sb_weights_file_name, vae_weights_file_name
 from PIL import Image
 from vae_env_inter import take_env_image, take_image_objects
@@ -31,8 +32,9 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	else:
 		parser.add_argument('--goal', help='method of goal generation', type=str, default='interval',
 							choices=['vanilla', 'fixobj', 'interval', 'intervalCollision','intervalExt',
-									 'intervalColl', 'intervalRewSub', 'intervalRewVec', 'intervalTestColDetRewVec',
-									 'intervalTestColDetRewSub','custom', 'intervalEnvCollStop', 'intervalSelfCollStop'])
+									 'intervalColl', 'intervalRewSub', 'intervalRewVec', 'intervalTestCollDetRewVec',
+									 'intervalTestColl',
+									 'intervalTestCollDetRewSub','custom', 'intervalEnvCollStop', 'intervalSelfCollStop'])
 		if args.env[:5]=='Fetch':
 			parser.add_argument('--init_offset', help='initial offset in fetch environments', type=np.float32, default=1.0)
 		elif args.env[:4]=='Hand':
@@ -85,7 +87,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
 	#type of VAE
 	parser.add_argument('--vae_type', help='', type=str,
-						default=None, choices=['sb', 'mixed', 'monet', 'space', 'bbox'])
+						default=None, choices=['sb', 'mixed', 'monet', 'space', 'bbox','faster_rcnn'])
 	#type VAE for size
 	parser.add_argument('--vae_size_type', help='', type=str,
 						default='all', choices=['normal', 'sb', 'mixed', 'monet'])#if mixed or monet then representation is shared
@@ -145,7 +147,10 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 		args.reward_dims = 2
 	else:
 		args.reward_dims = 1
-	args.colls_test_check_envs = ['intervalTestColDetRewVec', 'intervalCollision','intervalTestColDetRewSub']
+
+	args.colls_test_check_envs = ['intervalTestColl', 'intervalTestCollDetRewVec', 'intervalCollision',
+								  'intervalTestCollDetRewSub']   
+
 
 	return args
 
@@ -163,6 +168,11 @@ def load_vaes(args):
 								   device='cuda:0', num_slots=5)#latent size is not being used for now
 		args.vae_model.eval()
 		return
+	elif args.vae_type == 'faster_rcnn':
+		args.vae_model = load_faster_rcnn(path='data/FetchGenerativeEnv-v1/model_rcnn.pth', device='cuda:0')  # latent size is not being used for now
+		args.vae_model.eval()
+		return
+
 
 	if args.vae_type == 'sb':
 		weights_path_goal = data_dir + vae_sb_weights_file_name['goal']
@@ -213,33 +223,35 @@ def load_vaes(args):
 
 #This loads the field in 2D since methods used extract information in this way
 def load_field_parameters(args):
+	def load_real_field_params():
+		if args.env in ['FetchPushLabyrinth-v1', 'FetchPushObstacleFetchEnv-v1', 'FetchPushMovingObstacleEnv-v1',
+						'FetchPushMovingComEnv-v1']:
+			args.real_field_center = [1.3, 0.75]
+			args.real_field_size = [0.25, 0.25]
+		elif args.env in ['FetchPushMovingDoubleObstacleEnv-v1']:
+			args.real_field_center = [1.3, 0.75]
+			args.real_field_size = [0.3, 0.3]
+		else:
+			raise Warning(
+				'The environment used does not have predefined field dimensions. Assure they are not needed')
+
 	if args.vae_dist_help:
-		if args.vae_type == 'space' or 'bbox':
+		if args.vae_type == 'space' or args.vae_type == 'bbox':
 			#model space is trained to create measures in range [-1, 1], a bit more space is given for the calculations
 			args.field_center = [0., 0.]
 			args.field_size = [1.0, 1.0]
-			if args.env in ['FetchPushLabyrinth-v1', 'FetchPushObstacleFetchEnv-v1', 'FetchPushMovingObstacleEnv-v1',
-							'FetchPushMovingComEnv-v1']:
-				args.real_field_center = [1.3, 0.75]
-				args.real_field_size = [0.25, 0.25]
-			elif args.env in ['FetchPushMovingDoubleObstacleEnv-v1']:
-				args.real_field_center = [1.3, 0.75]
-				args.real_field_size = [0.3, 0.3]
-			else:
-				raise Warning(
-					'The environment used does not have predefined field dimensions. Assure they are not needed')
+			load_real_field_params()
+
+		elif args.vae_type == 'faster_rcnn':
+			args.field_center = [args.img_size / 2., args.img_size / 2.]
+			args.field_size = [args.img_size / 2., args.img_size / 2.]
+			load_real_field_params()
 		else:
 			raise Warning('Using a VAE or model, with own space. Assure that the transformations in this space are correct')
 	else:
-		if args.env in ['FetchPushLabyrinth-v1', 'FetchPushObstacleFetchEnv-v1',
-						'FetchPushMovingObstacleEnv-v1', 'FetchPushMovingComEnv-v1']:
-			args.field_center = args.real_field_center = [1.3, 0.75]
-			args.field_size = args.real_field_size = [0.25, 0.25]
-		elif args.env in ['FetchPushMovingDoubleObstacleEnv-v1']:
-			args.field_center = args.real_field_center = [1.3, 0.75]
-			args.field_size = args.real_field_size = [0.3, 0.3]
-		else:
-			raise Warning('The environment used does not have predefined field dimensions. Assure they are not needed')
+		load_real_field_params()
+		args.field_center = args.real_field_center
+		args.field_size = args.real_field_size
 
 def load_dist_estimator(args, env):
 	if args.dist_estimator_type == 'normal':
@@ -312,8 +324,6 @@ def load_dist_estimator(args, env):
 	plt.clf()
 
 
-
-
 def experiment_setup(args):
 	if args.vae_dist_help:
 		load_vaes(args)
@@ -352,6 +362,7 @@ def experiment_setup(args):
 
 from play import Player
 def experiment_setup_test(args):
+
 	if args.vae_dist_help:
 		load_vaes(args)
 

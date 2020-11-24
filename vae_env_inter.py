@@ -6,18 +6,8 @@ from j_vae.train_vae import VAE
 from j_vae.train_monet import Monet_VAE
 from j_vae.latent_space_transformations import torch_goal_transformation, torch_obstacle_transformation, \
     torch_get_size_in_space
+import torchvision
 from PIL import Image
-
-
-'''def setup_env_sizes(env, object_size=None, size_of_obstacle=None):
-    if object_size is not None:
-        env.env.env._set_size(names_list=['object0'], size=[object_size, 0.035, 0.0])
-    else:
-        env.env.env._set_size(names_list=['object0'], size=[puck_size, 0.035, 0.0])
-    if size_of_obstacle is not None:
-        env.env.env._set_size(names_list=['obstacle'], size=[size_of_obstacle, 0.035, 0.0])
-    else:
-        env.env.env._set_size(names_list=['obstacle'], size=[obstacle_size, 0.035, 0.0])'''
 
 
 # todo set to false once is trained with table
@@ -177,8 +167,6 @@ def obstacle_latent_from_images(obstacles_images, args):
 
 def latents_from_images(images, args):
     assert images.ndim == 4
-
-
     if args.vae_type == 'space':
         with torch.no_grad():
             args.vae_model.eval()
@@ -255,8 +243,59 @@ def latents_from_images(images, args):
         indices_goal_not_present = np.logical_not(indices_goal_present)
         #set those goals far away
         goal_pos[indices_goal_not_present] = np.array([100., 100.])#todo these goals should be avoided as hgg so this needs also to be passed
+        goal_size[indices_goal_not_present] = np.array([0., 0.])
 
         return goal_pos, goal_size, obstacles_pos, obstacles_size
+
+    elif args.vae_type=='faster_rcnn':
+        with torch.no_grad():
+            args.vae_model.eval()
+            images = torch.from_numpy(images).float().to(args.device)
+            images /= 255.
+            images = images.permute([0, 3, 1, 2])
+            output = args.vae_model(images)
+            boxes = []
+            labels = []
+            scores = []
+            for i in range(len(output)):
+                keep = torchvision.ops.nms(boxes=output[i]['boxes'], scores=output[i]['scores'], iou_threshold=0.3)
+                b = output[i]['boxes'][keep].detach().cpu().numpy()
+                #boxes to env format
+                x_center = (b[:, 2] + b[:, 0]) / 2.
+                x_dim = np.abs(b[:, 2] - b[:, 0]) / 2.
+                y_center = (b[:, 3] + b[:, 1]) / 2.
+                y_dim = np.abs(b[:, 3] - b[:, 1]) / 2.
+                b[:, 0] = x_center
+                b[:, 1] = y_center
+                b[:, 2] = x_dim
+                b[:, 3] = y_dim
+                boxes.append(b)
+                labels.append(output[i]['labels'][keep].detach().cpu().numpy())
+                scores.append(output[i]['scores'][keep].detach().cpu().numpy())
+
+
+        boxes_goal = []
+        boxes_obstacles = []
+        for i in range(len(boxes)):
+            index_goal = labels[i] == 2
+            index_obstacles = labels[i] == 1
+            if np.all(index_goal == False):
+                #the goal is not present
+                boxes_goal.append(np.array([100., 100., 0., 0.]))
+            else:
+                max_ind = np.argmax(scores[i][index_goal])
+                boxes_goal.append(boxes[i][index_goal][max_ind])
+            ob_idx_over_tr = scores[i][index_obstacles] >= 0.8
+            boxes_obstacles.append(boxes[i][index_obstacles][ob_idx_over_tr])
+        boxes_goal = np.array(boxes_goal)
+        boxes_obstacles = np.array(boxes_obstacles)
+        goal_pos = boxes_goal[:, 0:2]
+        goal_size = boxes_goal[:, 2:4]
+        obstacles_pos = boxes_obstacles[:, :, 0:2]
+        obstacles_size = boxes_obstacles[:, :, 2:4]
+
+        return goal_pos, goal_size, obstacles_pos, obstacles_size
+
         
     else:
         # first transform them in latent_representation
