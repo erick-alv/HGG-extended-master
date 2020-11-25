@@ -26,6 +26,9 @@ class Player:
         graph = tf.get_default_graph()
         self.raw_obs_ph = graph.get_tensor_by_name("raw_obs_ph:0")
         self.pi = graph.get_tensor_by_name("main/policy/net/pi/Tanh:0")
+        #for q values
+        self.acts_ph = graph.get_tensor_by_name("acts_ph:0")
+        self.q_pi = graph.get_tensor_by_name("main/value/net/q/BiasAdd:0")
 
 
     def my_step_batch(self, obs):
@@ -33,8 +36,19 @@ class Player:
         actions = self.sess.run(self.pi, {self.raw_obs_ph: obs})
         return actions
 
+
     def step_batch(self, obs):
         return self.my_step_batch(obs)
+
+    def get_q_pi(self, obs):
+        actions = self.step_batch(obs)
+        feed_dict = {
+            self.raw_obs_ph: obs,
+            self.acts_ph: actions,
+        }
+        value = self.sess.run(self.q_pi, feed_dict)[:, 0]  # get the q values at each achieved state
+        value = np.clip(value, self.args.clip_return_l, self.args.clip_return_r)
+        return value
 
     def play(self):
         # play policy on env

@@ -1,6 +1,6 @@
 import numpy as np
 import copy
-from envs import make_env, clip_return_range, Robotics_envs_id
+from envs import make_env, make_temp_env, clip_return_range, Robotics_envs_id
 from utils.os_utils import get_arg_parser, get_logger, str2bool
 from algorithm import create_agent
 from learner import create_learner, learner_collection
@@ -34,7 +34,16 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 							choices=['vanilla', 'fixobj', 'interval', 'intervalCollision','intervalExt',
 									 'intervalColl', 'intervalRewSub', 'intervalRewVec', 'intervalTestCollDetRewVec',
 									 'intervalTestColl',
-									 'intervalTestCollDetRewSub','custom', 'intervalEnvCollStop', 'intervalSelfCollStop'])
+									 'intervalTestCollDetRewSub','custom', 'intervalEnvCollStop', 'intervalSelfCollStop',
+									 'intervalRewMod',
+									 # from this on, it miss varation where collsion gives -1 but not stop
+									 'intervalSelfCollStopRegion',
+									 'intervalRewModStop',
+									 'intervalRewModRegion',
+									 'intervalRewModRegionStop',
+									 ])
+
+
 		if args.env[:5]=='Fetch':
 			parser.add_argument('--init_offset', help='initial offset in fetch environments', type=np.float32, default=1.0)
 		elif args.env[:4]=='Hand':
@@ -53,6 +62,9 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 
 	parser.add_argument('--gamma', help='discount factor', type=np.float32, default=0.98)
 	parser.add_argument('--clip_return', help='whether to clip return value', type=str2bool, default=True)
+	# these two arguments might be helpful if using other than sparse reward (-1, 0)
+	parser.add_argument('--reward_min', help='discount factor', type=np.float32, default=-1.)
+	parser.add_argument('--reward_max', help='discount factor', type=np.float32, default=0.)
 	parser.add_argument('--eps_act', help='percentage of epsilon greedy explorarion', type=np.float32, default=0.3)
 	parser.add_argument('--std_act', help='standard deviation of uncorrelated gaussian explorarion', type=np.float32, default=0.2)
 
@@ -328,13 +340,18 @@ def experiment_setup(args):
 	if args.vae_dist_help:
 		load_vaes(args)
 
+	#since some extensions of the envs use the distestimator this load is used with the interval wrapper#todo use other?
+	load_field_parameters(args)
+	if args.dist_estimator_type is not None:
+		temp_env = make_temp_env(args)
+		load_dist_estimator(args, temp_env)
+		del temp_env
+
 
 	env = make_env(args)
 	env_test = make_env(args)
 
-	load_field_parameters(args)
-	if args.dist_estimator_type is not None:
-		load_dist_estimator(args, env)
+
 
 
 	#rgb_array = take_env_image(env, args.img_size)
@@ -366,13 +383,16 @@ def experiment_setup_test(args):
 	if args.vae_dist_help:
 		load_vaes(args)
 
-
-	env = make_env(args)
-	#todo make here the test setup from the
-
 	load_field_parameters(args)
 	if args.dist_estimator_type is not None:
-		load_dist_estimator(args, env)
+		temp_env = make_temp_env(args)
+		load_dist_estimator(args, temp_env)
+		del temp_env
+
+
+	env = make_env(args)
+
+
 
 	if args.goal_based:
 		args.obs_dims = list(goal_based_process(env.reset()).shape)

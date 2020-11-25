@@ -178,6 +178,7 @@ class DDPG:
 			self.raw_obs_ph: obs
 		}
 		value = self.sess.run(self.q_pi, feed_dict)[:, 0]  # get the q values at each achieved state
-		value = np.clip(value, -1.0 / (1.0 - self.args.gamma), 0)
+		#value = np.clip(value, -1.0 / (1.0 - self.args.gamma), 0)
+		value = np.clip(value, self.args.clip_return_l, self.args.clip_return_r)
 		return value
 

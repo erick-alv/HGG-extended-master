@@ -155,6 +155,27 @@ class IntervalColl(IntervalExt):
             obs['coll'] = ncols
         return obs
 
+##TODO !!!!!!! TEst if checking just collsion or also if inside of the region
+class IntervalCollRegion(IntervalExt):
+    def __init__(self, args):
+        IntervalExt.__init__(self, args)
+        self.region_obstacles_bboxes = np.array(args.dist_estimator.obstacles)
+
+    def get_obs(self):
+        obs = super(IntervalCollRegion, self).get_obs()
+        begin_index = self.start_index_extra_observation
+        end_index = begin_index + self.single_step_extra_goal_state_size
+        goal_bbox = obs['observation'][begin_index: end_index]
+        #goal object is not in visible range
+        if goal_bbox[0] == 100. and goal_bbox[1] == 100.:
+            obs['coll'] = 0.
+        else:
+
+            cols = check_collisions(goal_bbox, self.region_obstacles_bboxes)
+            ncols = np.sum(cols.astype(np.float))
+            obs['coll'] = ncols
+        return obs
+
 #todo MAKE A SUPER CLASS FOR THE TEST warppers so the code must not be repeated but inherited by using multiple parents
 class IntervalTestColl(IntervalExt):#this can be used as well for IntervalSelfCollStop, intervalEnvCollStop, IntervalExt, IntervalColl and interval
     def __init__(self, args):
@@ -191,6 +212,24 @@ class IntervalSelfCollStop(IntervalColl):
         if observation_current['coll_stop']:
             rew = -1.
         return rew
+
+class IntervalSelfCollStopRegion(IntervalCollRegion):
+    def __init__(self, args):
+        IntervalCollRegion.__init__(self, args)
+
+    def get_obs(self):
+        obs = super(IntervalSelfCollStopRegion, self).get_obs()
+        if obs['coll'] > 0.:
+            obs['coll_stop'] = True
+        else:
+            obs['coll_stop'] = False
+        return obs
+
+    def compute_reward(self, observation_current, observation_old, goal):
+        rew = super(IntervalSelfCollStopRegion, self).compute_reward(observation_current, observation_old, goal)
+        if observation_current['coll_stop']:
+            rew = -1.
+        return rew
     
 
 class IntervalEnvCollStop(IntervalExt):
@@ -217,6 +256,63 @@ class IntervalEnvCollStop(IntervalExt):
         return rew
 
 
+#this is the modified reward
+class IntervalRewMod(IntervalColl):
+    def __init__(self, args):
+        IntervalColl.__init__(self, args)
+
+    def compute_reward(self, observation_current, observation_old, goal):
+        rew = super(IntervalRewMod, self).compute_reward(observation_current, observation_old, goal)
+        if observation_current['coll'] > 0.:
+            rew = -2.0
+        return rew
+
+class IntervalRewModStop(IntervalColl):
+    def __init__(self, args):
+        IntervalColl.__init__(self, args)
+
+    def get_obs(self):
+        obs = super(IntervalRewModStop, self).get_obs()
+        if obs['coll'] > 0.:
+            obs['coll_stop'] = True
+        else:
+            obs['coll_stop'] = False
+        return obs
+
+    def compute_reward(self, observation_current, observation_old, goal):
+        rew = super(IntervalRewModStop, self).compute_reward(observation_current, observation_old, goal)
+        if observation_current['coll'] > 0.:
+            rew = -2.0
+        return rew
+
+class IntervalRewModRegion(IntervalCollRegion):
+    def __init__(self, args):
+        IntervalCollRegion.__init__(self, args)
+
+    def compute_reward(self, observation_current, observation_old, goal):
+        rew = super(IntervalRewModRegion, self).compute_reward(observation_current, observation_old, goal)
+        if observation_current['coll'] > 0.:
+            rew = -2.0
+        return rew
+
+class IntervalRewModRegionStop(IntervalCollRegion):
+    def __init__(self, args):
+        IntervalCollRegion.__init__(self, args)
+
+    def get_obs(self):
+        obs = super(IntervalRewModRegionStop, self).get_obs()
+        if obs['coll'] > 0.:
+            obs['coll_stop'] = True
+        else:
+            obs['coll_stop'] = False
+        return obs
+
+    def compute_reward(self, observation_current, observation_old, goal):
+        rew = super(IntervalRewModRegionStop, self).compute_reward(observation_current, observation_old, goal)
+        if observation_current['coll'] > 0.:
+            rew = -2.0
+        return rew
+
 class IntervalRewSub(IntervalColl):
     def __init__(self, args):
         IntervalColl.__init__(self, args)
@@ -224,8 +320,10 @@ class IntervalRewSub(IntervalColl):
     def compute_reward(self, observation_current, observation_old, goal):
         rew = super(IntervalRewSub, self).compute_reward(observation_current, observation_old, goal)
         if observation_current['coll'] > 0.:
-            rew += -0.5#todo is -0.5 ok?; the idea is to create negative reward for collision but different so it can differentiate between negative reward for not reaching goal and negative reward for collision
+            rew += -1.0#do is -0.5 ok?; the idea is to create negative reward for collision but different so it can differentiate between negative reward for not reaching goal and negative reward for collision
         return rew
+
+
 
 
 class IntervalTestCollDetRewSub(IntervalRewSub):

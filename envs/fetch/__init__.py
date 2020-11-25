@@ -4,7 +4,8 @@ from .interval import IntervalGoalEnv
 from .custom import CustomGoalEnv
 from .interval_with_contact_detection import IntervalWithCollisionDetection
 from .extensions_interval import IntervalExt, IntervalColl, IntervalRewSub, IntervalRewVec, IntervalTestCollDetRewSub,\
-	IntervalTestCollDetRewVec, IntervalEnvCollStop, IntervalSelfCollStop, IntervalTestColl
+	IntervalTestCollDetRewVec, IntervalEnvCollStop, IntervalSelfCollStop, IntervalTestColl, IntervalRewMod, \
+	IntervalSelfCollStopRegion, IntervalRewModStop, IntervalRewModRegion,IntervalRewModRegionStop
 
 
 
@@ -24,7 +25,14 @@ def make_env(args):
 		'intervalTestCollDetRewSub':IntervalTestCollDetRewSub,
 		'intervalTestCollDetRewVec':IntervalTestCollDetRewVec,
 		'intervalEnvCollStop':IntervalEnvCollStop,
-		'intervalSelfCollStop':IntervalSelfCollStop
-
+		'intervalSelfCollStop':IntervalSelfCollStop,
+		'intervalRewMod': IntervalRewMod,#from this on, it miss varation where collsion gives -1 but not stop
+		'intervalSelfCollStopRegion': IntervalSelfCollStopRegion,
+		'intervalRewModStop': IntervalRewModStop,
+		'intervalRewModRegion': IntervalRewModRegion,
+		'intervalRewModRegionStop': IntervalRewModRegionStop,
 
 	}[args.goal](args)
+
+def make_temp_env(args):
+	return IntervalGoalEnv(args=args)
