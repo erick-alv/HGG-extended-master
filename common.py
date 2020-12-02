@@ -31,16 +31,17 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 		parser.add_argument('--goal', help='method of goal generation', type=str, default='reach', choices=['vanilla', 'reach'])
 	else:
 		parser.add_argument('--goal', help='method of goal generation', type=str, default='interval',
-							choices=['vanilla', 'fixobj', 'interval', 'intervalCollision','intervalExt',
-									 'intervalColl', 'intervalRewSub', 'intervalRewVec', 'intervalTestCollDetRewVec',
-									 'intervalTestColl',
-									 'intervalTestCollDetRewSub','custom', 'intervalEnvCollStop', 'intervalSelfCollStop',
-									 'intervalRewMod',
-									 # from this on, it miss varation where collsion gives -1 but not stop
-									 'intervalSelfCollStopRegion',
-									 'intervalRewModStop',
-									 'intervalRewModRegion',
-									 'intervalRewModRegionStop',
+							choices=['vanilla','fixobj','interval','custom' ,'intervalCollision','intervalExt',
+									 'intervalColl',
+									'intervalRewSub',
+									'intervalRewVec',
+									'intervalTestExtendedBbox',
+									'intervalCollStop',
+									'intervalRewMod',
+									'intervalCollStopRegion',
+									'intervalRewModStop',
+									'intervalRewModRegion',
+									'intervalRewModRegionStop',
 									 ])
 
 
@@ -155,13 +156,12 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	device = torch.device("cuda" if cuda else "cpu")
 	args.device = device
 
-	if args.goal in ['intervalRewVec', 'intervalTestColDetRewVec']:
+	if args.goal in ['intervalRewVec']:
 		args.reward_dims = 2
 	else:
 		args.reward_dims = 1
 
-	args.colls_test_check_envs = ['intervalTestColl', 'intervalTestCollDetRewVec', 'intervalCollision',
-								  'intervalTestCollDetRewSub']   
+	args.colls_test_check_envs = ['intervalTestExtendedBbox']
 
 
 	return args
@@ -329,9 +329,10 @@ def load_dist_estimator(args, env):
 		args.dist_estimator.update_calls = 0
 	size_goal_box /= counter
 	if args.dist_estimator_type == 'normal' or args.dist_estimator_type == 'realCoords' or args.dist_estimator_type == 'multiple' or args.dist_estimator_type == 'multipleReal':
+		n_ve = 100
 		args.dist_estimator.initialize_internal_distance_graph([args.field_center[0], args.field_center[1],
 																args.field_size[0], args.field_size[1]],
-															   num_vertices=[100, 100], size_increase=size_goal_box[0])#todo use real or other depending of va
+															   num_vertices=[n_ve, n_ve], size_increase=size_goal_box[0])#todo use real or other depending of va
 		args.dist_estimator.graph.plot_graph(save_path='env_graph_created', elev=90, azim=0)
 	plt.clf()
 
@@ -388,10 +389,7 @@ def experiment_setup_test(args):
 		temp_env = make_temp_env(args)
 		load_dist_estimator(args, temp_env)
 		del temp_env
-
-
 	env = make_env(args)
-
 
 
 	if args.goal_based:

@@ -246,6 +246,8 @@ def latents_from_images(images, args):
         goal_size[indices_goal_not_present] = np.array([0., 0.])
 
         return goal_pos, goal_size, obstacles_pos, obstacles_size
+        #return np.round(goal_pos, 3), np.round(goal_size, 3), np.round(obstacles_pos, 3), np.round(obstacles_size, 3)
+        #return np.round(goal_pos, 2), np.round(goal_size, 2), np.round(obstacles_pos, 2), np.round(obstacles_size, 2)
 
     elif args.vae_type=='faster_rcnn':
         with torch.no_grad():

@@ -52,7 +52,7 @@ def save_results_from_obs(obs, args, args_real, name):
 	plt.plot(np.arange(len(real_distance_to_goal)), real_distance_to_goal)
 	plt.savefig('log/space_tests/real_distance_to_goal_{}.png'.format(name))
 	plt.clf()
-	real_distance_to_goal2 = np.clip(real_distance_to_goal, a_min=None, a_max=2.3)
+	real_distance_to_goal2 = np.clip(real_distance_to_goal, a_min=None, a_max=1.0)
 	plt.plot(np.arange(len(real_distance_to_goal)), real_distance_to_goal2)
 	plt.savefig('log/space_tests/real_distance_to_goal_clipped_{}.png'.format(name))
 	plt.clf()
@@ -67,7 +67,7 @@ def save_results_from_obs(obs, args, args_real, name):
 	plt.plot(np.arange(len(latent_distance_to_goal)), latent_distance_to_goal)
 	plt.savefig('log/space_tests/latent_distance_to_goal_{}.png'.format(name))
 	plt.clf()
-	latent_distance_to_goal2 = np.clip(latent_distance_to_goal, a_min=None, a_max=4.)
+	latent_distance_to_goal2 = np.clip(latent_distance_to_goal, a_min=None, a_max=2.5)
 	plt.plot(np.arange(len(latent_distance_to_goal)), latent_distance_to_goal2)
 	plt.savefig('log/space_tests/latent_distance_to_goal_clipped_{}.png'.format(name))
 	plt.clf()
@@ -328,8 +328,10 @@ def compare_rollouts(args, args_real, env):
 
 def compare_at_positions(args, args_real, env):
 	r1 = np. array([[1.115, 0.825], [1.189, 0.825], [1.263, 0.825], [1.337, 0.825], [1.411, 0.825], [1.485, 0.825]])
+	r1 += np.array([0. , 0.002])
 	r2 = np. array([[1.485, 0.7875],[1.485, 0.75],[1.485, 0.7125], [1.485, 0.675]])
 	r3 = np.array([[1.411, 0.675], [1.337, 0.675], [1.263, 0.675], [1.189, 0.675], [1.115, 0.675]])
+	r3 -= np.array([0. , 0.002])
 	r4 = np.array([[1.115, 0.7125],[1.115, 0.75], [1.115, 0.7875], [1.115, 0.825]])
 	routes = np.concatenate([r1, r2, r3, r4], axis=0)
 

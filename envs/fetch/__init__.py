@@ -3,11 +3,9 @@ from .fixobj import FixedObjectGoalEnv
 from .interval import IntervalGoalEnv
 from .custom import CustomGoalEnv
 from .interval_with_contact_detection import IntervalWithCollisionDetection
-from .extensions_interval import IntervalExt, IntervalColl, IntervalRewSub, IntervalRewVec, IntervalTestCollDetRewSub,\
-	IntervalTestCollDetRewVec, IntervalEnvCollStop, IntervalSelfCollStop, IntervalTestColl, IntervalRewMod, \
-	IntervalSelfCollStopRegion, IntervalRewModStop, IntervalRewModRegion,IntervalRewModRegionStop
-
-
+from .extensions_interval import IntervalExt, IntervalColl, IntervalRewSub, IntervalRewVec, IntervalCollStopRegion,\
+	IntervalCollStop, IntervalRewMod, IntervalRewModStop, IntervalRewModRegion, IntervalRewModRegionStop, \
+	IntervalTestExtendedBbox
 
 # TODO: change this file for new env handling!
 def make_env(args):
@@ -21,18 +19,15 @@ def make_env(args):
 		'intervalColl':IntervalColl,
 		'intervalRewSub':IntervalRewSub,
 		'intervalRewVec': IntervalRewVec,
-		'intervalTestColl':IntervalTestColl,
-		'intervalTestCollDetRewSub':IntervalTestCollDetRewSub,
-		'intervalTestCollDetRewVec':IntervalTestCollDetRewVec,
-		'intervalEnvCollStop':IntervalEnvCollStop,
-		'intervalSelfCollStop':IntervalSelfCollStop,
-		'intervalRewMod': IntervalRewMod,#from this on, it miss varation where collsion gives -1 but not stop
-		'intervalSelfCollStopRegion': IntervalSelfCollStopRegion,
+		'intervalTestExtendedBbox':IntervalTestExtendedBbox,
+		'intervalCollStop':IntervalCollStop,
+		'intervalRewMod': IntervalRewMod,#from this on, it miss variation where collsion gives -1 but not stop
+		'intervalCollStopRegion': IntervalCollStopRegion,
 		'intervalRewModStop': IntervalRewModStop,
 		'intervalRewModRegion': IntervalRewModRegion,
 		'intervalRewModRegionStop': IntervalRewModRegionStop,
-
 	}[args.goal](args)
+
 
 def make_temp_env(args):
 	return IntervalGoalEnv(args=args)

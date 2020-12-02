@@ -6,6 +6,8 @@ import torch.distributions as dists
 import numpy as np
 from PIL import Image
 import os
+from torch.distributions.normal import Normal
+
 this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
 
 def double_conv(in_channels, out_channels):
@@ -184,13 +186,14 @@ class DecoderNet(nn.Module):
 class Monet2_VAE(nn.Module):
     def __init__(self, height, width, device, latent_size, num_blocks, channel_base, num_slots,
                  full_connected_size, color_channels, kernel_size, encoder_stride,decoder_stride,
-                 conv_size1, conv_size2):
+                 conv_size1, conv_size2, fg_sigma):
         super().__init__()
         self.device = device
         self.num_slots = num_slots
         self.latent_size = latent_size
         self.height = height
         self.width = width
+        self.fg_sigma = fg_sigma
         self.color_channels = color_channels
         self.attention = AttentionNet(num_blocks=num_blocks, channel_base=channel_base)
         self.encoder = EncoderNet(width=width, height=height, device=device, latent_size=latent_size,
@@ -207,6 +210,11 @@ class Monet2_VAE(nn.Module):
         self.decoderBG = DecoderNet(width=width, height=height, device=device, latent_size=latent_size,
                                   output_channels=color_channels + 1, kernel_size=kernel_size, conv_size1=conv_size1,
                                   decoder_stride=decoder_stride)
+        '''self.z_depth_net = nn.Sequential(
+            nn.Linear(conv_size2 * red_width * red_height, full_connected_size),
+            nn.ReLU(inplace=True),
+            nn.Linear(full_connected_size, 1 * 2)
+        )'''
 
     def _encoder_step(self, x, mask, slot_index):
         encoder_input = torch.cat((x, mask), 1)
@@ -276,7 +284,29 @@ class Monet2_VAE(nn.Module):
         mu_s, logvar_s, masks = self.encode(x)
         z_s = [self._reparameterize(mu_s[i], logvar_s[i]) for i in range(len(mu_s))]
         full_reconstruction, x_recon_s, mask_pred_s = self.decode(z_s, masks)
-        return mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s
+        #extra loss
+        #take masks of fg
+        fg_masks_united = torch.sum(torch.stack(masks[1:]), dim=0)
+        #extract all fg objects
+        fg_objects = x * fg_masks_united
+
+        #unite all fg objects
+        fg_objects_recon_united = torch.sum(torch.stack(x_recon_s[1:]), dim=0)
+
+        fg_dist = Normal(fg_objects_recon_united, self.fg_sigma)
+        fg_likelihood = fg_dist.log_prob(fg_objects)
+
+        log_like = fg_likelihood
+
+
+
+
+
+
+        log_like = log_like.flatten(start_dim=1).sum(1)
+        loss = -log_like.mean()
+
+        return loss, mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s
 
 
 def loss_function(x, x_recon_s, masks, mask_pred_s, mu_s, logvar_s, beta, gamma, bg_sigma, fg_sigma, device, aa=0):
@@ -344,7 +374,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
     #creates indexes and shuffles them. So it can acces the data
     idx_set = np.arange(data_size)
     np.random.shuffle(idx_set)
-    idx_set = idx_set
+    idx_set = idx_set[:12800]
     idx_set = np.split(idx_set, len(idx_set) / batch_size)
     for batch_idx, idx_select in enumerate(idx_set):
         data = data_set[idx_select]
@@ -352,10 +382,11 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
         data /= 255
         data = data.permute([0, 3, 1, 2])
         optimizer.zero_grad()
-        mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
+        loss_extra, mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
         loss_batch = loss_function(data, x_recon_s, masks, mask_pred_s, mu_s, logvar_s,
                                    beta, gamma, bg_sigma, fg_sigma, device=device, aa=batch_idx)
         loss = torch.mean(loss_batch)
+        loss += loss_extra
         loss.backward()
         optimizer.step()
         train_loss += loss.item()
@@ -420,7 +451,7 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
                            num_blocks=num_blocks,
                            channel_base=channel_base, num_slots=num_slots, full_connected_size=full_connected_size,
                            color_channels=color_channels, kernel_size=kernel_size, encoder_stride=encoder_stride,
-                           decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2).to(device)
+                           decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2, fg_sigma=fg_sigma).to(device)
 
         #todo check which optimizer is better
         optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
@@ -434,7 +465,7 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
                            num_blocks=num_blocks,
                            channel_base=channel_base, num_slots=num_slots, full_connected_size=full_connected_size,
                            color_channels=color_channels, kernel_size=kernel_size, encoder_stride=encoder_stride,
-                           decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2).to(device)
+                           decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2, fg_sigma=fg_sigma).to(device)
         #for w in model.parameters():
         #    std_init = 0.01
         #    nn.init.normal_(w, mean=0., std=std_init)
@@ -479,7 +510,7 @@ def compare_with_data_set(model, device, filename_suffix, latent_size, train_fil
         data = torch.from_numpy(data).float().to(device)
         data /= 255
         data = data.permute([0, 3, 1, 2])
-        mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
+        loss_extra, mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
 
         visualize_masks(imgs=numpify(data),masks=numpify(torch.cat(masks, dim=1)),
                         recons=numpify(full_reconstruction), x_recon_s=numpify(torch.cat(x_recon_s)),
@@ -497,7 +528,8 @@ def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1, num_blocks=5, c
     model = Monet2_VAE(height=img_size, width=img_size, device=device, latent_size=latent_size, num_blocks=num_blocks,
                        channel_base=channel_base, num_slots=num_slots, full_connected_size=full_connected_size,
                        color_channels=color_channels, kernel_size=kernel_size, encoder_stride=encoder_stride,
-                       decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2).to(device)
+                       decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2, fg_sigma=0.05).to(device)
+    #todo fg signame will not be used once trained therefore the same waht we give??
     #todo see with which optimizer is better
     #optimizer = optim.Adam(model.parameters(), lr=1e-3)
     checkpoint = torch.load(path)
@@ -511,7 +543,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=16)
+    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=4)#16)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=40)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
