@@ -6,7 +6,10 @@ from .interval_with_contact_detection import IntervalWithCollisionDetection
 from .extensions_interval import IntervalExt, IntervalColl, IntervalRewSub, IntervalRewVec, IntervalCollStopRegion,\
 	IntervalCollStop, IntervalRewMod, IntervalRewModStop, IntervalRewModRegion, IntervalRewModRegionStop, \
 	IntervalTestExtendedBbox, IntervalCollMinDist, IntervalMinDistRewMod,IntervalMinDistRewModStop, \
-	IntervalTestExtendedMinDist
+	IntervalTestExtendedMinDist, IntervalPA,IntervalPARewMod,IntervalPARewModStop,IntervalTestExtendedPA,IntervalPAV,\
+	IntervalPAVRewMod,IntervalPAVRewModStop,IntervalTestExtendedPAV,IntervalPARel,IntervalPARelRewMod,\
+	IntervalPARelRewModStop,IntervalTestExtendedPARel,IntervalPAVRel,IntervalPAVRelRewMod,\
+	IntervalPAVRelRewModStop,IntervalTestExtendedPAVRel
 
 # TODO: change this file for new env handling!
 def make_env(args):
@@ -30,8 +33,26 @@ def make_env(args):
 		'intervalCollMinDist':IntervalCollMinDist,
 		'intervalMinDistRewMod':IntervalMinDistRewMod,
 		'intervalMinDistRewModStop':IntervalMinDistRewModStop,
-		'intervalTestExtendedMinDist': IntervalTestExtendedMinDist
+		'intervalTestExtendedMinDist': IntervalTestExtendedMinDist,
+		'intervalPA': IntervalPA,
+		'intervalPARewMod':IntervalPARewMod,
+		'intervalPARewModStop':IntervalPARewModStop,
+		'intervalTestExtendedPA':IntervalTestExtendedPA,
+		'intervalPAV':IntervalPAV,
+		'intervalPAVRewMod':IntervalPAVRewMod,
+		'intervalPAVRewModStop':IntervalPAVRewModStop,
+		'intervalTestExtendedPAV':IntervalTestExtendedPAV,
+		'intervalPARel':IntervalPARel,
+		'intervalPARelRewMod':IntervalPARelRewMod,
+		'intervalPARelRewModStop':IntervalPARelRewModStop,
+		'intervalTestExtendedPARel':IntervalTestExtendedPARel,
+		'intervalPAVRel':IntervalPAVRel,
+		'intervalPAVRelRewMod':IntervalPAVRelRewMod,
+		'intervalPAVRelRewModStop':IntervalPAVRelRewModStop,
+		'intervalTestExtendedPAVRel':IntervalTestExtendedPAVRel
+		
 	}[args.goal](args)
+
 
 
 def make_temp_env(args):

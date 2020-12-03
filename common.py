@@ -45,7 +45,13 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 									'intervalCollMinDist',
 									 'intervalMinDistRewMod',
 									 'intervalMinDistRewModStop',
-									 'intervalTestExtendedMinDist'
+									 'intervalTestExtendedMinDist',
+									 'intervalCollPAV',
+									 'intervalPA', 'intervalPARewMod', 'intervalPARewModStop', 'intervalTestExtendedPA',
+									 'intervalPAV', 'intervalPAVRewMod', 'intervalPAVRewModStop',
+									 'intervalTestExtendedPAV', 'intervalPARel', 'intervalPARelRewMod',
+									 'intervalPARelRewModStop', 'intervalTestExtendedPARel', 'intervalPAVRel',
+									 'intervalPAVRelRewMod', 'intervalPAVRelRewModStop', 'intervalTestExtendedPAVRel'
 									 ])
 
 
@@ -53,6 +59,10 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 			parser.add_argument('--init_offset', help='initial offset in fetch environments', type=np.float32, default=1.0)
 		elif args.env[:4]=='Hand':
 			parser.add_argument('--init_rotation', help='initial rotation in hand environments', type=np.float32, default=0.25)
+
+	args, _ = parser.parse_known_args()
+	if 'RewMod' in args.goal:
+		parser.add_argument('--rew_mod_val', help='value to subtract on collision', type=np.float32, default=-2.)
 	parser.add_argument('--graph', help='g-hgg yes or no', type=str2bool, default=False)
 	parser.add_argument('--show_goals', help='number of goals to show', type=np.int32, default=0)
 	parser.add_argument('--play_path', help='path to meta_file directory for play', type=str, default=None)
@@ -160,12 +170,16 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	device = torch.device("cuda" if cuda else "cpu")
 	args.device = device
 
+	#extensions from intervale_ext
+
+
 	if args.goal in ['intervalRewVec']:
 		args.reward_dims = 2
 	else:
 		args.reward_dims = 1
 
-	args.colls_test_check_envs = ['intervalTestExtendedBbox', 'intervalTestExtendedMinDist']
+	args.colls_test_check_envs = ['intervalTestExtendedBbox', 'intervalTestExtendedMinDist', 'intervalTestExtendedPA',
+								  'intervalTestExtendedPAV', 'intervalTestExtendedPARel', 'intervalTestExtendedPAVRel']
 
 
 	return args

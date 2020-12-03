@@ -193,34 +193,12 @@ class ObsExtBboxInfo(ObsExtender):
 
         return obs
 
-
-
-class ObsExtMinDist(ObsExtBboxInfo):
+class ObsExtBboxColl(ObsExtBboxInfo):
     def __init__(self, args):
-        super(ObsExtMinDist, self).__init__(args)
-
+        super(ObsExtBboxColl, self).__init__(args)
 
     def extend_obs(self, obs, env):
-        obs = super(ObsExtMinDist, self).extend_obs(obs, env)
-        goal_bbox = obs['goal_st_t']
-        obstacle_bboxes = obs['obstacle_st_t']
-        # goal object is not in visible range therefore distance really far aways
-        if goal_bbox[0] == 100. and goal_bbox[1] == 100.:
-            dists = np.repeat(1000., repeats=obstacle_bboxes.shape[0])
-        else:
-            dists = aabbs_min_distances(goal_bbox, obstacle_bboxes)
-
-        new_state = np.concatenate([obs['observation'], dists])
-        obs['observation'] = new_state
-        return obs
-
-#inherits also from ObsExtBboxCollInfo
-class ObsExtCollAndMinDist(ObsExtMinDist):
-    def __init__(self, args):
-        super(ObsExtCollAndMinDist, self).__init__(args)
-
-    def extend_obs(self, obs, env):
-        obs = ObsExtMinDist.extend_obs(self, obs, env)
+        obs = ObsExtBboxInfo.extend_obs(self, obs, env)
         goal_bbox = obs['goal_st_t']
         # goal object is not in visible range
         if goal_bbox[0] == 100. and goal_bbox[1] == 100.:
@@ -231,6 +209,144 @@ class ObsExtCollAndMinDist(ObsExtMinDist):
             ncols = np.sum(cols.astype(np.float))
             obs['coll'] = ncols
         return obs
+
+
+class ObsExtMinDist(ObsExtBboxColl):
+    def __init__(self, args):
+        super(ObsExtMinDist, self).__init__(args)
+
+
+    def extend_obs(self, obs, env):
+        obs = super(ObsExtMinDist, self).extend_obs(obs, env)
+        goal_bbox = obs['goal_st_t']
+        obstacle_bboxes = obs['obstacle_st_t']
+        # goal object is not in visible range therefore distance really far away
+        if goal_bbox[0] == 100. and goal_bbox[1] == 100.:
+            dists = np.repeat(1000., repeats=obstacle_bboxes.shape[0])
+        else:
+            dists = aabbs_min_distances(goal_bbox, obstacle_bboxes)
+
+        obs['dists'] = dists.copy()
+        new_state = np.concatenate([obs['observation'], dists.copy()])
+        obs['observation'] = new_state
+        return obs
+
+
+def calc_vels(bboxes, bboxes_prev, dt):
+    pos_dif = bboxes[:, 0:2] - bboxes_prev[:, 0:2]
+    vel = pos_dif / dt
+    return vel
+
+def calc_angles(a_bbox, b_bboxes):
+    if a_bbox[0] == 100. and a_bbox[1] == 100.:
+        # use a negative angle so it is different in this case
+        angles = np.repeat(-1., shape=b_bboxes.shape[0])
+    else:
+        angles = np.arctan2(b_bboxes[:, 1] - a_bbox[1], b_bboxes[:, 0] - a_bbox[0]) * 180 / np.pi  # to degree
+        angles = angles % 360.
+    angles = np.expand_dims(angles, axis=1)
+    return angles
+
+class ObsExtPA(ObsExtMinDist):
+    def __init__(self, args):
+        super(ObsExtPA, self).__init__(args)
+
+    def extend_obs(self, obs, env):
+        obs = super(ObsExtPA, self).extend_obs(obs, env)
+        goal_bbox = obs['goal_st_t']
+        obstacle_bboxes = obs['obstacle_st_t']
+
+        dists = obs['dists'].copy()
+        len_dists = len(dists)
+        dists = np.expand_dims(dists, axis=1)
+        pos = obstacle_bboxes[:, 0:2]
+        angles = calc_angles(goal_bbox, obstacle_bboxes)
+
+
+        observation_without_dist = obs['observation'][:-len_dists]
+        extension = np.concatenate([dists, pos, angles], axis=1)
+        new_state = np.concatenate([observation_without_dist, np.ravel(extension)])
+        obs['observation'] = new_state
+        return obs
+
+
+class ObsExtPAV(ObsExtMinDist):
+    def __init__(self, args):
+        super(ObsExtPAV, self).__init__(args)
+
+    def extend_obs(self, obs, env):
+        obs = super(ObsExtPAV, self).extend_obs(obs, env)
+        goal_bbox = obs['goal_st_t']
+        obstacle_bboxes = obs['obstacle_st_t']
+        previous_obstacle_bboxes = obs['obstacle_st_t_minus1']
+
+        dists = obs['dists'].copy()
+        len_dists = len(dists)
+        dists = np.expand_dims(dists, axis=1)
+        pos = obstacle_bboxes[:, 0:2]
+        dt = env.env.dt
+        vel = calc_vels(obstacle_bboxes, previous_obstacle_bboxes, dt)
+        angles = calc_angles(goal_bbox, obstacle_bboxes)
+
+        observation_without_dist = obs['observation'][:-len_dists]
+        extension = np.concatenate([dists, pos, angles, vel], axis=1)
+        new_state = np.concatenate([observation_without_dist, np.ravel(extension)])
+        obs['observation'] = new_state
+        return obs
+
+#calculates position realitve to goal object
+class ObsExtPARel(ObsExtMinDist):
+    def __init__(self, args):
+        super(ObsExtPARel, self).__init__(args)
+
+    def extend_obs(self, obs, env):
+        obs = super(ObsExtPARel, self).extend_obs(obs, env)
+        goal_bbox = obs['goal_st_t']
+        obstacle_bboxes = obs['obstacle_st_t']
+
+        dists = obs['dists'].copy()
+        len_dists = len(dists)
+        dists = np.expand_dims(dists, axis=1)
+        pos = obstacle_bboxes[:, 0:2]
+        # here transformation to relative
+        pos = pos - goal_bbox[0:2]
+
+        angles = calc_angles(goal_bbox, obstacle_bboxes)
+        observation_without_dist = obs['observation'][:-len_dists]
+        extension = np.concatenate([dists, pos, angles], axis=1)
+        new_state = np.concatenate([observation_without_dist, np.ravel(extension)])
+        obs['observation'] = new_state
+        return obs
+
+#calculates position realitve to goal object
+class ObsExtPAVRel(ObsExtMinDist):
+    def __init__(self, args):
+        super(ObsExtPAVRel, self).__init__(args)
+
+    def extend_obs(self, obs, env):
+        obs = super(ObsExtPAVRel, self).extend_obs(obs, env)
+        goal_bbox = obs['goal_st_t']
+        obstacle_bboxes = obs['obstacle_st_t']
+        previous_obstacle_bboxes = obs['obstacle_st_t_minus1']
+
+        dists = obs['dists'].copy()
+        len_dists = len(dists)
+        dists = np.expand_dims(dists, axis=1)
+        pos = obstacle_bboxes[:, 0:2]
+        # here transformation to relative
+        pos = pos - goal_bbox[0:2]
+
+        dt = env.env.dt
+        vel = calc_vels(obstacle_bboxes, previous_obstacle_bboxes, dt)
+        angles = calc_angles(goal_bbox, obstacle_bboxes)
+
+        observation_without_dist = obs['observation'][:-len_dists]
+        extension = np.concatenate([dists, pos, angles, vel], axis=1)
+        new_state = np.concatenate([observation_without_dist, np.ravel(extension)])
+        obs['observation'] = new_state
+        return obs
+
+
 
 #does not change observation state, but observation dict
 class ObsExtenderBboxAndColl(ObsExtenderBbox):
@@ -376,7 +492,8 @@ class OnCollRewMod(OnColl):
     def compute_reward(self, observation_current, observation_old, goal, env_reward):
         rew = env_reward
         if observation_current['coll'] > 0.:
-            rew = -2.0
+            #per default is  -2.0; but leave it this way to experiment with other values
+            rew = self.args.rew_mod_val
         return rew
 
 
@@ -515,22 +632,103 @@ class IntervalTestExtendedBbox(IntervalWithExtensions):
 #Using extension of Min dist
 class IntervalCollMinDist(IntervalWithExtensions):
     def __init__(self, args):
-        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtCollAndMinDist(args),
-                                        on_coll_extender=OnCollStop(args))
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtMinDist(args))
 
 class IntervalMinDistRewMod(IntervalWithExtensions):
     def __init__(self, args):
-        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtCollAndMinDist(args),
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtMinDist(args),
                                         on_coll_extender=OnCollRewMod(args))
 
 
 class IntervalMinDistRewModStop(IntervalWithExtensions):
     def __init__(self, args):
-        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtCollAndMinDist(args),
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtMinDist(args),
                                         on_coll_extender=OnCollStopRewMod(args))
 
 #with this test every class with a obs extender that inherits ObsExtMinDist and do not change more observation state
 class IntervalTestExtendedMinDist(IntervalWithExtensions):
     def __init__(self, args):
         IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtMinDist(args),
+                                        test_extender=TestColl(args))
+
+class IntervalPA(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPA(args))
+
+class IntervalPARewMod(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPA(args),
+                                        on_coll_extender=OnCollRewMod(args))
+
+class IntervalPARewModStop(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPA(args),
+                                        on_coll_extender=OnCollStopRewMod(args))
+
+class IntervalTestExtendedPA(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPA(args),
+                                        test_extender=TestColl(args))
+
+
+class IntervalPAV(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPAV(args))
+
+class IntervalPAVRewMod(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPAV(args),
+                                        on_coll_extender=OnCollRewMod(args))
+
+class IntervalPAVRewModStop(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPAV(args),
+                                        on_coll_extender=OnCollStopRewMod(args))
+
+class IntervalTestExtendedPAV(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPAV(args),
+                                        test_extender=TestColl(args))
+
+
+
+class IntervalPARel(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPARel(args))
+
+
+class IntervalPARelRewMod(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPARel(args),
+                                        on_coll_extender=OnCollRewMod(args))
+
+
+class IntervalPARelRewModStop(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPARel(args),
+                                        on_coll_extender=OnCollStopRewMod(args))
+
+class IntervalTestExtendedPARel(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPARel(args),
+                                        test_extender=TestColl(args))
+
+
+class IntervalPAVRel(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPAVRel(args))
+
+class IntervalPAVRelRewMod(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPAVRel(args),
+                                        on_coll_extender=OnCollRewMod(args))
+
+class IntervalPAVRelRewModStop(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPAVRel(args),
+                                        on_coll_extender=OnCollStopRewMod(args))
+
+class IntervalTestExtendedPAVRel(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPAVRel(args),
                                         test_extender=TestColl(args))
