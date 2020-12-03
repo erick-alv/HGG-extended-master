@@ -5,7 +5,8 @@ from .custom import CustomGoalEnv
 from .interval_with_contact_detection import IntervalWithCollisionDetection
 from .extensions_interval import IntervalExt, IntervalColl, IntervalRewSub, IntervalRewVec, IntervalCollStopRegion,\
 	IntervalCollStop, IntervalRewMod, IntervalRewModStop, IntervalRewModRegion, IntervalRewModRegionStop, \
-	IntervalTestExtendedBbox
+	IntervalTestExtendedBbox, IntervalCollMinDist, IntervalMinDistRewMod,IntervalMinDistRewModStop, \
+	IntervalTestExtendedMinDist
 
 # TODO: change this file for new env handling!
 def make_env(args):
@@ -26,6 +27,10 @@ def make_env(args):
 		'intervalRewModStop': IntervalRewModStop,
 		'intervalRewModRegion': IntervalRewModRegion,
 		'intervalRewModRegionStop': IntervalRewModRegionStop,
+		'intervalCollMinDist':IntervalCollMinDist,
+		'intervalMinDistRewMod':IntervalMinDistRewMod,
+		'intervalMinDistRewModStop':IntervalMinDistRewModStop,
+		'intervalTestExtendedMinDist': IntervalTestExtendedMinDist
 	}[args.goal](args)
 
 

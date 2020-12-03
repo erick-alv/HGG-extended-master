@@ -27,6 +27,30 @@ def check_collisions(a_bbox, b_bboxes):
     d_bools = np.logical_or(d1_bools, d2_bools)
     return np.logical_not(d_bools)
 
+def aabbs_max_distances(a_bbox, b_bboxes):
+    dcxs = np.abs(b_bboxes[:, 0] - a_bbox[0])
+    extra_x_dist = b_bboxes[:, ] + a_bbox[2]
+    x_max_dists = dcxs + extra_x_dist
+
+    dcys = np.abs(b_bboxes[:, 1] - a_bbox[1])
+    extra_y_dist = b_bboxes[:, 3] + a_bbox[3]
+    y_max_dists = dcys + extra_y_dist
+    d_maxs = np.sqrt(x_max_dists**2 + y_max_dists**2)
+    return d_maxs
+
+
+def aabbs_min_distances(a_bbox, b_bboxes):
+    dcxs = np.abs(b_bboxes[:, 0] - a_bbox[0])
+    extra_x_dist = b_bboxes[:, 2] + a_bbox[2]
+    zeros_array = np.zeros(shape=extra_x_dist.shape)
+    x_min_dists = np.maximum(dcxs - extra_x_dist, zeros_array)
+
+    dcys = np.abs(b_bboxes[:, 1] - a_bbox[1])
+    extra_y_dist = b_bboxes[:, 3] + a_bbox[3]
+    y_min_dists = np.maximum(dcys - extra_y_dist, zeros_array)
+    d_mins = np.sqrt(x_min_dists**2 + y_min_dists**2)
+    return d_mins
+
 
 class ObsExtender(ABC):
     def __init__(self, args):
@@ -111,11 +135,107 @@ class ObsExtenderBbox(ObsExtender):
 
         return obs
 
+#basically the same but does not estend the state that is passed to agent. This class will be inherited to extend the
+#class in other ways
+class ObsExtBboxInfo(ObsExtender):
+    def __init__(self, args):
+        super(ObsExtBboxInfo, self).__init__(args)
+
+    def extend_obs(self, obs, env):
+        if self.args.vae_dist_help:
+            extra_goal_state = np.concatenate([obs['achieved_goal_latent'],
+                                               obs['achieved_goal_size_latent']])
+
+            obstacle_l = obs['obstacle_latent']
+            obstacle_s_l = obs['obstacle_size_latent']
+            obstacle_len_shape = len(obstacle_l.shape)
+            if len(obstacle_l.shape) > 1:
+
+                extra_obstacle_state = np.concatenate([obstacle_l, obstacle_s_l], axis=1)
+            else:
+                extra_obstacle_state = np.concatenate([obstacle_l, obstacle_s_l])
+                extra_obstacle_state = np.expand_dims(extra_obstacle_state, axis=0)
+        else:
+            extra_goal_state = np.concatenate([obs['achieved_goal'][:2],
+                                               obs['real_size_goal'][:2]])
+
+            obstacle_info = obs['real_obstacle_info']
+            if len(obstacle_info.shape) > 1:
+
+                extra_obstacle_state = np.concatenate([obstacle_info[:, :2], obstacle_info[:, -3:-1]], axis=1)
+            else:
+                extra_obstacle_state = np.concatenate([obstacle_info[:2], obstacle_info[-3:-1]])
+                extra_obstacle_state = np.expand_dims(extra_obstacle_state, axis=0)
+
+        if self.counter == 0:
+            #It is the first observation. We cannot assume nothing from previous steps and therefore init every
+            #field with the same
+
+            #might not need to store all goal state since they will not be used
+            obs['goal_st_t'] = extra_goal_state.copy()
+            obs['goal_st_t_minus1'] = extra_goal_state.copy()
+            obs['goal_st_t_minus2'] = extra_goal_state.copy()
+
+            obs['obstacle_st_t'] = extra_obstacle_state.copy()
+            obs['obstacle_st_t_minus1'] = extra_obstacle_state.copy()
+            obs['obstacle_st_t_minus2'] = extra_obstacle_state.copy()
+
+        else:
+            # the previous ones are pushed to the back
+            prev_obs = env.last_obs.copy()
+            obs['goal_st_t'] = extra_goal_state.copy()
+            obs['goal_st_t_minus1'] = prev_obs['goal_st_t'].copy()
+            obs['goal_st_t_minus2'] = prev_obs['goal_st_t_minus1'].copy()
+
+            obs['obstacle_st_t'] = extra_obstacle_state.copy()
+            obs['obstacle_st_t_minus1'] = prev_obs['obstacle_st_t'].copy()
+            obs['obstacle_st_t_minus2'] = prev_obs['obstacle_st_t_minus2'].copy()
+
+        return obs
+
+
+
+class ObsExtMinDist(ObsExtBboxInfo):
+    def __init__(self, args):
+        super(ObsExtMinDist, self).__init__(args)
+
+
+    def extend_obs(self, obs, env):
+        obs = super(ObsExtMinDist, self).extend_obs(obs, env)
+        goal_bbox = obs['goal_st_t']
+        obstacle_bboxes = obs['obstacle_st_t']
+        # goal object is not in visible range therefore distance really far aways
+        if goal_bbox[0] == 100. and goal_bbox[1] == 100.:
+            dists = np.repeat(1000., repeats=obstacle_bboxes.shape[0])
+        else:
+            dists = aabbs_min_distances(goal_bbox, obstacle_bboxes)
+
+        new_state = np.concatenate([obs['observation'], dists])
+        obs['observation'] = new_state
+        return obs
+
+#inherits also from ObsExtBboxCollInfo
+class ObsExtCollAndMinDist(ObsExtMinDist):
+    def __init__(self, args):
+        super(ObsExtCollAndMinDist, self).__init__(args)
+
+    def extend_obs(self, obs, env):
+        obs = ObsExtMinDist.extend_obs(self, obs, env)
+        goal_bbox = obs['goal_st_t']
+        # goal object is not in visible range
+        if goal_bbox[0] == 100. and goal_bbox[1] == 100.:
+            obs['coll'] = 0.
+        else:
+            obstacle_bboxes = obs['obstacle_st_t']
+            cols = check_collisions(goal_bbox, obstacle_bboxes)
+            ncols = np.sum(cols.astype(np.float))
+            obs['coll'] = ncols
+        return obs
+
 #does not change observation state, but observation dict
 class ObsExtenderBboxAndColl(ObsExtenderBbox):
     def __init__(self, args):
         ObsExtenderBbox.__init__(self, args)
-
 
     def extend_obs(self, obs, env):
         obs = super(ObsExtenderBboxAndColl, self).extend_obs(obs, env)
@@ -163,6 +283,8 @@ class ObsExtenderBboxAndColl(ObsExtenderBbox):
             ncols = np.sum(cols.astype(np.float))
             obs['coll'] = ncols
         return obs
+
+
 
 #does not change observation state, but observation dict
 class ObsExtenderBboxAndCollRegion(ObsExtenderBbox):
@@ -387,4 +509,28 @@ class IntervalRewVec(IntervalWithExtensions):
 class IntervalTestExtendedBbox(IntervalWithExtensions):
     def __init__(self, args):
         IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtenderBbox(args),
+                                        test_extender=TestColl(args))
+
+
+#Using extension of Min dist
+class IntervalCollMinDist(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtCollAndMinDist(args),
+                                        on_coll_extender=OnCollStop(args))
+
+class IntervalMinDistRewMod(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtCollAndMinDist(args),
+                                        on_coll_extender=OnCollRewMod(args))
+
+
+class IntervalMinDistRewModStop(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtCollAndMinDist(args),
+                                        on_coll_extender=OnCollStopRewMod(args))
+
+#with this test every class with a obs extender that inherits ObsExtMinDist and do not change more observation state
+class IntervalTestExtendedMinDist(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtMinDist(args),
                                         test_extender=TestColl(args))

@@ -42,6 +42,10 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 									'intervalRewModStop',
 									'intervalRewModRegion',
 									'intervalRewModRegionStop',
+									'intervalCollMinDist',
+									 'intervalMinDistRewMod',
+									 'intervalMinDistRewModStop',
+									 'intervalTestExtendedMinDist'
 									 ])
 
 
@@ -161,7 +165,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	else:
 		args.reward_dims = 1
 
-	args.colls_test_check_envs = ['intervalTestExtendedBbox']
+	args.colls_test_check_envs = ['intervalTestExtendedBbox', 'intervalTestExtendedMinDist']
 
 
 	return args

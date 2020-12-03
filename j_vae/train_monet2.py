@@ -374,7 +374,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
     #creates indexes and shuffles them. So it can acces the data
     idx_set = np.arange(data_size)
     np.random.shuffle(idx_set)
-    idx_set = idx_set[:12800]
+    idx_set = idx_set[:128]
     idx_set = np.split(idx_set, len(idx_set) / batch_size)
     for batch_idx, idx_select in enumerate(idx_set):
         data = data_set[idx_select]
@@ -386,7 +386,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
         loss_batch = loss_function(data, x_recon_s, masks, mask_pred_s, mu_s, logvar_s,
                                    beta, gamma, bg_sigma, fg_sigma, device=device, aa=batch_idx)
         loss = torch.mean(loss_batch)
-        loss += loss_extra
+        loss = loss*100. + loss_extra
         loss.backward()
         optimizer.step()
         train_loss += loss.item()
@@ -543,15 +543,15 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=16)
+    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=2)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=40)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
     parser.add_argument('--num_slots', help='number of slots', type=np.int32, default=6)
-    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=8.)#5#8
-    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=5.)#2.)#5
+    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=15.)#8.)#5#8
+    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=12.)#5.)#2.)#5
     parser.add_argument('--bg_sigma', help='', type=np.float, default=0.09)
-    parser.add_argument('--fg_sigma', help='', type=np.float, default=0.11)
+    parser.add_argument('--fg_sigma', help='', type=np.float, default=0.2)#0.11)
 
     args = parser.parse_args()
 
