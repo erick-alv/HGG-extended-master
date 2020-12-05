@@ -284,7 +284,7 @@ class Monet2_VAE(nn.Module):
         mu_s, logvar_s, masks = self.encode(x)
         z_s = [self._reparameterize(mu_s[i], logvar_s[i]) for i in range(len(mu_s))]
         full_reconstruction, x_recon_s, mask_pred_s = self.decode(z_s, masks)
-        #extra loss
+        '''#extra loss
         #take masks of fg
         fg_masks_united = torch.sum(torch.stack(masks[1:]), dim=0)
         #extract all fg objects
@@ -306,7 +306,9 @@ class Monet2_VAE(nn.Module):
         log_like = log_like.flatten(start_dim=1).sum(1)
         loss = -log_like.mean()
 
-        return loss, mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s
+        return loss, mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s'''
+
+        return mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s
 
 
 def loss_function(x, x_recon_s, masks, mask_pred_s, mu_s, logvar_s, beta, gamma, bg_sigma, fg_sigma, device, aa=0):
@@ -354,10 +356,6 @@ def loss_function(x, x_recon_s, masks, mask_pred_s, mu_s, logvar_s, beta, gamma,
 
     kl_masks = dists.kl_divergence(q_masks, q_masks_recon)
     kl_masks = torch.sum(kl_masks, [1, 2])
-    '''if aa % 100 == 0:
-        print('kl Mask is: {}'.format(kl_masks))
-        print('kl z is: {}'.format(kl_z))
-        print('px_s is: {}'.format(p_xs))'''
     for t in kl_masks:
         assert not torch.isnan(t)
         assert not torch.isinf(t)#here
@@ -369,6 +367,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
     model.train()
     train_loss = 0
     data_set = np.load(train_file)
+    data_set = data_set[:64]
 
     data_size = len(data_set)
     #creates indexes and shuffles them. So it can acces the data
@@ -382,11 +381,10 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
         data /= 255
         data = data.permute([0, 3, 1, 2])
         optimizer.zero_grad()
-        loss_extra, mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
+        mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
         loss_batch = loss_function(data, x_recon_s, masks, mask_pred_s, mu_s, logvar_s,
                                    beta, gamma, bg_sigma, fg_sigma, device=device, aa=batch_idx)
         loss = torch.mean(loss_batch)
-        loss = loss*100. + loss_extra
         loss.backward()
         optimizer.step()
         train_loss += loss.item()
@@ -454,7 +452,8 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
                            decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2, fg_sigma=fg_sigma).to(device)
 
         #todo check which optimizer is better
-        optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
+        #optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
+        optimizer = optim.Adam(model.parameters(), lr=1e-4)
         checkpoint = torch.load(vae_weights_path)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -471,8 +470,8 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
         #    nn.init.normal_(w, mean=0., std=std_init)
         #print('Initialized parameters')
         # todo check which optimizer is better
-        optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
-        # optimizer = optim.Adam(model.parameters(), lr=1e-4)
+        #optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
+        optimizer = optim.Adam(model.parameters(), lr=1e-4)
         start_epoch = 1
 
     for epoch in range(start_epoch, epochs + start_epoch):
@@ -510,7 +509,7 @@ def compare_with_data_set(model, device, filename_suffix, latent_size, train_fil
         data = torch.from_numpy(data).float().to(device)
         data /= 255
         data = data.permute([0, 3, 1, 2])
-        loss_extra, mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
+        mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
 
         visualize_masks(imgs=numpify(data),masks=numpify(torch.cat(masks, dim=1)),
                         recons=numpify(full_reconstruction), x_recon_s=numpify(torch.cat(x_recon_s)),
@@ -543,15 +542,15 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=2)
+    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=4)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=40)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
-    parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
-    parser.add_argument('--num_slots', help='number of slots', type=np.int32, default=6)
-    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=15.)#8.)#5#8
-    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=12.)#5.)#2.)#5
+    parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=8)
+    parser.add_argument('--num_slots', help='number of slots', type=np.int32, default=8)
+    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=1.)#8.)#5#8
+    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=2.)
     parser.add_argument('--bg_sigma', help='', type=np.float, default=0.09)
-    parser.add_argument('--fg_sigma', help='', type=np.float, default=0.2)#0.11)
+    parser.add_argument('--fg_sigma', help='', type=np.float, default=0.11)
 
     args = parser.parse_args()
 
