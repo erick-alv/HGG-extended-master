@@ -453,7 +453,7 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
 
         #todo check which optimizer is better
         #optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
-        optimizer = optim.Adam(model.parameters(), lr=1e-4)
+        optimizer = optim.Adam(model.parameters(), lr=1e-5)
         checkpoint = torch.load(vae_weights_path)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -471,7 +471,7 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
         #print('Initialized parameters')
         # todo check which optimizer is better
         #optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
-        optimizer = optim.Adam(model.parameters(), lr=1e-4)
+        optimizer = optim.Adam(model.parameters(), lr=1e-5)
         start_epoch = 1
 
     for epoch in range(start_epoch, epochs + start_epoch):
@@ -547,7 +547,7 @@ if __name__ == '__main__':
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=8)
     parser.add_argument('--num_slots', help='number of slots', type=np.int32, default=8)
-    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=1.)#8.)#5#8
+    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=5.)#8.)#5#8
     parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=2.)
     parser.add_argument('--bg_sigma', help='', type=np.float, default=0.09)
     parser.add_argument('--fg_sigma', help='', type=np.float, default=0.11)
