@@ -453,7 +453,7 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
 
         #todo check which optimizer is better
         #optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
-        optimizer = optim.Adam(model.parameters(), lr=1e-5)
+        optimizer = optim.Adam(model.parameters(), lr=1e-4)
         checkpoint = torch.load(vae_weights_path)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -471,7 +471,7 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
         #print('Initialized parameters')
         # todo check which optimizer is better
         #optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
-        optimizer = optim.Adam(model.parameters(), lr=1e-5)
+        optimizer = optim.Adam(model.parameters(), lr=1e-4)
         start_epoch = 1
 
     for epoch in range(start_epoch, epochs + start_epoch):
