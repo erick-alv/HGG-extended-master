@@ -594,7 +594,7 @@ if __name__ == '__main__':
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
     parser.add_argument('--num_slots', help='number of slots', type=np.int32, default=6)#8)
     parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=0.5)##8.)#8.)#5#8
-    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=0.5)###6.)#5.)
+    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=2.)###6.)#5.)
     parser.add_argument('--bg_sigma', help='', type=np.float, default=0.09)
     parser.add_argument('--fg_sigma', help='', type=np.float, default=0.11)
 
