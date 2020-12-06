@@ -272,8 +272,7 @@ class Monet2_VAE(nn.Module):
     def decode(self, z_s, masks):
         full_reconstruction = torch.zeros(
             (masks[0].shape[0], self.color_channels, self.width, self.height)).to(self.device)
-        full_reconstruction2 = torch.zeros(
-            (masks[0].shape[0], self.color_channels, self.width, self.height)).to(self.device)
+
         x_recon_s, mask_pred_s = [], []
         for i in range(len(masks)):
             x_recon, mask_pred = self._decoder_step(z_s[i], i)
@@ -282,14 +281,13 @@ class Monet2_VAE(nn.Module):
             full_reconstruction += x_recon*masks[i]
             # -> (B, 1, H, W)
             m_uns = torch.unsqueeze(mask_pred, dim=1)
-            full_reconstruction2 += x_recon * torch.sigmoid(m_uns)
-        return full_reconstruction, full_reconstruction2, x_recon_s, mask_pred_s
+        return full_reconstruction, x_recon_s, mask_pred_s
 
     def forward(self, x, training=False, params_dict ={}):
         B = x.shape[0]
         mu_s, logvar_s, masks = self.encode(x)
         z_s = [self._reparameterize(mu_s[i], logvar_s[i]) for i in range(len(mu_s))]
-        full_reconstruction, full_reconstruction2, x_recon_s, mask_pred_s = self.decode(z_s, masks)
+        full_reconstruction, x_recon_s, mask_pred_s = self.decode(z_s, masks)
         '''#extra loss
         #take masks of fg
         fg_masks_united = torch.sum(torch.stack(masks[1:]), dim=0)
@@ -313,6 +311,15 @@ class Monet2_VAE(nn.Module):
         loss = -log_like.mean()
 
         return loss, mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s'''
+        full_reconstruction2 = torch.zeros(
+            (B, self.color_channels, self.width, self.height)).to(self.device)
+        mask_pred_s_probs = F.softmax(torch.stack(mask_pred_s, dim=3), dim=3)
+        # -> (B, 8, H, W)
+        mask_pred_s_probs = mask_pred_s_probs.permute((0, 3, 1, 2))
+        for i in range(mask_pred_s_probs.shape[1]):
+            full_reconstruction2 += x_recon_s[i] * mask_pred_s_probs[:,i:i+1,:, :]
+
+
         if training:
             fg_sigma = params_dict['fg_sigma']
             bg_sigma = params_dict['bg_sigma']
