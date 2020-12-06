@@ -400,7 +400,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
     model.train()
     train_loss = 0
     data_set = np.load(train_file)
-    data_set = data_set[:256]
+    data_set = data_set[:512]
 
     data_size = len(data_set)
     #creates indexes and shuffles them. So it can acces the data
