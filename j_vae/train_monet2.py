@@ -366,7 +366,8 @@ class Monet2_VAE(nn.Module):
             mask_pred_s_permuted = mask_pred_s.permute([0, 2, 3, 1])
 
             masks= torch.cat(masks, 1)
-            masks_permuted = masks.permute([0, 2, 3, 1])
+            #masks_permuted = masks.permute([0, 2, 3, 1])
+            masks_permuted = masks.transpose(3, 1)
             q_masks = dists.Categorical(probs=masks_permuted)
             q_masks_recon = dists.Categorical(logits=mask_pred_s_permuted)
             # avoid problem of kl_divergence becoming inf
