@@ -6,6 +6,7 @@ import torch.distributions as dists
 import numpy as np
 from PIL import Image
 import os
+import torch.nn.functional as F
 from torch.distributions.normal import Normal
 
 this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
@@ -281,7 +282,7 @@ class Monet2_VAE(nn.Module):
             full_reconstruction += x_recon*masks[i]
             # -> (B, 1, H, W)
             m_uns = torch.unsqueeze(mask_pred, dim=1)
-            full_reconstruction2 += x_recon * m_uns
+            full_reconstruction2 += x_recon * torch.sigmoid(m_uns)
         return full_reconstruction, full_reconstruction2, x_recon_s, mask_pred_s
 
     def forward(self, x, training=False, params_dict ={}):
@@ -336,14 +337,25 @@ class Monet2_VAE(nn.Module):
                 p_x = torch.sum(p_x, [1, 2, 3])
                 p_xs += -p_x  # this iterartive sum might not be correct since log(x*y) = log(x)+log(y)
 
-            masks_tensor = torch.cat(masks, 1)
-            tr_masks = torch.transpose(masks_tensor, 1, 3)
-            q_masks = dists.Categorical(probs=tr_masks)
-            stacked_mask_preds = torch.stack(mask_pred_s, 3)
-            q_masks_recon = dists.Categorical(logits=stacked_mask_preds)
+            mask_pred_s = [m.unsqueeze(dim=1) for m in mask_pred_s]
+            mask_pred_s = torch.cat(mask_pred_s, 1)
+
+            mask_pred_softmaxed = F.softmax(mask_pred_s, dim=1)
+            mask_pred_softmaxed_permuted = mask_pred_softmaxed.permute([0, 2, 3, 1])
+            summed = mask_pred_softmaxed.sum(dim=1)
+
+            mask_pred_s_permuted = mask_pred_s.permute([0, 2, 3, 1])
+
+            masks= torch.cat(masks, 1)
+            masks_permuted = masks.permute([0, 2, 3, 1])
+            q_masks = dists.Categorical(probs=masks_permuted)
+            q_masks_recon = dists.Categorical(logits=mask_pred_s_permuted)
             # avoid problem of kl_divergence becoming inf
             smallest_num = torch.finfo(q_masks_recon.probs.dtype).tiny
             q_masks_recon.probs[q_masks_recon.probs == 0.] = smallest_num
+
+            q_test = dists.Categorical(probs=mask_pred_softmaxed_permuted)
+            kl_test = dists.kl_divergence(q_masks_recon, q_test)
 
             kl_masks = dists.kl_divergence(q_masks, q_masks_recon)
             kl_masks = torch.sum(kl_masks, [1, 2])
@@ -352,6 +364,13 @@ class Monet2_VAE(nn.Module):
 
             return loss, mu_s, logvar_s, masks, full_reconstruction, full_reconstruction2, x_recon_s, mask_pred_s
         else:
+            masks = torch.cat(masks, dim=1)
+            #transform to probs with softmax
+            #mask_pred_s = [m.unsqueeze(dim=1) for m in mask_pred_s]
+            mask_pred_s = F.softmax(torch.stack(mask_pred_s, dim=3), dim=3)
+            mask_pred_s = mask_pred_s.permute((0, 3, 1, 2))
+            #mask_pred_s = torch.cat(mask_pred_s, dim=1)
+            #mask_pred_s = F.softmax(mask_pred_s, dim=1)
             return mu_s, logvar_s, masks, full_reconstruction, full_reconstruction2, x_recon_s, mask_pred_s
 
 
@@ -398,7 +417,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
 def numpify(tensor):
     return tensor.cpu().detach().numpy()
 
-def visualize_masks(imgs, masks, recons, recons2, x_recon_s, file_name):
+def visualize_masks(imgs, masks, masks_recon, recons, recons2, x_recon_s, file_name):
     recons = np.clip(recons, 0., 1.)
     colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (0, 255, 255), (255, 0, 255), (255, 255, 0), (0, 0, 0), (0, 127, 255), (0,255, 127)]
     colors.extend([(c[0]//2, c[1]//2, c[2]//2) for c in colors])
@@ -416,6 +435,10 @@ def visualize_masks(imgs, masks, recons, recons2, x_recon_s, file_name):
     x_recon_s *= 255.0
     masks_ims = [np.stack([masks[:, i, :, :]]*3, axis=1) for i in range(masks.shape[1])]
     masks_ims = [np.concatenate(np.transpose(m, (0, 2, 3, 1)), axis=1) for m in masks_ims]
+
+    masks_recon_ims = [np.stack([masks_recon[:, i, :, :]]*3, axis=1) for i in range(masks_recon.shape[1])]
+    masks_recon_ims = [np.concatenate(np.transpose(m, (0, 2, 3, 1)), axis=1) for m in masks_recon_ims]
+
     x_recon_s = x_recon_s.reshape((masks.shape[0], masks.shape[1], 3, masks.shape[2], masks.shape[2] ))
     x_recon_s_ims = [x_recon_s[:, i, :, :] for i in range(x_recon_s.shape[1])]
     x_recon_s_ims = [np.concatenate(np.transpose(m, (0, 2, 3, 1)), axis=1) for m in x_recon_s_ims]
@@ -428,7 +451,7 @@ def visualize_masks(imgs, masks, recons, recons2, x_recon_s, file_name):
     recons = np.concatenate(recons, axis=1)
     recons2 = np.transpose(recons2, (0, 2, 3, 1))
     recons2 = np.concatenate(recons2, axis=1)
-    all_list = [imgs, seg_maps, recons, recons2]+masks_ims+x_recon_s_ims
+    all_list = [imgs, seg_maps, recons, recons2]+masks_ims+x_recon_s_ims+masks_recon_ims
     all_im_array = np.concatenate(all_list, axis=0)
     all_im = Image.fromarray(all_im_array.astype(np.uint8))
     all_im.save(file_name)
@@ -510,7 +533,8 @@ def compare_with_data_set(model, device, filename_suffix, latent_size, train_fil
         mu_s, logvar_s, masks, full_reconstruction, full_reconstruction2, x_recon_s, mask_pred_s = model(data)
 
         visualize_masks(imgs=numpify(data),
-                        masks=numpify(torch.cat(masks, dim=1)),
+                        masks=numpify(masks),
+                        masks_recon=numpify(mask_pred_s),
                         recons=numpify(full_reconstruction),
                         recons2=numpify(full_reconstruction2),
                         x_recon_s=numpify(torch.cat(x_recon_s)),
@@ -542,7 +566,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=8)#8)
+    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=4)#8)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=40)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=8)
