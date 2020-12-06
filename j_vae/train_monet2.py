@@ -429,10 +429,13 @@ def visualize_masks(imgs, masks, masks_recon, recons, recons2, x_recon_s, file_n
             for x in range(imgs.shape[3]):
                 seg_maps[i, :, y, x] = colors[masks_argmax[i, y, x]]
 
-    imgs *= 255.0
-    recons *= 255.0
-    masks *= 255.0
-    x_recon_s *= 255.0
+    imgs *= 255.
+    masks *= 255.
+    masks_recon *= 255.
+    recons *= 255.
+    recons2 *= 255.
+    x_recon_s *= 255.
+
     masks_ims = [np.stack([masks[:, i, :, :]]*3, axis=1) for i in range(masks.shape[1])]
     masks_ims = [np.concatenate(np.transpose(m, (0, 2, 3, 1)), axis=1) for m in masks_ims]
 
