@@ -345,9 +345,10 @@ class Monet2_VAE(nn.Module):
                 #p_x = dist.log_prob(x)
                 #p_x *= masks[i]
                 #log_mask_k + log_prob(x|z_k) = mask_k * prob(x|z_k)
-                ##p_x = masks[i].log() + dist.log_prob(x)
+                p_x1 = masks[i].log() + dist.log_prob(x)
                 #trying with loss of other paper
-                p_x = dist.log_prob(x*masks[i])
+                p_x2 = dist.log_prob(x*masks[i])
+                p_x = p_x1 + p_x2
                 #p_x = torch.sum(p_x, [1, 2, 3])
                 #p_xs += -p_x  # this iterartive sum might not be correct since log(x*y) = log(x)+log(y)
                 p_xs[:, i] = p_x
