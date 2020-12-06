@@ -335,6 +335,9 @@ class Monet2_VAE(nn.Module):
             kl_z = torch.zeros(batch_size).to(x.device)
             for i in range(len(masks)):
                 kld = -0.5 * torch.sum(1 + logvar_s[i] - mu_s[i].pow(2) - logvar_s[i].exp(), dim=1)
+                for t in kld:
+                    assert not torch.isnan(t)
+                    assert not torch.isinf(t)
                 kl_z += kld
                 if i == 0:
                     sigma = bg_sigma
@@ -346,6 +349,9 @@ class Monet2_VAE(nn.Module):
                 #p_x *= masks[i]
                 #log_mask_k + log_prob(x|z_k) = mask_k * prob(x|z_k)
                 p_x = masks[i].log() + dist.log_prob(x)
+                for t in p_x:
+                    assert not torch.isnan(t)
+                    assert not torch.isinf(t)
                 #trying with loss of other paper
                 #p_x2 = dist.log_prob(x*masks[i])
                 #p_x = p_x1 + p_x2
@@ -359,26 +365,29 @@ class Monet2_VAE(nn.Module):
             mask_pred_s = [m.unsqueeze(dim=1) for m in mask_pred_s]
             mask_pred_s = torch.cat(mask_pred_s, 1)
 
-            mask_pred_softmaxed = F.softmax(mask_pred_s, dim=1)
+            '''mask_pred_softmaxed = F.softmax(mask_pred_s, dim=1)
             mask_pred_softmaxed_permuted = mask_pred_softmaxed.permute([0, 2, 3, 1])
-            summed = mask_pred_softmaxed.sum(dim=1)
+            summed = mask_pred_softmaxed.sum(dim=1)'''
 
             mask_pred_s_permuted = mask_pred_s.permute([0, 2, 3, 1])
 
             masks= torch.cat(masks, 1)
-            #masks_permuted = masks.permute([0, 2, 3, 1])
-            masks_permuted = masks.transpose(3, 1)
+            masks_permuted = masks.permute([0, 2, 3, 1])
+            #masks_permuted = masks.transpose(3, 1)
             q_masks = dists.Categorical(probs=masks_permuted)
             q_masks_recon = dists.Categorical(logits=mask_pred_s_permuted)
             # avoid problem of kl_divergence becoming inf
             smallest_num = torch.finfo(q_masks_recon.probs.dtype).tiny
             q_masks_recon.probs[q_masks_recon.probs == 0.] = smallest_num
 
-            q_test = dists.Categorical(probs=mask_pred_softmaxed_permuted)
-            kl_test = dists.kl_divergence(q_masks_recon, q_test)
+            '''q_test = dists.Categorical(probs=mask_pred_softmaxed_permuted)
+            kl_test = dists.kl_divergence(q_masks_recon, q_test)'''
 
             kl_masks = dists.kl_divergence(q_masks, q_masks_recon)
             kl_masks = torch.sum(kl_masks, [1, 2])
+            for t in kl_masks:
+                assert not torch.isnan(t)
+                assert not torch.isinf(t)
             loss_batch = gamma * kl_masks + p_xs + beta * kl_z
             loss = torch.mean(loss_batch)
 
