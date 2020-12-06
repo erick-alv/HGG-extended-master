@@ -350,8 +350,8 @@ class Monet2_VAE(nn.Module):
                 #log_mask_k + log_prob(x|z_k) = mask_k * prob(x|z_k)
                 p_x = masks[i].log() + dist.log_prob(x)
                 for t in p_x:
-                    assert not torch.isnan(t)
-                    assert not torch.isinf(t)
+                    assert not torch.isnan(t.sum())
+                    assert not torch.isinf(t.sum())
                 #trying with loss of other paper
                 #p_x2 = dist.log_prob(x*masks[i])
                 #p_x = p_x1 + p_x2
