@@ -32,8 +32,8 @@ if __name__ == '__main__':
     opt_1182 = (0.63, 0.92, 0.98, 0.99)
     opt_1186 = (0.94, 0.96, 0.95, 0.97)
     opt_1280 = (0.1, 0.84, 0.99, 0.99)
-    opt_1282 = ()
-    opt_1286 = ()
+    opt_1282 = (0.74, 0.92, 0.96, 0.98)
+    opt_1286 = (0.94, 0.97, 0.98, 0.96)
 
     opt_1176 = (0.97, 0.98, 0.99, 0.99)
     bbox_3180 = (0, 0, 0, 0)
@@ -79,9 +79,9 @@ if __name__ == '__main__':
         plt.bar(ind, opt_1180, width, label='1) reward -2')
         plt.bar(ind + width, opt_1182, width, label='1) safe region, reward -2')
         plt.bar(ind + 2 * width, opt_1186, width, label='1) reward -10')
-        '''plt.bar(ind + 3 * width, opt_1280, width,label='2) reward -2')
+        plt.bar(ind + 3 * width, opt_1280, width,label='2) reward -2')
         plt.bar(ind + 4 * width, opt_1282, width,label='2) safe region, reward -2')
-        plt.bar(ind + 5 * width, opt_1286, width, label='2) coll. reward -10')'''
+        plt.bar(ind + 5 * width, opt_1286, width, label='2) reward -10')
         figname = 'comparison_rewmods_vs_safe.png'
     elif show_results == 5:
         plt.bar(ind, bbox_3180, width, label='bbox reward -2')
