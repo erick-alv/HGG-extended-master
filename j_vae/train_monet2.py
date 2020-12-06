@@ -311,13 +311,14 @@ class Monet2_VAE(nn.Module):
         loss = -log_like.mean()
 
         return loss, mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s'''
-        full_reconstruction2 = torch.zeros(
-            (B, self.color_channels, self.width, self.height)).to(self.device)
-        mask_pred_s_probs = F.softmax(torch.stack(mask_pred_s, dim=3), dim=3)
-        # -> (B, 8, H, W)
-        mask_pred_s_probs = mask_pred_s_probs.permute((0, 3, 1, 2))
-        for i in range(mask_pred_s_probs.shape[1]):
-            full_reconstruction2 += x_recon_s[i] * mask_pred_s_probs[:,i:i+1,:, :]
+        with torch.no_grad():
+            full_reconstruction2 = torch.zeros(
+                (B, self.color_channels, self.width, self.height)).to(self.device)
+            mask_pred_s_probs = F.softmax(torch.stack(mask_pred_s, dim=3), dim=3)
+            # -> (B, 8, H, W)
+            mask_pred_s_probs = mask_pred_s_probs.permute((0, 3, 1, 2))
+            for i in range(mask_pred_s_probs.shape[1]):
+                full_reconstruction2 += x_recon_s[i] * mask_pred_s_probs[:,i:i+1,:, :]
 
 
         if training:
@@ -328,7 +329,9 @@ class Monet2_VAE(nn.Module):
             #calculates the loss
 
             batch_size = x.shape[0]
-            p_xs = torch.zeros(batch_size).to(x.device)
+            p_xs = torch.zeros(
+                (B, self.num_slots, self.color_channels, self.width, self.height)
+            ).to(x.device)
             kl_z = torch.zeros(batch_size).to(x.device)
             for i in range(len(masks)):
                 kld = -0.5 * torch.sum(1 + logvar_s[i] - mu_s[i].pow(2) - logvar_s[i].exp(), dim=1)
@@ -339,10 +342,16 @@ class Monet2_VAE(nn.Module):
                     sigma = fg_sigma
                 dist = dists.Normal(x_recon_s[i], sigma)
                 # log(p_theta(x|z_k))
-                p_x = dist.log_prob(x)
-                p_x *= masks[i]
-                p_x = torch.sum(p_x, [1, 2, 3])
-                p_xs += -p_x  # this iterartive sum might not be correct since log(x*y) = log(x)+log(y)
+                #p_x = dist.log_prob(x)
+                #p_x *= masks[i]
+                #log_mask + log_prob(x|z_k) = mask * probprob(x|z_k)
+                p_x = masks[i].log() + dist.log_prob(x)
+                #p_x = torch.sum(p_x, [1, 2, 3])
+                #p_xs += -p_x  # this iterartive sum might not be correct since log(x*y) = log(x)+log(y)
+                p_xs[:, i] = p_x
+            p_xs = -torch.logsumexp(p_xs, dim=1)
+            # -> (B)
+            p_xs = torch.sum(p_xs, [1,2,3])
 
             mask_pred_s = [m.unsqueeze(dim=1) for m in mask_pred_s]
             mask_pred_s = torch.cat(mask_pred_s, 1)
