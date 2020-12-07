@@ -447,6 +447,12 @@ for reward_type in ['sparse', 'dense']:
         max_episode_steps=100,)
 
     register(
+        id='FetchPushMovingObstacleEnv{}-v2'.format(suffix),
+        entry_point='gym.envs.robotics:FetchPushMovingObstacleEnv2',
+        kwargs=kwargs,
+        max_episode_steps=100, )
+
+    register(
         id='FetchPushMovingDoubleObstacleEnv{}-v1'.format(suffix),
         entry_point='gym.envs.robotics:FetchPushMovingDoubleObstacleEnv',
         kwargs=kwargs,

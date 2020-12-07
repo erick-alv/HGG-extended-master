@@ -255,7 +255,7 @@ def load_vaes(args):
 def load_field_parameters(args):
 	def load_real_field_params():
 		if args.env in ['FetchPushLabyrinth-v1', 'FetchPushObstacleFetchEnv-v1', 'FetchPushMovingObstacleEnv-v1',
-						'FetchPushMovingComEnv-v1']:
+						'FetchPushMovingObstacleEnv-v2','FetchPushMovingComEnv-v1']:
 			args.real_field_center = [1.3, 0.75]
 			args.real_field_size = [0.25, 0.25]
 		elif args.env in ['FetchPushMovingDoubleObstacleEnv-v1']:

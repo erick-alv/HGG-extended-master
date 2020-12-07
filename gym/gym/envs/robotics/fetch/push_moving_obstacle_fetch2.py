@@ -5,9 +5,9 @@ import numpy as np
 import copy
 
 # Ensure we get the path separator correct on windows
-MODEL_XML_PATH = os.path.join('fetch', 'push_moving_obstacle_fetch.xml')
+MODEL_XML_PATH = os.path.join('fetch', 'push_moving_obstacle_fetch2.xml')
 
-class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
+class FetchPushMovingObstacleEnv2(fetch_env.FetchEnv, utils.EzPickle):
     def __init__(self, reward_type='sparse'):
         self.further = False
 
@@ -23,8 +23,8 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.current_obstacle_vel = 1.2
         self.initial_obstacle_direction = 1
         self.obstacle_direction = 1
-        self.obstacle_upper_limit = 1.35
-        self.obstacle_lower_limit = 1.25
+        self.obstacle_upper_limit = 1.46
+        self.obstacle_lower_limit = 1.14
         self.pos_dif = (self.obstacle_upper_limit - self.obstacle_lower_limit) / 2.
 
 
@@ -44,25 +44,6 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
 
     # RobotEnv methods
     # ----------------------------
-
-    '''def _step_callback(self):
-        # direction is one dimensional see type = 'slide' in mujoco doc
-        body_id = self.sim.model.body_name2id('obstacle')
-        mov_obst_center = self.sim.data.body_xpos[body_id]
-        if mov_obst_center[0] >= self.obstacle_upper_limit and self.obstacle_direction == 1:
-            self.obstacle_direction = -1
-        elif mov_obst_center[0] <= self.obstacle_lower_limit and self.obstacle_direction == -1:
-            self.obstacle_direction = 1
-        dt = self.sim.nsubsteps * self.sim.model.opt.timestep
-        if self.obstacle_direction == 1 and \
-                self.sim.model.body_pos[body_id][0] + self.obstacle_vel * dt > self.obstacle_upper_limit:
-            self.sim.model.body_pos[body_id][0] = self.obstacle_upper_limit
-        elif self.obstacle_direction == -1 and \
-                self.sim.model.body_pos[body_id][0] - self.obstacle_vel * dt < self.obstacle_lower_limit:
-            self.sim.model.body_pos[body_id][0] = self.obstacle_lower_limit
-        else:
-            self.sim.model.body_pos[body_id][0] += self.obstacle_vel * self.obstacle_direction * dt
-        super(FetchPushMovingObstacleEnv, self)._step_callback()'''
 
     def test_setup(self, new_vel_lims=[1.8, 2.2]):
         '''
@@ -94,7 +75,6 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         qpos = self.sim.data.qpos.flat[:]
         current_qpos = qpos[self.obstacle_slider_idx]
 
-
         if self.obstacle_direction == 1:
             if current_qpos >= self.pos_dif:
                 new_pos = current_qpos - self.current_obstacle_vel * dt
@@ -125,13 +105,9 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
                     new_pos = current_qpos - extra_dist
                     self.set_obstacle_slide_pos(new_pos)
 
-        #body_id = self.sim.model.body_name2id('obstacle')
-        #mov_obst_center = self.sim.data.body_xpos[body_id]
-        #print(mov_obst_center)
-
     def step(self, action):
         self.move_obstacle()
-        return super(FetchPushMovingObstacleEnv, self).step(action)
+        return super(FetchPushMovingObstacleEnv2, self).step(action)
 
 
     def _sample_goal(self):
@@ -171,7 +147,7 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         return True
 
     def _get_obs(self):
-        obs = super(FetchPushMovingObstacleEnv, self)._get_obs()
+        obs = super(FetchPushMovingObstacleEnv2, self)._get_obs()
         body_id = self.sim.model.body_name2id('obstacle')
         pos = self.sim.data.body_xpos[body_id].copy()
         dims = np.array([0.09, 0.03, 0.025])
@@ -181,27 +157,3 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         obs['real_obstacle_info'] = ob.copy()
         obs['real_size_goal'] = np.array([0.045, 0.045, 0.025])
         return obs
-
-'''if __name__ == '__main__':
-    import time
-    from utils.image_util import rgb_array_to_image
-    import cv2
-    e = FetchPushMovingObstacleEnv()
-    im_size = 500
-    ims = []
-    for episode in range(5):
-        ob = e.reset()
-        for step in range(100):
-            array = e.render(mode='rgb_array')
-            image = rgb_array_to_image(array)
-            ims.append(image)
-            a = e.action_space.sample()
-            e.step(a)
-            obs = e._get_obs()
-    e.close()
-    out = cv2.VideoWriter('/home/erick/RL/HGG-extended/HGG-Extended-master/vid.avi',
-                          cv2.VideoWriter_fourcc(*'DIVX'),
-                          10, (im_size, im_size))
-    for i in range(len(ims)):
-        out.write(np.array(ims[i]))
-    out.release()'''

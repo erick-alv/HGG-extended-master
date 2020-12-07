@@ -1,21 +1,7 @@
 import numpy as np
 import copy
-'''import matplotlib.pyplot as plt
-from matplotlib.patches import Arc
-import torch
-from common import get_args
-from envs import make_env
-from j_vae.vae_mix_test import setup_env_sizes, take_goal_image, take_obstacle_image
-from j_vae.generate_vae_data import random_pos_inside, size_file, min_obstacle_size, max_obstacle_size, random_size_at, \
-    range_x, range_y, obstacle_size, puck_size, generate_points, z_table_height
-from j_vae.latent_space_transformations import obstacle_transformation, goal_transformation, get_size_in_space, \
-    from_real_pos_to_range, from_real_radius_to_range
-
-
-vae_model_obstacle = load_Vae_SB(path='../data/FetchPushObstacle/vae_sb_model_obstacle')
-vae_model_goal = load_Vae_SB(path='../data/FetchPushObstacle/vae_sb_model_goal')
-img_size = 84
-vae_model_size = load_Vae(path='../data/FetchPushObstacle/vae_model_sizes', img_size=img_size, latent_size=1)'''
+from envs.distance_graph import DistanceGraph2D
+from scipy.stats import uniform
 
 
 def check_for_collision(g0, g1, o, r_o):
@@ -218,7 +204,7 @@ def calculate_distance_batch(obstacle_pos, obstacle_radius, current_pos_batch, g
     return dist
 
 
-from scipy.stats import uniform
+
 class DistMovEst:
     def __init__(self):
         self.max_x = None
@@ -283,7 +269,7 @@ class DistMovEst:
         obstacles.append([self.x_mid, self.y_mid, size_x, size_y])
         self.obstacles = obstacles
         graph = DistanceGraph2D(args=None, field=field, num_vertices=num_vertices,
-                                obstacles=obstacles, size_increase=size_increase)
+                                obstacles=obstacles, size_increase=size_increase, use_discrete=True)
         graph.compute_cs_graph()
         graph.compute_dist_matrix()
         self.graph = graph
@@ -340,10 +326,13 @@ class DistMovEstReal(DistMovEst):
         obstacles.append([self.x_mid, self.y_mid, size_x, size_y])
         self.obstacles = obstacles
         graph = DistanceGraph2D(args=None, field=field, num_vertices=num_vertices,
-                                obstacles=obstacles, size_increase=size_increase)
+                                obstacles=obstacles, size_increase=size_increase, use_discrete=True)
         graph.compute_cs_graph()
         graph.compute_dist_matrix()
         self.graph = graph
+        distances = self.calculate_distance_batch(np.array([1.3, 0.9, 0.4]),
+                                                  np.array([[1.3, 0.92, 0.4], [1.4, 1., 0.4]]))
+        print(distances)
 
     def calculate_distance_batch(self, goal_pos, current_pos_batch):
         d, _ = self.graph.get_dist_batch(goal_pos, current_pos_batch)
@@ -353,7 +342,7 @@ class DistMovEstReal(DistMovEst):
 
 
 
-from envs.distance_graph import  DistanceGraph2D
+
 #Works for estimations in 2D plane
 class MultipleObstacle(DistMovEst):
     def __init__(self):
@@ -378,10 +367,11 @@ class MultipleObstacle(DistMovEst):
             obstacles.append([self.x_mid[i], self.y_mid[i], size_x, size_y])
         self.obstacles = obstacles
         graph = DistanceGraph2D(args=None, field=field, num_vertices=num_vertices,
-                                obstacles=obstacles, size_increase=size_increase)
+                                obstacles=obstacles, size_increase=size_increase, use_discrete=True)
         graph.compute_cs_graph()
         graph.compute_dist_matrix()
         self.graph = graph
+
 
     def calculate_distance_batch(self, goal_pos, current_pos_batch):
         B = len(current_pos_batch)

@@ -18,7 +18,7 @@ class DistanceGraph:
     dist_matrix = None
     predecessors = None
 
-    def __init__(self, args, field, num_vertices, obstacles, z_dim_is_flat=False, size_increase=0.02):
+    def __init__(self, args, field, num_vertices, obstacles, use_discrte, z_dim_is_flat=False, size_increase=0.02):
         # field is of form [m_x, m_y, m_z, l, w, h], same format as in mujoco
         # obstacles is list with entries of form: [m_x, m_y, m_z, l, w, h], same format as in mujoco
         # Up to 10000 nodes can be handled memorywise (computation time non-problematic in this case)
@@ -26,6 +26,7 @@ class DistanceGraph:
 
         [m_x, m_y, m_z, l, w, h] = field
         self.args = args
+        self.use_discrete = use_discrte
 
         # Get min and max coordinate values, number of spaces in each direction, obstacles and z_penalty
         self.x_min = m_x - l
@@ -232,6 +233,9 @@ class DistanceGraph:
             raise Exception("No CS_Graph available!")
         if compute_predecessors:
             self.dist_matrix, self.predecessors = dijkstra(self.cs_graph, directed=False, return_predecessors=True)
+
+        elif self.use_discrete:
+            self.dist_matrix = dijkstra(self.cs_graph, directed=False, return_predecessors=False, unweighted=True)
         else:
             self.dist_matrix = dijkstra(self.cs_graph, directed=False, return_predecessors=False)
         end = timer()
@@ -449,7 +453,7 @@ class DistanceGraph:
             self.args.logger.info("\tdone")
 
 class DistanceGraph2D(DistanceGraph):
-    def __init__(self, args, field, num_vertices, obstacles, size_increase):
+    def __init__(self, args, field, num_vertices, obstacles, size_increase, use_discrete):
         #This completely uses other methods, just adapts the parameters to use as 2D plane
 
         field = [field[0], field[1], 0., field[2], field[3], 0.]#
@@ -460,7 +464,7 @@ class DistanceGraph2D(DistanceGraph):
             new_obstacles.append([o[0], o[1], 0., o[2], o[3], 0.])
 
         super(DistanceGraph2D, self).__init__(args, field, num_vertices, new_obstacles, z_dim_is_flat=True,
-                                              size_increase=size_increase)
+                                              size_increase=size_increase, use_discrte=use_discrete)
 
 
     def get_dist(self, coords1, coords2, return_path=False):
