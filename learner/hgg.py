@@ -404,9 +404,7 @@ class HGGLearner:
 				if timestep==args.timesteps-1: done = True#this makes that the last obs is as done
 				current.store_step(action, obs, reward, done)
 				if done: break
-				stop_trajectory = check_conditions_after_step(obs, args)
-				if stop_trajectory:
-					break
+				
 
 			## just for video
 			if (self.learn_calls % 100 == 0 and i == args.episodes - 1) or \
@@ -601,9 +599,9 @@ class HGGLearner_VAEs(HGGLearner):
 
 			#just for video
 			#todo comment after correcting
-			#print('exploration goal: {}'.format(explore_goal))
-			#print('test goal: {}'.format(test_goal))
-			#self.env_List[i].env.env._move_object(position=self.env_List[i].goal.copy())
+			print('exploration goal: {}'.format(explore_goal))
+			print('test goal: {}'.format(test_goal))
+			self.env_List[i].env.env._move_object(position=self.env_List[i].goal.copy())
 			tr_goal = take_goal_image(self.env_List[i], args.img_size)
 			create_rollout_video(tr_env_images, args=args, goal_image=tr_goal,
 								 filename='rollout_call_{}_it_{}'.format(self.learn_calls, i))
@@ -637,7 +635,8 @@ class HGGLearner_VAEs(HGGLearner):
 		# Check which of the explore goals are inside the target goal space
 		# target goal space is represented by a sample of test_goals directly generated from the environemnt
 		# an explore goal is considered inside the target goal space, if it is closer than the distance_threshold to one of the test goals
-		# (i.e. would yield a non-negative reward if that test goal was to be achieved		if self.learn_calls > 0:
+		# (i.e. would yield a non-negative reward if that test goal was to be achieved)
+		if self.learn_calls > 0:
 			assert len(explore_goals) == len(test_goals)
 			for ex in explore_goals:
 				is_inside = 0
