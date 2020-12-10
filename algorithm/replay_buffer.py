@@ -256,7 +256,7 @@ class ReplayBuffer_Episodic:
 					rew = self.buffer['rews'][idx][step][0]
 				else:
 					rew = self.args.compute_reward(self.buffer['obs'][idx][step + 1], self.buffer['obs'][idx][step], goal)
-				done = self.buffer['done'][idx][step]
+				done = self.buffer['done'][idx][step]#todo is this done correct?
 
 				batch['obs'].append(copy.deepcopy(obs))
 				batch['obs_next'].append(copy.deepcopy(obs_next))

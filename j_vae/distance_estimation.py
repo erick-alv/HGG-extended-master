@@ -269,7 +269,7 @@ class DistMovEst:
         obstacles.append([self.x_mid, self.y_mid, size_x, size_y])
         self.obstacles = obstacles
         graph = DistanceGraph2D(args=None, field=field, num_vertices=num_vertices,
-                                obstacles=obstacles, size_increase=size_increase, use_discrete=True)
+                                obstacles=obstacles, size_increase=size_increase, use_discrete=False)
         graph.compute_cs_graph()
         graph.compute_dist_matrix()
         self.graph = graph
@@ -326,7 +326,7 @@ class DistMovEstReal(DistMovEst):
         obstacles.append([self.x_mid, self.y_mid, size_x, size_y])
         self.obstacles = obstacles
         graph = DistanceGraph2D(args=None, field=field, num_vertices=num_vertices,
-                                obstacles=obstacles, size_increase=size_increase, use_discrete=True)
+                                obstacles=obstacles, size_increase=size_increase, use_discrete=False)
         graph.compute_cs_graph()
         graph.compute_dist_matrix()
         self.graph = graph
@@ -367,7 +367,7 @@ class MultipleObstacle(DistMovEst):
             obstacles.append([self.x_mid[i], self.y_mid[i], size_x, size_y])
         self.obstacles = obstacles
         graph = DistanceGraph2D(args=None, field=field, num_vertices=num_vertices,
-                                obstacles=obstacles, size_increase=size_increase, use_discrete=True)
+                                obstacles=obstacles, size_increase=size_increase, use_discrete=False)
         graph.compute_cs_graph()
         graph.compute_dist_matrix()
         self.graph = graph
