@@ -404,7 +404,7 @@ class HGGLearner:
 				if timestep==args.timesteps-1: done = True#this makes that the last obs is as done
 				current.store_step(action, obs, reward, done)
 				if done: break
-				
+
 
 			## just for video
 			if (self.learn_calls % 100 == 0 and i == args.episodes - 1) or \
@@ -599,12 +599,12 @@ class HGGLearner_VAEs(HGGLearner):
 
 			#just for video
 			#todo comment after correcting
-			print('exploration goal: {}'.format(explore_goal))
-			print('test goal: {}'.format(test_goal))
-			self.env_List[i].env.env._move_object(position=self.env_List[i].goal.copy())
-			tr_goal = take_goal_image(self.env_List[i], args.img_size)
-			create_rollout_video(tr_env_images, args=args, goal_image=tr_goal,
-								 filename='rollout_call_{}_it_{}'.format(self.learn_calls, i))
+			#print('exploration goal: {}'.format(explore_goal))
+			#print('test goal: {}'.format(test_goal))
+			#self.env_List[i].env.env._move_object(position=self.env_List[i].goal.copy())
+			#tr_goal = take_goal_image(self.env_List[i], args.img_size)
+			#create_rollout_video(tr_env_images, args=args, goal_image=tr_goal,
+			#					 filename='rollout_call_{}_it_{}'.format(self.learn_calls, i))
 
 			# Trajectory is stored in replay buffer, replay buffer can be normal or EBP
 			buffer.store_trajectory(current)
