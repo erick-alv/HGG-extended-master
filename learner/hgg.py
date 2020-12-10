@@ -404,6 +404,9 @@ class HGGLearner:
 				if timestep==args.timesteps-1: done = True#this makes that the last obs is as done
 				current.store_step(action, obs, reward, done)
 				if done: break
+				stop_trajectory = check_conditions_after_step(obs, args)
+				if stop_trajectory:
+					break
 
 			## just for video
 			if (self.learn_calls % 100 == 0 and i == args.episodes - 1) or \
@@ -553,7 +556,8 @@ class HGGLearner_VAEs(HGGLearner):
 
 			# store goals in explore_goals list to check whether goals are within goal space later
 			explore_goals.append(explore_goal)
-			test_goals.append(self.env.generate_goal())
+			test_goal = self.env.generate_goal()
+			test_goals.append(test_goal.copy())
 
 			# Perform HER training by interacting with the environment
 			self.env_List[i].goal = explore_goal.copy()
@@ -567,6 +571,7 @@ class HGGLearner_VAEs(HGGLearner):
 			trajectory_goals_latents = [obs['achieved_goal_latent'].copy()]
 			trajectory_obstacles_latents = [obs['obstacle_latent'].copy()]
 			trajectory_obstacles_latents_sizes = [obs['obstacle_size_latent'].copy()]
+			# just for video
 			tr_env_images = [take_env_image(self.env_List[i], args.img_size)]
 
 			for timestep in range(args.timesteps):
@@ -577,19 +582,31 @@ class HGGLearner_VAEs(HGGLearner):
 				trajectory_goals_latents.append(obs['achieved_goal_latent'].copy())
 				trajectory_obstacles_latents.append(obs['obstacle_latent'].copy())
 				trajectory_obstacles_latents_sizes.append(obs['obstacle_size_latent'].copy())
+
+				#just for video
+				tr_env_images.append(take_env_image(self.env_List[i], args.img_size))
+
 				if timestep==args.timesteps-1: done = True#this makes that the last obs is as done
 				current.store_step(action, obs, reward, done)
 				if done: break
 				stop_trajectory = check_conditions_after_step(obs, args)
 				if stop_trajectory:
 					break
-			## just for video
 			achieved_trajectories.append(np.array(trajectory))
 			achieved_init_states.append(init_state)
 			achieved_trajectory_goals_latents.append(np.array(trajectory_goals_latents))
 			achieved_trajectory_init_goals_latents.append(trajectory_goals_latents[0].copy())
 			achieved_trajectory_obstacle_latents.append(np.array(trajectory_obstacles_latents))
 			achieved_trajectory_obstacle_latents_sizes.append(np.array(trajectory_obstacles_latents_sizes))
+
+			#just for video
+			#todo comment after correcting
+			#print('exploration goal: {}'.format(explore_goal))
+			#print('test goal: {}'.format(test_goal))
+			#self.env_List[i].env.env._move_object(position=self.env_List[i].goal.copy())
+			tr_goal = take_goal_image(self.env_List[i], args.img_size)
+			create_rollout_video(tr_env_images, args=args, goal_image=tr_goal,
+								 filename='rollout_call_{}_it_{}'.format(self.learn_calls, i))
 
 			# Trajectory is stored in replay buffer, replay buffer can be normal or EBP
 			buffer.store_trajectory(current)
@@ -620,8 +637,7 @@ class HGGLearner_VAEs(HGGLearner):
 		# Check which of the explore goals are inside the target goal space
 		# target goal space is represented by a sample of test_goals directly generated from the environemnt
 		# an explore goal is considered inside the target goal space, if it is closer than the distance_threshold to one of the test goals
-		# (i.e. would yield a non-negative reward if that test goal was to be achieved)
-		if self.learn_calls > 0:
+		# (i.e. would yield a non-negative reward if that test goal was to be achieved		if self.learn_calls > 0:
 			assert len(explore_goals) == len(test_goals)
 			for ex in explore_goals:
 				is_inside = 0

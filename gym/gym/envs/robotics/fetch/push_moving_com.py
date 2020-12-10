@@ -17,7 +17,7 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
 
         #centers of the interval where goal and initial position will be sampld
         self.target_goal_center = np.array([1.405, 0.7, 0.425])
-        self.object_center = np.array([1.095, 0.68, 0.425])
+        self.object_center = np.array([1.08, 0.68, 0.425])
         #self.object_center = np.array([1.25, 0.825, 0.421])
 
         #for moving
@@ -41,7 +41,7 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         fetch_env.FetchEnv.__init__(
             self, MODEL_XML_PATH, has_object=True, block_gripper=True, n_substeps=20,
             gripper_extra_height=0.0, target_in_the_air=False, target_offset=0.0,
-            obj_range=0.0, target_range=0.01, distance_threshold=0.05,
+            obj_range=0.0, target_range=0.005, distance_threshold=0.05,
             initial_qpos=initial_qpos, reward_type=reward_type)
         utils.EzPickle.__init__(self)
         self.obstacle_slider_idx = self.sim.model.joint_names.index('obstacle:joint')
