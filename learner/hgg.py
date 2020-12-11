@@ -582,7 +582,7 @@ class HGGLearner_VAEs(HGGLearner):
 				trajectory_obstacles_latents_sizes.append(obs['obstacle_size_latent'].copy())
 
 				#just for video
-				tr_env_images.append(take_env_image(self.env_List[i], args.img_size))
+				#tr_env_images.append(take_env_image(self.env_List[i], args.img_size))
 
 				if timestep==args.timesteps-1: done = True#this makes that the last obs is as done
 				current.store_step(action, obs, reward, done)
