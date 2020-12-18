@@ -765,9 +765,9 @@ if __name__ == '__main__':
     #one less since background mask is not used
     seed=1
     torch.manual_seed(seed)
-    model = Bbox(5, device).to(device)
+    '''model = Bbox(5, device).to(device)
     optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
-    train(model, optimizer, device, log_interval_epoch=10, log_interval_batch=400, batch_size=16, num_epochs=500)#4)
+    train(model, optimizer, device, log_interval_epoch=10, log_interval_batch=400, batch_size=16, num_epochs=500)#4)'''
 
 
     '''seed = 1
@@ -780,7 +780,7 @@ if __name__ == '__main__':
     '''data_set = np.load('../data/FetchGenerativeEnv-v1/all_set.npy')
     #just take half the data
     data_set = data_set[:19200]
-    device = 'cuda:0'
+    
     from j_vae.train_monet import load_Vae, visualize_masks
     model = load_Vae(path='../data/FetchGenerativeEnv-v1/all_sb_model', img_size=64, latent_size=6)
     model = model.to(device)
@@ -818,3 +818,6 @@ if __name__ == '__main__':
     '''new_data_set = np.load('../data/FetchGenerativeEnv-v1/all_set_with_masks.npy')
     bbox_info = preprocess_bounding_boxes(new_data_set[:, 1:, :, :, 0:1].copy())
     np.save('../data/FetchGenerativeEnv-v1/all_set_with_masks_bbox.npy', bbox_info)'''
+    model = load_Model('../data/FetchGenerativeEnv-v1/model_bbox',
+                       img_size=64, latent_size=8, device=device, num_slots=5)
+    rec_dataset(model, dataset_path='../data/FetchGenerativeEnv-v1/all_set_with_masks.npy')

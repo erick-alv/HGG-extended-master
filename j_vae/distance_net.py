@@ -142,50 +142,7 @@ def gen_training_data(N, filename):
     np.save(filename, data_set)
 
 #--     Network  --
-class DistNet(nn.Module):
-    def __init__(self, device, img_size=64, hidden_size=256, fg_sigma=0.15, latent_size=8):
-        super().__init__()
-        self.device = device
-        kernel_size = 3
-        conv_size1 = 64
-        conv_size2 = 32
-        encoder_stride = 2
-        self.img_size = img_size
-        self.fg_sigma = fg_sigma
-        self.use_bg_mask = False
-        self.bb_net = nn.Sequential(
-            nn.Linear(32, hidden_size),
-            nn.ReLU(inplace=True),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(inplace=True),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(inplace=True),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(inplace=True),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(inplace=True)
-        )
-        self.p_net = nn.Sequential(
-            nn.Linear(4, hidden_size),
-            nn.ReLU(inplace=True),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(inplace=True),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(inplace=True)
-        )
-        self.d = nn.Bilinear(hidden_size, hidden_size, 1)
 
-
-
-    def forward(self, x):
-        B = x.shape[0]
-        D = x.shape[1]
-        ps = x[:, :4]
-        bs = x[:, 4:]
-        np = self.p_net(ps)
-        nb = self.bb_net(bs)
-        y = self.d(np, nb)
-        return y.squeeze()
 
 
 #function should be [px1,py1, px2, py2, coords_bboxes] -> dist

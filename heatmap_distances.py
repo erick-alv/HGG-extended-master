@@ -60,10 +60,22 @@ def create_heatmap_distances(args, env):
                     #then heatmap does not represent any important info (these clipping depend of env)
                     distance_to_goal = np.clip(distance_to_goal, a_min=None, a_max=3.2)
                 else:
+                    #uses real coordinates
+                    if args.dist_estimator_type == 'net':
+                        bboxes_list = np.atleast_2d(o['real_obstacle_info'])
+                        bboxes_list = np.concatenate([bboxes_list[:, 0:2], bboxes_list[:, 3:5]], axis=1)
+                        print(bboxes_list)
 
-                    distance_to_goal = args.dist_estimator.calculate_distance_batch(
-                        goal_pos=o['desired_goal'].copy(),
-                        current_pos_batch=np.array([o['achieved_goal']]))[0]
+                        distance_to_goal = args.dist_estimator.calculate_distance_batch(
+                            goal_pos=o['desired_goal'][0:2].copy(),
+                            current_pos_batch=np.array([o['achieved_goal'][0:2]]),
+                            bboxes_list_batch=np.array([bboxes_list])
+                        )
+                    else:
+
+                        distance_to_goal = args.dist_estimator.calculate_distance_batch(
+                            goal_pos=o['desired_goal'].copy(),
+                            current_pos_batch=np.array([o['achieved_goal']]))[0]
                     # clipped to 0.8 since estimator puts regions inside obstacle too far away and
                     # then heatmap does not represent any important info
                     distance_to_goal = np.clip(distance_to_goal, a_min=None, a_max=0.8)

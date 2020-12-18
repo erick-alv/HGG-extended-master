@@ -15,9 +15,12 @@ from j_vae.faster_rcnn import load_faster_rcnn
 from j_vae.common_data import vae_sb_weights_file_name, vae_weights_file_name
 from PIL import Image
 from vae_env_inter import take_env_image, take_image_objects
-from j_vae.distance_estimation import calculate_distance, DistMovEst, DistMovEstReal, MultipleDist, MultipleDistReal
+from j_vae.distance_estimation import calculate_distance
+from dist_estimator import DistMovEst, DistMovEstReal, MultipleDist, MultipleDistReal, Estimator_DistNet
 from SPACE.main_space import load_space_model
 import matplotlib.pyplot as plt
+import os
+
 def get_args(do_just_test=False):#this parameter is just used for the name
 	parser = get_arg_parser()
 
@@ -135,7 +138,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 
 	parser.add_argument('--dist_estimator_type', help='the type if dist estimator to use or None if not using',
 						type=str, default=None,
-						choices=['normal', 'realCoords', 'multiple', 'multipleReal'])
+						choices=['normal', 'realCoords', 'multiple', 'multipleReal', 'net'])
 	#for dense reward transformation
 	parser.add_argument('--transform_dense', help='if transform to dense with VAES or not', type=str2bool, default=False)
 
@@ -292,6 +295,14 @@ def load_dist_estimator(args, env):
 		args.dist_estimator = MultipleDistReal()
 	elif args.dist_estimator_type == 'multiple':
 		args.dist_estimator = MultipleDist()
+	elif args.dist_estimator_type == 'net':
+		this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
+		base_data_dir = this_file_dir + 'data/'
+		env_data_dir = base_data_dir + args.env + '/'
+		weights_file_path = env_data_dir + 'dist_model_best'
+		info_csv = env_data_dir + 'dist_info.csv'
+		args.dist_estimator = Estimator_DistNet(net_weights_path=weights_file_path, csv_dist_filepath=info_csv)
+		return
 	else:
 		raise Exception('logic for dist estimator type not implemented yet')
 

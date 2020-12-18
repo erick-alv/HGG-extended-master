@@ -523,16 +523,16 @@ if __name__ == '__main__':
     train_file = data_dir + train_file_name[args.enc_type]
     weights_path = data_dir + vae_sb_weights_file_name[args.enc_type]
 
-    train_Vae(epochs=args.train_epochs, batch_size=args.batch_size,img_size=args.img_size,latent_size=args.latent_size,
+    '''train_Vae(epochs=args.train_epochs, batch_size=args.batch_size,img_size=args.img_size,latent_size=args.latent_size,
               train_file=train_file,
               vae_weights_path=weights_path, beta=args.beta, gamma=args.gamma, bg_sigma=args.bg_sigma,
-              fg_sigma=args.fg_sigma, load=False, num_slots=args.num_slots)
+              fg_sigma=args.fg_sigma, load=False, num_slots=args.num_slots)'''
 
 
-    '''device = torch.device("cuda")
+    device = torch.device("cuda")
 
     model = load_Vae(path=weights_path, img_size=args.img_size, latent_size=args.latent_size)
 
 
     compare_with_data_set(model=model, device=device, latent_size=args.latent_size,
-                     filename_suffix="test", train_file=train_file )'''
+                     filename_suffix="test", train_file=train_file )
