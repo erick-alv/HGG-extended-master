@@ -240,14 +240,16 @@ def save_checkpoint(model, optimizer, weights_path, epoch=None):
 
 
 def calc_loss(pred_dict, labels_dict):
-    #loss = torch.nn.functional.mse_loss(pred_dict['distance'], labels_dict['distance'])
-    loss = torch.nn.functional.binary_cross_entropy(pred_dict['is_infinite'], labels_dict['is_infinite'])
+    loss_mse = torch.nn.functional.mse_loss(pred_dict['distance'], labels_dict['distance'])
+    loss_bce = torch.nn.functional.binary_cross_entropy(pred_dict['is_infinite'], labels_dict['is_infinite'])
+    loss =loss_bce+loss_mse
     return loss
 
-def load_DistNet_model(path, device, input_size, output_size, seed=1):
+def load_DistNet_model(path, device, input_size, output_size, val_infinite, seed=1):
     torch.manual_seed(seed)
     checkpoint = torch.load(path)
-    model = DistNet(device=device, input_size=input_size, output_size=output_size).to(device)
+    model = DistNet(device=device, input_size=input_size, output_size=output_size,
+                    val_infinite=val_infinite).to(device)
     model.load_state_dict(checkpoint['model_state_dict'])
     return model
 
@@ -268,6 +270,7 @@ if __name__ == "__main__":
     mean_output = pd_info['mean_output'][0]
     std_output = pd_info['std_output'][0]
     input_size = pd_info['input_size'][0]
+    max_val = pd_info['max'][0]
 
     normTransformInput = NormalizeTransform(
         mean=torch.from_numpy(
@@ -302,7 +305,7 @@ if __name__ == "__main__":
                                                     collate_fn=combine_batch_els)
 
     device = 'cuda:0'
-    model = DistNet(device=device, input_size=input_size, output_size=1).to(device)
+    model = DistNet(device=device, input_size=input_size, val_infinite= max_val + 1., output_size=1).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     seed = 1
     torch.manual_seed(seed)

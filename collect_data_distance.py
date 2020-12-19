@@ -139,7 +139,7 @@ if __name__ == "__main__":
     #have about 5 rollouts
     #the last 2 are the more expensive since we need to create a graph in each of them
     n_rollouts = 5
-    n_steps = 5#20
+    n_steps = 20
 
     field_center = args.field_center
     field_size = args.field_size
@@ -291,11 +291,6 @@ if __name__ == "__main__":
     print("time: {}".format(end_time - start_time))
     #calculate std from variance
     it_output_std = np.sqrt(it_output_std / (n_output - 1))
-    for a in it_input_std:
-        print(a)
-        assert a >= 0.
-        assert (a / (n_input-1)) >= 0
-
     it_input_std = np.sqrt(it_input_std / (n_input - 1))
 
     fn = ['max', 'min', 'mean_input', 'std_input', 'mean_output', 'std_output', 'input_size']
