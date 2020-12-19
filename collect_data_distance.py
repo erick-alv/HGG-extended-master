@@ -139,7 +139,7 @@ if __name__ == "__main__":
     #have about 5 rollouts
     #the last 2 are the more expensive since we need to create a graph in each of them
     n_rollouts = 5
-    n_steps = 20
+    n_steps = 10
 
     field_center = args.field_center
     field_size = args.field_size

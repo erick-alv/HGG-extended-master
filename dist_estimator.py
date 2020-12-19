@@ -290,7 +290,8 @@ class Estimator_DistNet:
         self.input_size = data['input_size'][0]
         self.device=device
         
-        self.model = load_DistNet_model(net_weights_path, device, input_size=self.input_size, output_size=1)
+        self.model = load_DistNet_model(net_weights_path, device, input_size=self.input_size, output_size=1,
+                                        val_infinite= self.max + 1.)
         self.model.eval()
 
     #Net receives normalized input
