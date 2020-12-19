@@ -212,7 +212,7 @@ if __name__ == "__main__":
                     else:
                         it_input_mean_prev = it_input_mean.copy()
                         it_input_mean = it_input_mean + (entry - it_input_mean)/(n_input + 1)
-                        it_input_std = it_input_std + (entry - it_input_mean_prev)*(entry*it_input_mean)
+                        it_input_std = it_input_std + (entry - it_input_mean_prev)*(entry-it_input_mean)
                     n_input += 1
 
                     if distance != 9999 and distance > max_dist:
