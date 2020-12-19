@@ -4,10 +4,12 @@ import pandas as pd
 import os
 import numpy as np
 from torch.utils.data import SubsetRandomSampler
+import argparse
 from PIL import Image
 import matplotlib.pyplot as plt
 import warnings
 import io
+import torchvision
 from tqdm import tqdm
 from matplotlib import patches
 import math
@@ -31,11 +33,11 @@ def label_str_to_numpy(labelstr):
     return label
 
 class DistancesDataset(torch.utils.data.Dataset):
-    def __init__(self,root,transform=None, transform_output=None):
+    def __init__(self,root, dataset_file_name, transform=None, transform_output=None):
         self.transform = transform
         self.transform_output = transform_output
         self.root=root
-        data=pd.read_csv(os.path.join(root, "distances.csv"))
+        data=pd.read_csv(os.path.join(root, dataset_file_name))
         self.data = data
         self.max_min_entries = pd.read_csv(os.path.join(root, "dist_info.csv"))
 
@@ -65,7 +67,7 @@ class DistancesDataset(torch.utils.data.Dataset):
             distance = self.transform_output(distance)
 
         labels = {'distance': distance,
-                  'is_infinite':is_infinite}
+                  'is_infinite': is_infinite}
         return x, labels
 
 
@@ -91,6 +93,26 @@ class NormalizeTransform(object):
     def __call__(self, x):
         x = x - self.mean
         x = x / self.std
+
+        return x
+
+#data augementation:since distance is symmetrical changing the order from points does not matter
+#changes with probability pr
+class ChangePointsOrderTransform:
+    def __init__(self, pr=0.5):
+        self.pr = pr
+
+    def __call__(self, x):
+        i = np.random.uniform(0, 1)
+        if i < self.pr:
+            x0 = torch.clone(x[-4])
+            y0 = torch.clone(x[-3])
+            x1 = torch.clone(x[-2])
+            y1 = torch.clone(x[-1])
+            x[-4] = x1
+            x[-3] = y1
+            x[-2] = x0
+            x[-1] = y0
 
         return x
 
@@ -218,78 +240,76 @@ def save_checkpoint(model, optimizer, weights_path, epoch=None):
 
 
 def calc_loss(pred_dict, labels_dict):
-    loss = torch.nn.functional.mse_loss(pred_dict['distance'], labels_dict['distance'])
+    #loss = torch.nn.functional.mse_loss(pred_dict['distance'], labels_dict['distance'])
+    loss = torch.nn.functional.binary_cross_entropy(pred_dict['is_infinite'], labels_dict['is_infinite'])
     return loss
 
 def load_DistNet_model(path, device, input_size, output_size, seed=1):
     torch.manual_seed(seed)
-
     checkpoint = torch.load(path)
     model = DistNet(device=device, input_size=input_size, output_size=output_size).to(device)
     model.load_state_dict(checkpoint['model_state_dict'])
     return model
 
 if __name__ == "__main__":
-    '''loader = torch.utils.data.DataLoader(dataset, batch_size=1000000, collate_fn=combine_batch_els)
-    iterator = iter(loader)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--env', help='gym env id', type=str)
+    args = parser.parse_args()
 
-    data_x, data_dict = next(iterator)
-    x_acc_mean = data_x.mean(dim=0)
-    x_acc_std = data_x.std(dim=0)
-    d_acc_mean = data_dict['distance'].mean()
-    d_acc_std = data_dict['distance'].std()
-    print(x_acc_mean)
-    print(x_acc_std)
-    print(d_acc_mean)
-    print(d_acc_std)'''
-    '''tensor([1.3007, 0.7500, 0.0900, 0.0300, 1.3002, 0.7500, 1.2999, 0.7501],
-       dtype=torch.float64)
-    tensor([0.0325, 0.0000, 0.0000, 0.0000, 0.1450, 0.1451, 0.1451, 0.1452],
-       dtype=torch.float64)
-    tensor(0.4120, dtype=torch.float64)
-    tensor(0.4274, dtype=torch.float64)'''
+    this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
+    base_data_dir = this_file_dir + 'data/'
+    env_data_dir = base_data_dir + args.env + '/'
 
-    #todo make param
+    pd_info = pd.read_csv(os.path.join(env_data_dir, "dist_info.csv"))
+    mean_input = label_str_to_numpy(pd_info['mean_input'][0])
+    std_input = label_str_to_numpy(pd_info['std_input'][0])
+    std_input[std_input == 0] = 1e-15
+
+    mean_output = pd_info['mean_output'][0]
+    std_output = pd_info['std_output'][0]
+    input_size = pd_info['input_size'][0]
+
     normTransformInput = NormalizeTransform(
         mean=torch.from_numpy(
-            np.array([1.3007, 0.7500, 0.0900, 0.0300, 1.3002, 0.7500, 1.2999, 0.7501])
+            mean_input
         ).float(),
         std=torch.from_numpy(
-            np.array([0.0325, 1e-8, 1e-8, 1e-8, 0.1450, 0.1451, 0.1451, 0.1452])
+            std_input
         ).float()
     )
+    input_tr = torchvision.transforms.Compose([
+        normTransformInput,
+        ChangePointsOrderTransform()
+    ])
 
-    normTransformOutput = NormalizeTransform(mean=0.4120, std=0.4274)
+    normTransformOutput = NormalizeTransform(mean=mean_output, std=std_output)
 
-    dataset = DistancesDataset(root='data/FetchPushMovingObstacleEnv-v1', transform=normTransformInput,
-                               transform_output=normTransformOutput)
+    dataset_train = DistancesDataset(root=env_data_dir,
+                                     dataset_file_name='distances.csv',
+                                     transform=input_tr,
+                                     transform_output=normTransformOutput)
+    dataset_val = DistancesDataset(root=env_data_dir,
+                                     dataset_file_name='distances_val.csv',
+                                     transform=normTransformInput,
+                                     transform_output=normTransformOutput)
 
-    validation_split = 0.4
+
     batch_size = 12
 
-    dataset_size = len(dataset)
-    indices = list(range(dataset_size))
-    split = int(np.floor(validation_split * dataset_size))
-    train_indices, val_indices = indices[split:], indices[:split]
-
-    # Creating PT data samplers and loaders:
-    train_sampler = SubsetRandomSampler(train_indices)
-    valid_sampler = SubsetRandomSampler(val_indices)
-
-    train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
-                                               sampler=train_sampler, collate_fn=combine_batch_els)
-    validation_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
-                                                    sampler=valid_sampler, collate_fn=combine_batch_els)
+    train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=batch_size, shuffle=True,
+                                               collate_fn=combine_batch_els)
+    validation_loader = torch.utils.data.DataLoader(dataset_val, batch_size=batch_size,
+                                                    collate_fn=combine_batch_els)
 
     device = 'cuda:0'
-    model = DistNet(device=device, input_size=8, output_size=1).to(device)
+    model = DistNet(device=device, input_size=input_size, output_size=1).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     seed = 1
     torch.manual_seed(seed)
 
     solver = Solver(model=model, train_loader=train_loader, eval_loader=validation_loader,
                     loss_func=calc_loss, optimizer=optimizer,device=device,
-                    save_file_path='data/FetchPushMovingObstacleEnv-v1/dist_model', print_every=1, verbose=True)
+                    save_file_path=env_data_dir+'dist_model', print_every=1, verbose=True)
     solver.train(epochs=8)
 
     plt.plot(solver.val_loss_history, label="Validation Loss")

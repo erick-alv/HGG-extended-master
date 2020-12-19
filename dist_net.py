@@ -19,5 +19,8 @@ class DistNet(nn.Module):
 
     def forward(self, x):
         y = self.bb_net(x)
-        ans_dict = {'distance':y.squeeze()}
+        y = y.squeeze()
+        y = torch.sigmoid(y)
+        #ans_dict = {'distance':}
+        ans_dict = {'is_infinite':y}
         return ans_dict
