@@ -297,7 +297,7 @@ if __name__ == "__main__":
                                      transform_output=normTransformOutput)
 
 
-    batch_size = 12
+    batch_size = 64
 
     train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=batch_size, shuffle=True,
                                                collate_fn=combine_batch_els)

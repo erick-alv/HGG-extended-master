@@ -285,6 +285,8 @@ class Estimator_DistNet:
         self.std_input = torch.from_numpy(
             label_str_to_numpy(data['std_input'][0])
         ).float().to(device)
+        self.std_input[self.std_input == 0] = 1e-15
+
         self.mean_output = data['mean_output'][0]
         self.std_output = data['std_output'][0]
         self.input_size = data['input_size'][0]

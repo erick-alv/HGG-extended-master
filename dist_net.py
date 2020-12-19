@@ -8,29 +8,37 @@ class DistNet(nn.Module):
         self.input_size = input_size
         self.output_size = output_size
         self.val_infinite = torch.tensor(val_infinite).float().to(device)
-        self.bb_net = nn.Sequential(
+
+
+
+        self.common = nn.Sequential(
             nn.Linear(input_size, hidden_size),
             nn.ReLU(inplace=True),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(inplace=True),
-            nn.Linear(hidden_size, output_size)
         )
-        self.d2 = nn.Sequential(
-            nn.Linear(input_size+1, hidden_size),
+
+        self.pred_inf_net = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
             nn.ReLU(inplace=True),
             nn.Linear(hidden_size, hidden_size),
             nn.ReLU(inplace=True),
             nn.Linear(hidden_size, output_size)
         )
 
-
+        self.pred_dist_net = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden_size, hidden_size),
+            nn.ReLU(inplace=True),
+            nn.Linear(hidden_size, output_size)
+        )
 
     def forward(self, x):
-        is_infinite_logits = self.bb_net(x)
+        x_common = self.common(x)
+        is_infinite_logits = self.pred_inf_net(x_common)
         is_infinite_pr = torch.sigmoid(is_infinite_logits)
         is_infinite_pr_flat = is_infinite_pr.squeeze()
-        x_with_pr = torch.cat([x, is_infinite_pr], dim=1)
-        pred_dist = self.d2(x_with_pr)
+        pred_dist = self.pred_dist_net(x_common)
+        pred_dist = is_infinite_pr * self.val_infinite + (1. - is_infinite_pr) * pred_dist
         pred_dist = pred_dist.squeeze()
 
 
