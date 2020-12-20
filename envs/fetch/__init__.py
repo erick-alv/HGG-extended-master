@@ -6,9 +6,9 @@ from .interval_with_contact_detection import IntervalWithCollisionDetection
 from .extensions_interval import IntervalExt, IntervalColl, IntervalRewSub, IntervalRewVec, IntervalCollStopRegion,\
 	IntervalCollStop, IntervalRewMod, IntervalRewModStop, IntervalRewModRegion, IntervalRewModRegionStop, \
 	IntervalTestExtendedBbox, IntervalCollMinDist, IntervalMinDistRewMod,IntervalMinDistRewModStop, \
-	IntervalTestExtendedMinDist, IntervalPA,IntervalPARewMod,IntervalPARewModStop,IntervalTestExtendedPA,IntervalPAV,\
-	IntervalPAVRewMod,IntervalPAVRewModStop,IntervalTestExtendedPAV,IntervalPARel,IntervalPARelRewMod,\
-	IntervalPARelRewModStop,IntervalTestExtendedPARel,IntervalPAVRel,IntervalPAVRelRewMod,\
+	IntervalTestExtendedMinDist, IntervalP,IntervalPRewMod,IntervalPRewModStop,IntervalTestExtendedP,IntervalPAV,\
+	IntervalPAVRewMod,IntervalPAVRewModStop,IntervalTestExtendedPAV,IntervalPRel,IntervalPRelRewMod,\
+	IntervalPRelRewModStop,IntervalTestExtendedPRel,IntervalPAVRel,IntervalPAVRelRewMod,\
 	IntervalPAVRelRewModStop,IntervalTestExtendedPAVRel
 
 # TODO: change this file for new env handling!
@@ -34,18 +34,18 @@ def make_env(args):
 		'intervalMinDistRewMod':IntervalMinDistRewMod,
 		'intervalMinDistRewModStop':IntervalMinDistRewModStop,
 		'intervalTestExtendedMinDist': IntervalTestExtendedMinDist,
-		'intervalPA': IntervalPA,
-		'intervalPARewMod':IntervalPARewMod,
-		'intervalPARewModStop':IntervalPARewModStop,
-		'intervalTestExtendedPA':IntervalTestExtendedPA,
+		'intervalP': IntervalP,
+		'intervalPRewMod':IntervalPRewMod,
+		'intervalPRewModStop':IntervalPRewModStop,
+		'intervalTestExtendedP':IntervalTestExtendedP,
 		'intervalPAV':IntervalPAV,
 		'intervalPAVRewMod':IntervalPAVRewMod,
 		'intervalPAVRewModStop':IntervalPAVRewModStop,
 		'intervalTestExtendedPAV':IntervalTestExtendedPAV,
-		'intervalPARel':IntervalPARel,
-		'intervalPARelRewMod':IntervalPARelRewMod,
-		'intervalPARelRewModStop':IntervalPARelRewModStop,
-		'intervalTestExtendedPARel':IntervalTestExtendedPARel,
+		'intervalPRel':IntervalPRel,
+		'intervalPRelRewMod':IntervalPRelRewMod,
+		'intervalPRelRewModStop':IntervalPRelRewModStop,
+		'intervalTestExtendedPRel':IntervalTestExtendedPRel,
 		'intervalPAVRel':IntervalPAVRel,
 		'intervalPAVRelRewMod':IntervalPAVRelRewMod,
 		'intervalPAVRelRewModStop':IntervalPAVRelRewModStop,

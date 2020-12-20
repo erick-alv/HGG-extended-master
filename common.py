@@ -5,7 +5,7 @@ from utils.os_utils import get_arg_parser, get_logger, str2bool
 from algorithm import create_agent
 from learner import create_learner, learner_collection
 from test import Tester
-from algorithm.replay_buffer import ReplayBuffer_Episodic, goal_based_process
+from algorithm.replay_buffer import ReplayBuffer_Episodic, goal_based_process, ReplayBuffer_Imaginary
 import torch
 from j_vae.train_vae_sb import load_Vae as load_Vae_SB
 from j_vae.train_vae import load_Vae
@@ -20,6 +20,8 @@ from dist_estimator import DistMovEst, DistMovEstReal, MultipleDist, MultipleDis
 from SPACE.main_space import load_space_model
 import matplotlib.pyplot as plt
 import os
+
+
 
 def get_args(do_just_test=False):#this parameter is just used for the name
 	parser = get_arg_parser()
@@ -50,10 +52,10 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 									 'intervalMinDistRewModStop',
 									 'intervalTestExtendedMinDist',
 									 'intervalCollPAV',
-									 'intervalPA', 'intervalPARewMod', 'intervalPARewModStop', 'intervalTestExtendedPA',
+									 'intervalP', 'intervalPRewMod', 'intervalPRewModStop', 'intervalTestExtendedP',
 									 'intervalPAV', 'intervalPAVRewMod', 'intervalPAVRewModStop',
-									 'intervalTestExtendedPAV', 'intervalPARel', 'intervalPARelRewMod',
-									 'intervalPARelRewModStop', 'intervalTestExtendedPARel', 'intervalPAVRel',
+									 'intervalTestExtendedPAV', 'intervalPRel', 'intervalPRelRewMod',
+									 'intervalPRelRewModStop', 'intervalTestExtendedPRel', 'intervalPAVRel',
 									 'intervalPAVRelRewMod', 'intervalPAVRelRewModStop', 'intervalTestExtendedPAVRel'
 									 ])
 
@@ -105,6 +107,9 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	parser.add_argument('--her', help='type of hindsight experience replay', type=str, default='future', choices=['none', 'final', 'future'])
 	parser.add_argument('--her_ratio', help='ratio of hindsight experience replay', type=np.float32, default=0.8)
 	parser.add_argument('--pool_rule', help='rule of collecting achieved states', type=str, default='full', choices=['full', 'final'])
+	parser.add_argument('--imaginary_obstacle_transitions',
+						help='expand obstacle transition', type=bool, default=False)
+
 
 	parser.add_argument('--hgg_c', help='weight of initial distribution in flow learner', type=np.float32, default=3.0)
 	parser.add_argument('--hgg_L', help='Lipschitz constant', type=np.float32, default=5.0)
@@ -142,14 +147,12 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	#for dense reward transformation
 	parser.add_argument('--transform_dense', help='if transform to dense with VAES or not', type=str2bool, default=False)
 
-
-
 	args = parser.parse_args()
 	args.num_vertices = [args.n_x, args.n_y, args.n_z]
 	args.goal_based = (args.env in Robotics_envs_id)
 	args.clip_return_l, args.clip_return_r = clip_return_range(args)
 
-	logger_name = args.alg+'-'+args.env+'-'+args.learn
+	logger_name = args.alg+'-'+args.env+'-'+args.goal+'-'+args.learn
 	if do_just_test:
 		logger_name = 'TEST-'+logger_name
 	if args.tag!='': logger_name = args.tag+'-'+logger_name
@@ -161,6 +164,10 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 		logger_name = logger_name+'-' + args.dist_estimator_type
 	if args.vae_type is not None:
 		logger_name = logger_name +'-'+ args.vae_type
+	if 'RewMod' in args.goal:
+		logger_name = logger_name +'-rewmodVal('+ str(args.rew_mod_val)+')'
+	if args.imaginary_obstacle_transitions:
+		logger_name = logger_name + '-IMAGINARY'
 	args.logger = get_logger(logger_name)
 
 
@@ -181,11 +188,12 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	else:
 		args.reward_dims = 1
 
-	args.colls_test_check_envs = ['intervalTestExtendedBbox', 'intervalTestExtendedMinDist', 'intervalTestExtendedPA',
-								  'intervalTestExtendedPAV', 'intervalTestExtendedPARel', 'intervalTestExtendedPAVRel']
+	args.colls_test_check_envs = ['intervalTestExtendedBbox', 'intervalTestExtendedMinDist', 'intervalTestExtendedP',
+								  'intervalTestExtendedPAV', 'intervalTestExtendedPRel', 'intervalTestExtendedPAVRel']
 
 
 	return args
+
 
 def load_vaes(args):
 	base_data_dir = 'data/'
@@ -257,8 +265,8 @@ def load_vaes(args):
 #This loads the field in 2D since methods used extract information in this way
 def load_field_parameters(args):
 	def load_real_field_params():
-		if args.env in ['FetchPushLabyrinth-v1', 'FetchPushObstacleFetchEnv-v1', 'FetchPushMovingObstacleEnv-v1',
-						'FetchPushMovingObstacleEnv-v2','FetchPushMovingComEnv-v1']:
+		if args.env in ['FetchPushLabyrinth-v1', 'FetchPushObstacleFetchEnv-v1','FetchPushMovingObstacleEnv-v1',
+						'FetchPushMovingObstacleEnv-v2', 'FetchPushMovingComEnv-v1']:
 			args.real_field_center = [1.3, 0.75]
 			args.real_field_size = [0.25, 0.25]
 		elif args.env in ['FetchPushMovingDoubleObstacleEnv-v1']:
@@ -285,6 +293,7 @@ def load_field_parameters(args):
 		load_real_field_params()
 		args.field_center = args.real_field_center
 		args.field_size = args.real_field_size
+
 
 def load_dist_estimator(args, env):
 	if args.dist_estimator_type == 'normal':
@@ -381,9 +390,6 @@ def experiment_setup(args):
 	env = make_env(args)
 	env_test = make_env(args)
 
-
-
-
 	#rgb_array = take_env_image(env, args.img_size)
 	#img = Image.fromarray(rgb_array)
 	#img.show()
@@ -396,6 +402,9 @@ def experiment_setup(args):
 		args.compute_reward = env.compute_reward
 		args.compute_distance = env.compute_distance
 
+	if args.imaginary_obstacle_transitions:
+		#relative small buffer size so it always have most recent collisions
+		args.imaginary_buffer = ReplayBuffer_Imaginary(args, buffer_size=200)
 	args.buffer = buffer = ReplayBuffer_Episodic(args)
 	args.learner = learner = create_learner(args)
 	args.agent = agent = create_agent(args)
@@ -407,7 +416,7 @@ def experiment_setup(args):
 
 	return env, env_test, agent, buffer, learner, tester
 
-from play import Player
+
 def experiment_setup_test(args):
 
 	if args.vae_dist_help:
@@ -427,6 +436,7 @@ def experiment_setup_test(args):
 		args.compute_reward = env.compute_reward
 		args.compute_distance = env.compute_distance
 
+	from play import Player
 	args.agent = agent = Player(args)
 	args.tester = tester = Tester(args)
 	args.timesteps = env.env.env.spec.max_episode_steps

@@ -10,7 +10,6 @@ from common import get_args, load_vaes
 import torch
 import copy
 import matplotlib.pyplot as plt
-from j_vae.distance_estimation import DistMovEst
 import time
 
 '''obs_x_pos = np.array([o['obstacle_latent'][0] for o in obs])

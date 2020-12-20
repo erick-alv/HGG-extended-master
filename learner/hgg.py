@@ -403,7 +403,10 @@ class HGGLearner:
 				##
 				if timestep==args.timesteps-1: done = True#this makes that the last obs is as done
 				current.store_step(action, obs, reward, done)
-				if done: break
+				stop_trajectory, im_info = check_conditions_after_step(obs, current, args)
+				if args.imaginary_obstacle_transitions and im_info is not None:
+					args.imaginary_buffer.store_im_info(im_info)
+				if done or stop_trajectory: break
 
 
 			## just for video
@@ -433,6 +436,10 @@ class HGGLearner:
 					args.logger.add_dict(info)
 				# update target network
 				agent.target_update()
+				if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:
+					#for _ in range(5):
+					info2 = agent.train(args.imaginary_buffer.sample_batch())
+					agent.target_update()
 
 		selection_trajectory_idx = {}
 		for i in range(self.args.episodes):
@@ -474,14 +481,42 @@ class HGGLearner:
 		return goal_list if len(goal_list)>0 else None
 
 
-def check_conditions_after_step(obs, args):
-	if 'coll_stop' in obs.keys():
-		if obs['coll_stop']:
-			return True
+def check_conditions_after_step(obs, trajectory, args):
+	if args.imaginary_obstacle_transitions:
+		assert 'coll' in obs.keys() and 'coll_bool_ar' in obs.keys()
+		#there is a collision
+		indices = np.nonzero(obs['coll_bool_ar'])[0]
+		if len(indices) > 0:
+			if len(trajectory.ep['acts']) > 1:
+				#select just cases with moving obstacles
+				diff = obs['obstacle_st_t'][:, 0:2] - trajectory.ep['obs'][-2]['obstacle_st_t'][:, 0:2]
+				diff = np.atleast_2d(diff)
+				dist = np.sqrt(np.sum(np.square(diff), axis=1))
+				#todo check which one is a good value
+				indices_moving = np.nonzero(dist > 0.001)[0]
+				if len(indices_moving) > 0:
+					index = indices[np.random.choice(indices_moving)]
+					imaginary_info_dict = {}
+					for key in trajectory.ep.keys():
+						imaginary_info_dict[key] = []
+						imaginary_info_dict[key].append(trajectory.ep[key][-2])
+						imaginary_info_dict[key].append(trajectory.ep[key][-1])
+					imaginary_info = (index, imaginary_info_dict)
+					return True, imaginary_info
+				else:
+					return True, None
+			else:
+				return True, None
 		else:
-			return False
+			return False, None
 	else:
-		return False
+		if 'coll_stop' in obs.keys():
+			if obs['coll_stop']:
+				return True, None
+			else:
+				return False, None
+		else:
+			return False, None
 
 
 class HGGLearner_VAEs(HGGLearner):
@@ -503,7 +538,6 @@ class HGGLearner_VAEs(HGGLearner):
 		self.stop = False
 		self.learn_calls = 0
 		self.success_n = 0
-
 
 	def learn(self, args, env, env_test, agent, buffer, write_goals=0, epoch=None, cycle=None):
 		# Actual learning cycle takes place here!
@@ -586,10 +620,10 @@ class HGGLearner_VAEs(HGGLearner):
 
 				if timestep==args.timesteps-1: done = True#this makes that the last obs is as done
 				current.store_step(action, obs, reward, done)
-				if done: break
-				stop_trajectory = check_conditions_after_step(obs, args)
-				if stop_trajectory:
-					break
+				stop_trajectory, im_info = check_conditions_after_step(obs, current, args)
+				if args.imaginary_obstacle_transitions and im_info is not None:
+					args.imaginary_buffer.store_im_info(im_info)
+				if done or stop_trajectory: break
 			achieved_trajectories.append(np.array(trajectory))
 			achieved_init_states.append(init_state)
 			achieved_trajectory_goals_latents.append(np.array(trajectory_goals_latents))
@@ -617,6 +651,11 @@ class HGGLearner_VAEs(HGGLearner):
 					args.logger.add_dict(info)
 				# update target network
 				agent.target_update()
+				#train with imaginary
+				if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:
+					#for _ in range(5):
+					info2 = agent.train(args.imaginary_buffer.sample_batch())
+					agent.target_update()
 
 		selection_trajectory_idx = {}
 		for i in range(self.args.episodes):

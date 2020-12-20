@@ -9,11 +9,14 @@ from memory_profiler import profile
 import gc
 import psutil
 
+
 def goal_concat(obs, goal):#todo will this require that the observation is modified coorespondingly if goal is expanded
 	return np.concatenate([obs, goal], axis=0)
 
+
 def goal_based_process(obs):
 	return goal_concat(obs['observation'], obs['desired_goal'])
+
 
 class Trajectory:
 	def __init__(self, init_obs):
@@ -116,29 +119,6 @@ class ReplayBuffer_Episodic:
 		else:
 			self.sample_batch = self.sample_methods['ddpg']
 
-
-	def save_checkpoint(self, filename, epoch):
-		if not filename.endswith(str(epoch)):
-			filename = filename + '_' + str(epoch)
-		save_dict = {
-			'buffer':self.buffer,
-			'steps': self.steps,
-			'length': self.length,
-			'counter': self.counter,
-			'steps_counter': self.steps_counter,
-		}
-		'''if self.energy=='energy':
-			save_dict['energy_sum'] = self.energy_sum
-			save_dict['energy_offset'] = self.energy_offset
-			save_dict['energy_max'] = self.energy_max
-			save_dict['buffer_energy'] = self.buffer_energy
-			save_dict['buffer_energy_sum'] = self.buffer_energy_sum'''
-		path = self.args.dirpath + 'replaybuf/' + filename
-		with open('{}.pkl'.format(path), 'wb') as f:
-			pickle.dump(save_dict, f)
-
-
-	#@profile(precision=4)
 	def load_checkpoint(self,filename):
 		if filename.endswith('.pkl'):
 			filename.replace('.pkl','')
@@ -275,3 +255,174 @@ class ReplayBuffer_Episodic:
 						batch[key].append(copy.deepcopy(self.buffer[key][idx][step]))
 
 		return batch
+
+
+class ReplayBuffer_Imaginary:
+	def __init__(self, args, buffer_size):
+		self.args = args
+		self.buffer = {}
+		self.steps = []
+		self.length = 0
+		self.counter = 0
+		self.steps_counter = 0
+		self.buffer_size = buffer_size
+
+
+	def store_im_info(self, im_info):
+		index, imaginary_info_dict = im_info
+		obs_t0 = imaginary_info_dict['obs'][0]
+		obs_t1 = imaginary_info_dict['obs'][1]
+
+		if self.counter==0:
+			for key in imaginary_info_dict.keys():
+				self.buffer[key] = []
+
+		bbox_obstacle_t0 = obs_t0['obstacle_st_t'][index]
+		bbox_obstacle_t1 = obs_t1['obstacle_st_t'][index]
+		bbox_elem_t0 = obs_t0['goal_st_t']
+		bbox_elem_t1 = obs_t1['goal_st_t']
+
+		new_bboxes_t0, new_bboxes_t1 = create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1,
+															   bbox_elem_t0, bbox_elem_t1)
+		episodes = []
+		for i in range(len(new_bboxes_t0)):
+			new_list_bboxes_t0 = obs_t0['obstacle_st_t'].copy()
+			new_list_bboxes_t0[index] = new_bboxes_t0[i]
+			new_list_bboxes_t1 = obs_t1['obstacle_st_t'].copy()
+			new_list_bboxes_t1[index] = new_bboxes_t1[i]
+
+			new_obst0 = self.args.learner.env._modify_obs(obs_t0, new_list_bboxes_t0)
+			new_obst1 = self.args.learner.env._modify_obs(obs_t1, new_list_bboxes_t1)
+			im_ep = {'obs':[new_obst0, new_obst1]}
+			for key in imaginary_info_dict:
+				if key == 'obs':
+					pass
+				else:
+					im_ep[key] = imaginary_info_dict[key]
+			episodes.append(im_ep)
+		episodes.append(imaginary_info_dict)
+
+		for ep in episodes:
+			if self.counter < self.buffer_size:
+				for key in self.buffer.keys():
+					self.buffer[key].append(ep[key])
+				self.length += 1
+			else:
+				idx = self.counter % self.buffer_size
+				for key in self.buffer.keys():
+					self.buffer[key][idx] = ep[key]
+			self.counter += 1
+
+
+	def sample_batch(self, batch_size=-1, normalizer=False, plain=False):
+		assert int(normalizer) + int(plain) <= 1
+		if batch_size == -1: batch_size = max(self.args.batch_size / 100, 100)
+		batch = dict(obs=[], obs_next=[], acts=[], rews=[], done=[])
+
+		for i in range(batch_size):
+			idx = np.random.randint(self.length)
+
+			if self.args.goal_based:
+				if plain:
+					# no additional tricks
+					goal = self.buffer['obs'][idx][1]['desired_goal']
+				elif normalizer:
+					# uniform sampling for normalizer update
+					goal = self.buffer['obs'][idx][1]['achieved_goal']
+				else:
+					# upsampling by HER trick
+					if (self.args.her != 'none') and (np.random.uniform() <= self.args.her_ratio):
+						#with this we can just do future
+						goal = self.buffer['obs'][idx][1]['achieved_goal']
+					else:
+						goal = self.buffer['obs'][idx][1]['desired_goal']
+
+				obs = goal_concat(self.buffer['obs'][idx][0]['observation'], goal)
+				obs_next = goal_concat(self.buffer['obs'][idx][1]['observation'], goal)
+				act = self.buffer['acts'][idx][0]
+				rew = self.args.compute_reward(self.buffer['obs'][idx][1], self.buffer['obs'][idx][0], goal)
+				done = self.buffer['done'][idx][0]#todo is this done correct?
+
+				batch['obs'].append(copy.deepcopy(obs))
+				batch['obs_next'].append(copy.deepcopy(obs_next))
+				batch['acts'].append(copy.deepcopy(act))
+				if isinstance(rew, np.ndarray) and len(rew.shape) > 0:
+					batch['rews'].append(copy.deepcopy(rew))
+				else:
+					batch['rews'].append(copy.deepcopy([rew]))
+				batch['done'].append(copy.deepcopy(done))
+			else:
+				for key in ['obs', 'acts', 'rews', 'done']:
+					if key == 'obs':
+						batch['obs'].append(copy.deepcopy(self.buffer[key][idx][0]))
+						batch['obs_next'].append(copy.deepcopy(self.buffer[key][idx][1]))
+					else:
+						batch[key].append(copy.deepcopy(self.buffer[key][idx][0]))
+
+		return batch
+
+
+def check_collisions(a_bbox, b_bboxes):
+	# b_min_x - a_max_x
+	d1x = (b_bboxes[:, 0] - b_bboxes[:, 2]) - (a_bbox[0] + a_bbox[2])
+	d1y = (b_bboxes[:, 1] - b_bboxes[:, 3]) - (a_bbox[1] + a_bbox[3])
+	d2x = (a_bbox[0] - a_bbox[2]) - (b_bboxes[:, 0] + b_bboxes[:, 2])
+	d2y = (a_bbox[1] - a_bbox[3]) - (b_bboxes[:, 1] + b_bboxes[:, 3])
+	d1_bools = np.logical_or(d1x > 0., d1y > 0.)
+	d2_bools = np.logical_or(d2x > 0., d2y > 0.)
+	d_bools = np.logical_or(d1_bools, d2_bools)
+	return np.logical_not(d_bools)
+
+
+def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bbox_elem_t1):
+	ox0, oy0, oxs0, oys0 = bbox_obstacle_t0
+	ox1, oy1, oxs1, oys1 = bbox_obstacle_t1
+	elx0, ely0, elxs0, elys0 = bbox_elem_t0
+	elx1, ely1, elxs1, elys1 = bbox_elem_t1
+
+	direction = (bbox_obstacle_t1[0:2] - bbox_obstacle_t0[0:2])
+	if np.abs(direction[1]) > np.abs(direction[0]):
+		dif = np.abs(bbox_obstacle_t1[1] - bbox_obstacle_t0[1])
+		extra_dist = np.random.uniform(low=0., high=dif / 2.)
+		# place over
+		a_ny0 = ely1 + elys1 + oys1 + extra_dist
+		a_new_bbox_t0 = np.array([ox0, a_ny0, oxs0, oys0])
+		if check_collisions(a_new_bbox_t0, np.array([bbox_elem_t0]))[0]:
+			a_ny0 = ely0 + elys0 + oys0 + 0.01 + extra_dist
+			a_new_bbox_t0 = np.array([ox0, a_ny0, oxs0, oys0])
+		a_ny1 = a_ny0 + np.abs(direction[1])
+		a_new_bbox_t1 = np.array([ox1, a_ny1, oxs1, oys1])
+
+		# place below
+		b_ny0 = ely1 - elys1 - oys1 - extra_dist
+		b_new_bbox_t0 = np.array([ox0, b_ny0, oxs0, oys0])
+		if check_collisions(b_new_bbox_t0, np.array([bbox_elem_t0]))[0]:
+			b_ny0 = ely0 - elys0 - oys0 - 0.01 - extra_dist
+			b_new_bbox_t0 = np.array([ox0, b_ny0, oxs0, oys0])
+		b_ny1 = b_ny0 - np.abs(direction[1])
+		b_new_bbox_t1 = np.array([ox1, b_ny1, oxs1, oys1])
+
+	else:
+		dif = np.abs(bbox_obstacle_t1[0] - bbox_obstacle_t0[0])
+		extra_dist = np.random.uniform(low=0., high=dif / 2.)
+		# place right
+		a_nx0 = elx1 + elxs1 + oxs1 + extra_dist
+		a_new_bbox_t0 = np.array([a_nx0, oy0, oxs0, oys0])
+		if check_collisions(a_new_bbox_t0, np.array([bbox_elem_t0]))[0]:
+			a_nx0 = elx0 + elxs0 + oxs0 + 0.01 + extra_dist
+			a_new_bbox_t0 = np.array([a_nx0, oy0, oxs0, oys0])
+		a_nx1 = a_nx0 + np.abs(direction[0])
+		a_new_bbox_t1 = np.array([a_nx1, oy1, oxs1, oys1])
+
+		# place left
+		b_nx0 = elx1 - elxs1 - oxs1 - extra_dist
+		b_new_bbox_t0 = np.array([b_nx0, oy0, oxs0, oys0])
+		if check_collisions(b_new_bbox_t0, np.array([bbox_elem_t0]))[0]:
+			b_nx0 = elx0 - elxs0 - oxs0 - 0.01 - extra_dist
+			b_new_bbox_t0 = np.array([b_nx0, oy0, oxs0, oys0])
+		b_nx1 = b_nx0 - np.abs(direction[0])
+		b_new_bbox_t1 = np.array([b_nx1, oy1, oxs1, oys1])
+
+	new_bboxes_t0 = [a_new_bbox_t0, b_new_bbox_t0]
+	new_bboxes_t1 = [a_new_bbox_t1, b_new_bbox_t1]
+	return new_bboxes_t0, new_bboxes_t1
