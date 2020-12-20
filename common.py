@@ -370,7 +370,7 @@ def load_dist_estimator(args, env):
 		n_ve = 100
 		args.dist_estimator.initialize_internal_distance_graph([args.field_center[0], args.field_center[1],
 																args.field_size[0], args.field_size[1]],
-															   num_vertices=[n_ve, n_ve], size_increase=size_goal_box[0])#todo use real or other depending of va
+															   num_vertices=[n_ve, n_ve], size_increase=0)#size_goal_box[0])#todo use real or other depending of va
 		args.dist_estimator.graph.plot_graph(save_path='env_graph_created', elev=90, azim=0)
 	plt.clf()
 
