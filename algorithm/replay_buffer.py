@@ -292,8 +292,8 @@ class ReplayBuffer_Imaginary:
 			new_list_bboxes_t1 = obs_t1['obstacle_st_t'].copy()
 			new_list_bboxes_t1[index] = new_bboxes_t1[i]
 
-			new_obst0 = self.args.learner.env._modify_obs(obs_t0, new_list_bboxes_t0)
-			new_obst1 = self.args.learner.env._modify_obs(obs_t1, new_list_bboxes_t1)
+			new_obst0 = self.args.learner.env._modify_obs(obs_t0, new_list_bboxes_t0, extra_info[i], index)
+			new_obst1 = self.args.learner.env._modify_obs(obs_t1, new_list_bboxes_t1, extra_info[i], index)
 			im_ep = {'obs':[new_obst0, new_obst1]}
 			for key in imaginary_info_dict:
 				if key == 'obs':
@@ -400,6 +400,9 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			a_new_bbox_t1 = np.array([ox1, a_ny1, oxs1, oys1])
 			new_bboxes_t0.append(a_new_bbox_t0)
 			new_bboxes_t1.append(a_new_bbox_t1)
+			dir = np.array(a_new_bbox_t1[0:2] - a_new_bbox_t0[0:2])
+			extra_info.append({'dir_not_scaled': dir.copy()})
+
 
 		# place below
 		extra_dists = np.random.uniform(low=0., high=dif / 2., size=10)
@@ -413,6 +416,9 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			b_new_bbox_t1 = np.array([ox1, b_ny1, oxs1, oys1])
 			new_bboxes_t0.append(b_new_bbox_t0)
 			new_bboxes_t1.append(b_new_bbox_t1)
+			dir = np.array(b_new_bbox_t1[0:2] - b_new_bbox_t0[0:2])
+			extra_info.append({'dir_not_scaled': dir.copy()})
+
 
 	else:
 		dif = np.abs(bbox_obstacle_t1[0] - bbox_obstacle_t0[0])
@@ -428,6 +434,8 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			a_new_bbox_t1 = np.array([a_nx1, oy1, oxs1, oys1])
 			new_bboxes_t0.append(a_new_bbox_t0)
 			new_bboxes_t1.append(a_new_bbox_t1)
+			dir = np.array(a_new_bbox_t1[0:2] - a_new_bbox_t0[0:2])
+			extra_info.append({'dir_not_scaled': dir.copy()})
 
 		# place left
 		extra_dists = np.random.uniform(low=0., high=dif / 2., size=10)
@@ -441,6 +449,8 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			b_new_bbox_t1 = np.array([b_nx1, oy1, oxs1, oys1])
 			new_bboxes_t0.append(b_new_bbox_t0)
 			new_bboxes_t1.append(b_new_bbox_t1)
+			dir = np.array(b_new_bbox_t1[0:2] - b_new_bbox_t0[0:2])
+			extra_info.append({'dir_not_scaled': dir.copy()})
 
 
 	return new_bboxes_t0, new_bboxes_t1, extra_info

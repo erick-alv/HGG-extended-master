@@ -214,7 +214,7 @@ class ObsExtBboxInfo(ObsExtender):
 
         return obs
 
-    def _modify_obs(self, obs, new_obstacle_list):
+    def _modify_obs(self, obs, new_obstacle_list, extra_info, index):
         new_obs = copy.deepcopy(obs)
         new_obs['obstacle_st_t'] = new_obstacle_list.copy()
         new_obs['obstacle_st_t_minus1'] = None
@@ -242,8 +242,8 @@ class ObsExtBboxColl(ObsExtBboxInfo):
             obs['coll'] = ncols
         return obs
     
-    def _modify_obs(self, obs, new_obstacle_list):
-        new_obs = super(ObsExtBboxColl, self)._modify_obs(obs, new_obstacle_list)
+    def _modify_obs(self, obs, new_obstacle_list, extra_info, index):
+        new_obs = super(ObsExtBboxColl, self)._modify_obs(obs, new_obstacle_list, extra_info, index)
         goal_bbox = new_obs['goal_st_t']
         obstacle_bboxes = new_obs['obstacle_st_t']
         # goal object is not in visible range
@@ -278,8 +278,8 @@ class ObsExtMinDist(ObsExtBboxColl):
         obs['observation'] = new_state
         return obs
     
-    def _modify_obs(self, obs, new_obstacle_list):
-        new_obs = super(ObsExtMinDist, self)._modify_obs(obs, new_obstacle_list)
+    def _modify_obs(self, obs, new_obstacle_list, extra_info, index):
+        new_obs = super(ObsExtMinDist, self)._modify_obs(obs, new_obstacle_list, extra_info, index)
         goal_bbox = new_obs['goal_st_t']
         obstacle_bboxes = new_obs['obstacle_st_t']
         # goal object is not in visible range therefore distance really far away
@@ -315,8 +315,8 @@ class ObsExtP(ObsExtMinDist):
         obs['observation'] = new_state
         return obs
     
-    def _modify_obs(self, obs, new_obstacle_list):
-        new_obs = super(ObsExtP, self)._modify_obs(obs, new_obstacle_list)
+    def _modify_obs(self, obs, new_obstacle_list, extra_info, index):
+        new_obs = super(ObsExtP, self)._modify_obs(obs, new_obstacle_list, extra_info, index)
         goal_bbox = new_obs['goal_st_t']
         obstacle_bboxes = new_obs['obstacle_st_t']
 
@@ -328,8 +328,7 @@ class ObsExtP(ObsExtMinDist):
         len_extension = len(extension)
         new_obs['observation'][-len_extension:] = extension
         return new_obs
-    
-    
+      
 
 
 class ObsExtPAV(ObsExtMinDist):
@@ -347,6 +346,7 @@ class ObsExtPAV(ObsExtMinDist):
         dists = np.expand_dims(dists, axis=1)
         pos = obstacle_bboxes[:, 0:2]
         dt = env.env.dt
+        self.dt = dt
         vel = calc_vels(obstacle_bboxes, previous_obstacle_bboxes, dt)
         angles = calc_angles(goal_bbox, obstacle_bboxes)
 
@@ -355,6 +355,34 @@ class ObsExtPAV(ObsExtMinDist):
         new_state = np.concatenate([observation_without_dist, np.ravel(extension)])
         obs['observation'] = new_state
         return obs
+    
+    def _modify_obs(self, obs, new_obstacle_list, extra_info, index):
+        new_obs = super(ObsExtPAV, self)._modify_obs(obs, new_obstacle_list, extra_info, index)
+        goal_bbox = new_obs['goal_st_t']
+        obstacle_bboxes = new_obs['obstacle_st_t']
+
+        dists = new_obs['dists'].copy()
+        len_dists = len(dists)
+        dists = np.expand_dims(dists, axis=1)
+        pos = obstacle_bboxes[:, 0:2]
+        len_pos_el = len(pos[0])
+        #vel = calc_vels(obstacle_bboxes, previous_obstacle_bboxes, dt)
+        angles = calc_angles(goal_bbox, obstacle_bboxes)
+
+        mock_extension = np.ravel(np.concatenate([dists, pos, angles, pos], axis=1))
+        len_extension = len(mock_extension)
+        unmodified_extension = obs[-len_extension:].copy()
+        unmodified_extension =np.reshape(unmodified_extension, newshape=(-1, 1+2*len_pos_el+1))
+        vel = unmodified_extension[:, -2:]
+
+        dir_not_scaled = extra_info['dir_not_scaled']
+        vel[index] = dir_not_scaled / self.dt
+
+        extension = np.ravel(np.concatenate([dists, pos, angles, vel], axis=1))
+        len_extension = len(extension)
+        new_obs['observation'][-len_extension:] = extension
+
+        return new_obs
 
 
 #calculates position realitve to goal object
@@ -380,8 +408,8 @@ class ObsExtPRel(ObsExtMinDist):
         obs['observation'] = new_state
         return obs
 
-    def _modify_obs(self, obs, new_obstacle_list):
-        new_obs = super(ObsExtPRel, self)._modify_obs(obs, new_obstacle_list)
+    def _modify_obs(self, obs, new_obstacle_list, extra_info, index):
+        new_obs = super(ObsExtPRel, self)._modify_obs(obs, new_obstacle_list, extra_info, index)
         goal_bbox = new_obs['goal_st_t']
         obstacle_bboxes = new_obs['obstacle_st_t']
 
@@ -424,6 +452,35 @@ class ObsExtPAVRel(ObsExtMinDist):
         new_state = np.concatenate([observation_without_dist, np.ravel(extension)])
         obs['observation'] = new_state
         return obs
+
+    def _modify_obs(self, obs, new_obstacle_list, extra_info, index):
+        new_obs = super(ObsExtPAV, self)._modify_obs(obs, new_obstacle_list, extra_info, index)
+        goal_bbox = new_obs['goal_st_t']
+        obstacle_bboxes = new_obs['obstacle_st_t']
+
+        dists = new_obs['dists'].copy()
+        len_dists = len(dists)
+        dists = np.expand_dims(dists, axis=1)
+        pos = obstacle_bboxes[:, 0:2]
+        pos = pos - goal_bbox[0:2]
+        len_pos_el = len(pos[0])
+        #vel = calc_vels(obstacle_bboxes, previous_obstacle_bboxes, dt)
+        angles = calc_angles(goal_bbox, obstacle_bboxes)
+
+        mock_extension = np.ravel(np.concatenate([dists, pos, angles, pos], axis=1))
+        len_extension = len(mock_extension)
+        unmodified_extension = obs[-len_extension:].copy()
+        unmodified_extension =np.reshape(unmodified_extension, newshape=(-1, 1+2*len_pos_el+1))
+        vel = unmodified_extension[:, -2:]
+
+        dir_not_scaled = extra_info['dir_not_scaled']
+        vel[index] = dir_not_scaled / self.dt
+
+        extension = np.ravel(np.concatenate([dists, pos, angles, vel], axis=1))
+        len_extension = len(extension)
+        new_obs['observation'][-len_extension:] = extension
+
+        return new_obs
 
 
 #does not change observation state, but observation dict
@@ -637,8 +694,8 @@ class IntervalWithExtensions(IntervalGoalEnv):
         return rew
 
     #this sshould be called just by the imaginary replay_buffer
-    def _modify_obs(self, obs, new_obstacle_list):
-        new_obs = self.obs_extender._modify_obs(obs, new_obstacle_list)
+    def _modify_obs(self, obs, new_obstacle_list, extra_info, index):
+        new_obs = self.obs_extender._modify_obs(obs, new_obstacle_list, extra_info, index)
         return new_obs
 
 
