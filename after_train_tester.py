@@ -25,6 +25,7 @@ if __name__ == '__main__':
             e.env.env.test_setup()'''
 
     # Progress info
+    args.logger.add_item('N')
     args.logger.add_item('Epoch')
     args.logger.add_item('Cycle')
     args.logger.add_item('TimeCost(sec)')
@@ -38,7 +39,8 @@ if __name__ == '__main__':
     counter = 0
 
     #Testing
-    for n in [2, 4, 7, 10]:
+    N_confs = [2, 4, 7, 10]
+    for n in N_confs:
         print("the current N is {}".format(n))
         tester.coll_tol = n
         for epoch in range(args.epoches):
@@ -49,6 +51,7 @@ if __name__ == '__main__':
 
                 # Log learning progresss
                 tester.cycle_summary()
+                args.logger.add_record('N', str(n))
                 args.logger.add_record('Epoch', str(epoch) + '/' + str(args.epoches))
                 args.logger.add_record('Cycle', str(cycle) + '/' + str(args.cycles))
                 args.logger.add_record('TimeCost(sec)', time.time() - start_time)

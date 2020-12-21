@@ -428,6 +428,11 @@ class HGGLearner:
 			# Trajectory is stored in replay buffer, replay buffer can be normal or EBP
 			buffer.store_trajectory(current)
 			agent.normalizer_update(buffer.sample_batch())
+			if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:
+				if args.normalizer_every_counter % args.normalizer_every == 0:
+					agent.normalizer_update(args.imaginary_buffer.sample_batch())
+				args.normalizer_every_counter += 1
+				args.normalizer_every_counter = args.normalizer_every_counter % args.normalizer_every
 
 			if buffer.steps_counter>=args.warmup:
 				for _ in range(args.train_batches):
@@ -437,9 +442,12 @@ class HGGLearner:
 				# update target network
 				agent.target_update()
 				if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:
-					#for _ in range(5):
-					info2 = agent.train(args.imaginary_buffer.sample_batch())
-					agent.target_update()
+					if args.train_every_counter % args.train_every == 0:
+						for _ in range(3):
+							info2 = agent.train(args.imaginary_buffer.sample_batch())
+						agent.target_update()
+					args.train_every_counter +=1
+					args.train_every_counter = args.train_every_counter % args.train_every
 
 		selection_trajectory_idx = {}
 		for i in range(self.args.episodes):
@@ -643,6 +651,11 @@ class HGGLearner_VAEs(HGGLearner):
 			# Trajectory is stored in replay buffer, replay buffer can be normal or EBP
 			buffer.store_trajectory(current)
 			agent.normalizer_update(buffer.sample_batch())
+			if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:
+				if args.normalizer_every_counter % args.normalizer_every == 0:
+					agent.normalizer_update(args.imaginary_buffer.sample_batch())
+				args.normalizer_every_counter += 1
+				args.normalizer_every_counter = args.normalizer_every_counter % args.normalizer_every
 
 			if buffer.steps_counter>=args.warmup:
 				for _ in range(args.train_batches):
@@ -652,10 +665,14 @@ class HGGLearner_VAEs(HGGLearner):
 				# update target network
 				agent.target_update()
 				#train with imaginary
+				
 				if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:
-					#for _ in range(5):
-					info2 = agent.train(args.imaginary_buffer.sample_batch())
-					agent.target_update()
+					if args.train_every_counter % args.train_every == 0:
+						for _ in range(3):
+							info2 = agent.train(args.imaginary_buffer.sample_batch())
+						agent.target_update()
+					args.train_every_counter += 1
+					args.train_every_counter = args.train_every_counter % args.train_every
 
 		selection_trajectory_idx = {}
 		for i in range(self.args.episodes):

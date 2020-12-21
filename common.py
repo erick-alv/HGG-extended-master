@@ -152,22 +152,37 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	args.goal_based = (args.env in Robotics_envs_id)
 	args.clip_return_l, args.clip_return_r = clip_return_range(args)
 
-	logger_name = args.alg+'-'+args.env+'-'+args.goal+'-'+args.learn
+
+	base_name = args.alg + '-' + args.env + '-' + args.goal + '-' + args.learn
 	if do_just_test:
-		logger_name = 'TEST-'+logger_name
-	if args.tag!='': logger_name = args.tag+'-'+logger_name
-	if args.graph:
-		logger_name =logger_name + '-graph'
-	if args.stop_hgg_threshold < 1:
-		logger_name = logger_name + '-stop'
-	if args.dist_estimator_type is not None:
-		logger_name = logger_name+'-' + args.dist_estimator_type
-	if args.vae_type is not None:
-		logger_name = logger_name +'-'+ args.vae_type
-	if 'RewMod' in args.goal:
-		logger_name = logger_name +'-rewmodVal('+ str(args.rew_mod_val)+')'
-	if args.imaginary_obstacle_transitions:
-		logger_name = logger_name + '-IMAGINARY'
+		if args.play_path is not None:
+			remaining, last = os.path.split(args.play_path)
+			if args.env in last:
+				logger_name = 'TEST-'+last
+			else:
+				remaining, last = os.path.split(remaining)
+				if args.env in last:
+					logger_name = 'TEST-' + last
+				else:
+					logger_name = 'TEST-' + base_name
+
+		else:
+			logger_name = 'TEST-' + base_name
+	else:
+		logger_name = base_name
+		if args.tag!='': logger_name = args.tag+'-'+logger_name
+		if args.graph:
+			logger_name =logger_name + '-graph'
+		if args.stop_hgg_threshold < 1:
+			logger_name = logger_name + '-stop'
+		if args.dist_estimator_type is not None:
+			logger_name = logger_name+'-' + args.dist_estimator_type
+		if args.vae_type is not None:
+			logger_name = logger_name +'-'+ args.vae_type
+		if 'RewMod' in args.goal:
+			logger_name = logger_name +'-rewmodVal('+ str(args.rew_mod_val)+')'
+		if args.imaginary_obstacle_transitions:
+			logger_name = logger_name + '-IMAGINARY'
 	args.logger = get_logger(logger_name)
 
 
@@ -404,6 +419,10 @@ def experiment_setup(args):
 
 	if args.imaginary_obstacle_transitions:
 		#relative small buffer size so it always have most recent collisions
+		args.train_every = 5
+		args.train_every_counter = 0
+		args.normalizer_every = 5
+		args.normalizer_every_counter = 0
 		args.imaginary_buffer = ReplayBuffer_Imaginary(args, buffer_size=200)
 	args.buffer = buffer = ReplayBuffer_Episodic(args)
 	args.learner = learner = create_learner(args)

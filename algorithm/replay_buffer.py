@@ -282,8 +282,9 @@ class ReplayBuffer_Imaginary:
 		bbox_elem_t0 = obs_t0['goal_st_t']
 		bbox_elem_t1 = obs_t1['goal_st_t']
 
-		new_bboxes_t0, new_bboxes_t1 = create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1,
-															   bbox_elem_t0, bbox_elem_t1)
+		new_bboxes_t0, new_bboxes_t1, extra_info = create_new_interactions(
+			bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bbox_elem_t1
+		)
 		episodes = []
 		for i in range(len(new_bboxes_t0)):
 			new_list_bboxes_t0 = obs_t0['obstacle_st_t'].copy()
@@ -381,48 +382,65 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 	elx1, ely1, elxs1, elys1 = bbox_elem_t1
 
 	direction = (bbox_obstacle_t1[0:2] - bbox_obstacle_t0[0:2])
+	new_bboxes_t0 = []
+	new_bboxes_t1 = []
+	extra_info = []
 	if np.abs(direction[1]) > np.abs(direction[0]):
 		dif = np.abs(bbox_obstacle_t1[1] - bbox_obstacle_t0[1])
-		extra_dist = np.random.uniform(low=0., high=dif / 2.)
+
 		# place over
-		a_ny0 = ely1 + elys1 + oys1 + extra_dist
-		a_new_bbox_t0 = np.array([ox0, a_ny0, oxs0, oys0])
-		if check_collisions(a_new_bbox_t0, np.array([bbox_elem_t0]))[0]:
-			a_ny0 = ely0 + elys0 + oys0 + 0.01 + extra_dist
+		extra_dists = np.random.uniform(low=0., high=dif / 2., size=10)
+		for extra_dist in extra_dists:
+			a_ny0 = ely1 + elys1 + oys1 + extra_dist
 			a_new_bbox_t0 = np.array([ox0, a_ny0, oxs0, oys0])
-		a_ny1 = a_ny0 + np.abs(direction[1])
-		a_new_bbox_t1 = np.array([ox1, a_ny1, oxs1, oys1])
+			if check_collisions(a_new_bbox_t0, np.array([bbox_elem_t0]))[0]:
+				a_ny0 = ely0 + elys0 + oys0 + 0.01 + extra_dist
+				a_new_bbox_t0 = np.array([ox0, a_ny0, oxs0, oys0])
+			a_ny1 = a_ny0 + np.abs(direction[1])
+			a_new_bbox_t1 = np.array([ox1, a_ny1, oxs1, oys1])
+			new_bboxes_t0.append(a_new_bbox_t0)
+			new_bboxes_t1.append(a_new_bbox_t1)
 
 		# place below
-		b_ny0 = ely1 - elys1 - oys1 - extra_dist
-		b_new_bbox_t0 = np.array([ox0, b_ny0, oxs0, oys0])
-		if check_collisions(b_new_bbox_t0, np.array([bbox_elem_t0]))[0]:
-			b_ny0 = ely0 - elys0 - oys0 - 0.01 - extra_dist
+		extra_dists = np.random.uniform(low=0., high=dif / 2., size=10)
+		for extra_dist in extra_dists:
+			b_ny0 = ely1 - elys1 - oys1 - extra_dist
 			b_new_bbox_t0 = np.array([ox0, b_ny0, oxs0, oys0])
-		b_ny1 = b_ny0 - np.abs(direction[1])
-		b_new_bbox_t1 = np.array([ox1, b_ny1, oxs1, oys1])
+			if check_collisions(b_new_bbox_t0, np.array([bbox_elem_t0]))[0]:
+				b_ny0 = ely0 - elys0 - oys0 - 0.01 - extra_dist
+				b_new_bbox_t0 = np.array([ox0, b_ny0, oxs0, oys0])
+			b_ny1 = b_ny0 - np.abs(direction[1])
+			b_new_bbox_t1 = np.array([ox1, b_ny1, oxs1, oys1])
+			new_bboxes_t0.append(b_new_bbox_t0)
+			new_bboxes_t1.append(b_new_bbox_t1)
 
 	else:
 		dif = np.abs(bbox_obstacle_t1[0] - bbox_obstacle_t0[0])
-		extra_dist = np.random.uniform(low=0., high=dif / 2.)
 		# place right
-		a_nx0 = elx1 + elxs1 + oxs1 + extra_dist
-		a_new_bbox_t0 = np.array([a_nx0, oy0, oxs0, oys0])
-		if check_collisions(a_new_bbox_t0, np.array([bbox_elem_t0]))[0]:
-			a_nx0 = elx0 + elxs0 + oxs0 + 0.01 + extra_dist
+		extra_dists = np.random.uniform(low=0., high=dif / 2., size=10)
+		for extra_dist in extra_dists:
+			a_nx0 = elx1 + elxs1 + oxs1 + extra_dist
 			a_new_bbox_t0 = np.array([a_nx0, oy0, oxs0, oys0])
-		a_nx1 = a_nx0 + np.abs(direction[0])
-		a_new_bbox_t1 = np.array([a_nx1, oy1, oxs1, oys1])
+			if check_collisions(a_new_bbox_t0, np.array([bbox_elem_t0]))[0]:
+				a_nx0 = elx0 + elxs0 + oxs0 + 0.01 + extra_dist
+				a_new_bbox_t0 = np.array([a_nx0, oy0, oxs0, oys0])
+			a_nx1 = a_nx0 + np.abs(direction[0])
+			a_new_bbox_t1 = np.array([a_nx1, oy1, oxs1, oys1])
+			new_bboxes_t0.append(a_new_bbox_t0)
+			new_bboxes_t1.append(a_new_bbox_t1)
 
 		# place left
-		b_nx0 = elx1 - elxs1 - oxs1 - extra_dist
-		b_new_bbox_t0 = np.array([b_nx0, oy0, oxs0, oys0])
-		if check_collisions(b_new_bbox_t0, np.array([bbox_elem_t0]))[0]:
-			b_nx0 = elx0 - elxs0 - oxs0 - 0.01 - extra_dist
+		extra_dists = np.random.uniform(low=0., high=dif / 2., size=10)
+		for extra_dist in extra_dists:
+			b_nx0 = elx1 - elxs1 - oxs1 - extra_dist
 			b_new_bbox_t0 = np.array([b_nx0, oy0, oxs0, oys0])
-		b_nx1 = b_nx0 - np.abs(direction[0])
-		b_new_bbox_t1 = np.array([b_nx1, oy1, oxs1, oys1])
+			if check_collisions(b_new_bbox_t0, np.array([bbox_elem_t0]))[0]:
+				b_nx0 = elx0 - elxs0 - oxs0 - 0.01 - extra_dist
+				b_new_bbox_t0 = np.array([b_nx0, oy0, oxs0, oys0])
+			b_nx1 = b_nx0 - np.abs(direction[0])
+			b_new_bbox_t1 = np.array([b_nx1, oy1, oxs1, oys1])
+			new_bboxes_t0.append(b_new_bbox_t0)
+			new_bboxes_t1.append(b_new_bbox_t1)
 
-	new_bboxes_t0 = [a_new_bbox_t0, b_new_bbox_t0]
-	new_bboxes_t1 = [a_new_bbox_t1, b_new_bbox_t1]
-	return new_bboxes_t0, new_bboxes_t1
+
+	return new_bboxes_t0, new_bboxes_t1, extra_info
