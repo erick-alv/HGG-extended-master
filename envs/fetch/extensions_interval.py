@@ -371,7 +371,7 @@ class ObsExtPAV(ObsExtMinDist):
 
         mock_extension = np.ravel(np.concatenate([dists, pos, angles, pos], axis=1))
         len_extension = len(mock_extension)
-        unmodified_extension = obs[-len_extension:].copy()
+        unmodified_extension = obs['observation'][-len_extension:].copy()
         unmodified_extension =np.reshape(unmodified_extension, newshape=(-1, 1+2*len_pos_el+1))
         vel = unmodified_extension[:, -2:]
 
@@ -469,7 +469,7 @@ class ObsExtPAVRel(ObsExtMinDist):
 
         mock_extension = np.ravel(np.concatenate([dists, pos, angles, pos], axis=1))
         len_extension = len(mock_extension)
-        unmodified_extension = obs[-len_extension:].copy()
+        unmodified_extension = obs['observation'][-len_extension:].copy()
         unmodified_extension =np.reshape(unmodified_extension, newshape=(-1, 1+2*len_pos_el+1))
         vel = unmodified_extension[:, -2:]
 
