@@ -8,7 +8,7 @@ import matplotlib.patches as patches
 #todo first run jsut the algorithm with the minimizer of collision along side to see what Q values it does create
 #A space visualizer V value will be needed that(heat map)
 
-
+env_dt = 0.02
 #becomes obstacles in both steps returns the most current one as 2-dim array
 def extract_most_current_obstacles(obstacles_array):
     splitted = np.array(np.split(obstacles_array, len(obstacles_array)/4))
@@ -346,7 +346,6 @@ class ObsExtPAV(ObsExtMinDist):
         dists = np.expand_dims(dists, axis=1)
         pos = obstacle_bboxes[:, 0:2]
         dt = env.env.dt
-        self.dt = dt
         vel = calc_vels(obstacle_bboxes, previous_obstacle_bboxes, dt)
         angles = calc_angles(goal_bbox, obstacle_bboxes)
 
@@ -376,7 +375,7 @@ class ObsExtPAV(ObsExtMinDist):
         vel = unmodified_extension[:, -2:]
 
         dir_not_scaled = extra_info['dir_not_scaled']
-        vel[index] = dir_not_scaled / self.dt
+        vel[index] = dir_not_scaled / env_dt
 
         extension = np.ravel(np.concatenate([dists, pos, angles, vel], axis=1))
         len_extension = len(extension)
@@ -474,7 +473,7 @@ class ObsExtPAVRel(ObsExtMinDist):
         vel = unmodified_extension[:, -2:]
 
         dir_not_scaled = extra_info['dir_not_scaled']
-        vel[index] = dir_not_scaled / self.dt
+        vel[index] = dir_not_scaled / env_dt
 
         extension = np.ravel(np.concatenate([dists, pos, angles, vel], axis=1))
         len_extension = len(extension)
