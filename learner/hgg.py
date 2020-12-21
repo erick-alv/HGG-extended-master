@@ -510,11 +510,20 @@ def check_conditions_after_step(obs, trajectory, args):
 						imaginary_info_dict[key].append(trajectory.ep[key][-2])
 						imaginary_info_dict[key].append(trajectory.ep[key][-1])
 					imaginary_info = (index, imaginary_info_dict)
-					return True, imaginary_info
+					if 'coll_stop' in obs.keys():
+						return True, imaginary_info
+					else:
+						return False, imaginary_info
 				else:
-					return True, None
+					if 'coll_stop' in obs.keys():
+						return True, None
+					else:
+						return False, None
 			else:
-				return True, None
+				if 'coll_stop' in obs.keys():
+					return True, None
+				else:
+					return False, None
 		else:
 			return False, None
 	else:
