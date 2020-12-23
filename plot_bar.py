@@ -183,6 +183,14 @@ if __name__ == "__main__":
     fig, ax = plt.subplots()
     ind = np.arange(len(groups))
     rects_s = []
+    for i in range(len(labels)):
+        number = ''.join([i for i in labels[i][:15] if i.isdigit()])
+        labels[i] = number
+    mappings = {'2575':"minDist",'2275':"Pos,Vel,Angle", '2276':"Pos,Vel,Angle. Imaginary"}
+    for i in range(len(labels)):
+        if labels[i] in mappings.keys():
+            labels[i] = mappings[labels[i]]
+
     for i, rect_data in enumerate(rects_data):
         r = ax.bar(ind + i*width, rect_data, width, label=labels[i])
         rects_s.append(r)

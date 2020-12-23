@@ -453,7 +453,7 @@ class ObsExtPAVRel(ObsExtMinDist):
         return obs
 
     def _modify_obs(self, obs, new_obstacle_list, extra_info, index):
-        new_obs = super(ObsExtPAV, self)._modify_obs(obs, new_obstacle_list, extra_info, index)
+        new_obs = super(ObsExtPAVRel, self)._modify_obs(obs, new_obstacle_list, extra_info, index)
         goal_bbox = new_obs['goal_st_t']
         obstacle_bboxes = new_obs['obstacle_st_t']
 
