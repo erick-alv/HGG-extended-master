@@ -63,7 +63,7 @@ def calc_vels(bboxes, bboxes_prev, dt):
 def calc_angles(a_bbox, b_bboxes):
     if a_bbox[0] == 100. and a_bbox[1] == 100.:
         # use a negative angle so it is different in this case
-        angles = np.repeat(-1., shape=b_bboxes.shape[0])
+        angles = np.repeat(-1., repeats=b_bboxes.shape[0])
     else:
         angles = np.arctan2(b_bboxes[:, 1] - a_bbox[1], b_bboxes[:, 0] - a_bbox[0]) * 180 / np.pi  # to degree
         angles = angles % 360.
