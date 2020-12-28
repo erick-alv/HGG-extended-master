@@ -41,6 +41,9 @@ class FetchPushMovingObstacleEnv2(fetch_env.FetchEnv, utils.EzPickle):
             initial_qpos=initial_qpos, reward_type=reward_type)
         utils.EzPickle.__init__(self)
         self.obstacle_slider_idx = self.sim.model.joint_names.index('obstacle:joint')
+        self.geom_id_object = self.sim.model.geom_name2id('object0')
+        self.geom_ids_obstacles = []
+        self.geom_ids_obstacles.append(self.sim.model.geom_name2id('obstacle'))
 
     # RobotEnv methods
     # ----------------------------

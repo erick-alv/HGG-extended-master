@@ -453,14 +453,44 @@ for reward_type in ['sparse', 'dense']:
         max_episode_steps=100, )
 
     register(
+        id='FetchPushMovingObstacleEnv{}-v3'.format(suffix),
+        entry_point='gym.envs.robotics:FetchPushMovingObstacleEnv3',
+        kwargs=kwargs,
+        max_episode_steps=100, )
+
+    register(
         id='FetchPushMovingDoubleObstacleEnv{}-v1'.format(suffix),
         entry_point='gym.envs.robotics:FetchPushMovingDoubleObstacleEnv',
         kwargs=kwargs,
         max_episode_steps=100, )
 
     register(
+        id='FetchPushMovingDoubleObstacleEnv{}-v2'.format(suffix),
+        entry_point='gym.envs.robotics:FetchPushMovingDoubleObstacleEnv2',
+        kwargs=kwargs,
+        max_episode_steps=100, )
+
+    register(
+        id='FetchPushMovingDoubleObstacleEnv{}-v3'.format(suffix),
+        entry_point='gym.envs.robotics:FetchPushMovingDoubleObstacleEnv3',
+        kwargs=kwargs,
+        max_episode_steps=100, )
+
+    register(
         id='FetchPushMovingComEnv{}-v1'.format(suffix),
         entry_point='gym.envs.robotics:FetchPushMovingComEnv',
+        kwargs=kwargs,
+        max_episode_steps=100, )
+
+    register(
+        id='FetchPushMovingComEnv{}-v2'.format(suffix),
+        entry_point='gym.envs.robotics:FetchPushMovingComEnv2',
+        kwargs=kwargs,
+        max_episode_steps=100, )
+
+    register(
+        id='FetchPushMovingComEnv{}-v3'.format(suffix),
+        entry_point='gym.envs.robotics:FetchPushMovingComEnv3',
         kwargs=kwargs,
         max_episode_steps=100, )
 

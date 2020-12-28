@@ -5,9 +5,9 @@ import numpy as np
 import copy
 
 # Ensure we get the path separator correct on windows
-MODEL_XML_PATH = os.path.join('fetch', 'push_moving_obstacle_fetch.xml')
+MODEL_XML_PATH = os.path.join('fetch', 'push_moving_obstacle_fetch3.xml')
 
-class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
+class FetchPushMovingObstacleEnv3(fetch_env.FetchEnv, utils.EzPickle):
     def __init__(self, reward_type='sparse'):
         self.further = False
 
@@ -23,8 +23,8 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.current_obstacle_vel = 1.2
         self.initial_obstacle_direction = 1
         self.obstacle_direction = 1
-        self.obstacle_upper_limit = 1.35
-        self.obstacle_lower_limit = 1.25
+        self.obstacle_upper_limit = 1.46
+        self.obstacle_lower_limit = 1.14
         self.pos_dif = (self.obstacle_upper_limit - self.obstacle_lower_limit) / 2.
 
 
@@ -78,7 +78,6 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         qpos = self.sim.data.qpos.flat[:]
         current_qpos = qpos[self.obstacle_slider_idx]
 
-
         if self.obstacle_direction == 1:
             if current_qpos >= self.pos_dif:
                 new_pos = current_qpos - self.current_obstacle_vel * dt
@@ -109,13 +108,10 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
                     new_pos = current_qpos - extra_dist
                     self.set_obstacle_slide_pos(new_pos)
 
-        #body_id = self.sim.model.body_name2id('obstacle')
-        #mov_obst_center = self.sim.data.body_xpos[body_id]
-        #print(mov_obst_center)
-
     def step(self, action):
         self.move_obstacle()
-        return super(FetchPushMovingObstacleEnv, self).step(action)
+        return super(FetchPushMovingObstacleEnv3, self).step(action)
+
 
     def _sample_goal(self):
         goal = self.target_goal_center + self.np_random.uniform(-self.target_range, self.target_range, size=3)
@@ -154,7 +150,7 @@ class FetchPushMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         return True
 
     def _get_obs(self):
-        obs = super(FetchPushMovingObstacleEnv, self)._get_obs()
+        obs = super(FetchPushMovingObstacleEnv3, self)._get_obs()
         body_id = self.sim.model.body_name2id('obstacle')
         pos = self.sim.data.body_xpos[body_id].copy()
         dims = np.array([0.09, 0.03, 0.025])

@@ -18,7 +18,6 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         #centers of the interval where goal and initial position will be sampld
         self.target_goal_center = np.array([1.405, 0.7, 0.425])
         self.object_center = np.array([1.08, 0.68, 0.425])
-        #self.object_center = np.array([1.25, 0.825, 0.421])
 
         #for moving
         self.vel_lims = [0.7, 1.]
@@ -45,6 +44,10 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
             initial_qpos=initial_qpos, reward_type=reward_type)
         utils.EzPickle.__init__(self)
         self.obstacle_slider_idx = self.sim.model.joint_names.index('obstacle:joint')
+        self.geom_id_object = self.sim.model.geom_name2id('object0')
+        self.geom_ids_obstacles = []
+        for name in ['o', 'o2', 'o3']:
+            self.geom_ids_obstacles.append(self.sim.model.geom_name2id(name))
 
     def test_setup(self, new_vel_lims=[1., 1.2]):
         '''

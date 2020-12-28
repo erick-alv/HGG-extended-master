@@ -5,9 +5,9 @@ import numpy as np
 import copy
 
 # Ensure we get the path separator correct on windows
-MODEL_XML_PATH = os.path.join('fetch', 'push_moving_double_obstacle.xml')
+MODEL_XML_PATH = os.path.join('fetch', 'push_moving_double_obstacle3.xml')
 
-class FetchPushMovingDoubleObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
+class FetchPushMovingDoubleObstacleEnv3(fetch_env.FetchEnv, utils.EzPickle):
     def __init__(self, reward_type='sparse'):
         self.further = False
 
@@ -32,11 +32,11 @@ class FetchPushMovingDoubleObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
             self.obstacle_directions.append(1)
 
         self.initial_obstacle_directions.append(1)
-        self.obstacle_upper_limits.append(1.33)
+        self.obstacle_upper_limits.append(1.42)
         self.obstacle_lower_limits.append(1.18)
         self.initial_obstacle_directions.append(-1)
         self.obstacle_upper_limits.append(1.42)
-        self.obstacle_lower_limits.append(1.27)
+        self.obstacle_lower_limits.append(1.18)
         for i in range(self.n_moving_obstacles):
             self.pos_difs.append((self.obstacle_upper_limits[i] - self.obstacle_lower_limits[i]) / 2.)
 
@@ -133,7 +133,7 @@ class FetchPushMovingDoubleObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
 
     def step(self, action):
         self.move_obstacle()
-        return super(FetchPushMovingDoubleObstacleEnv, self).step(action)
+        return super(FetchPushMovingDoubleObstacleEnv3, self).step(action)
 
     def _set_gripper_during_setup(self):
         # Move end effector into position.
@@ -174,7 +174,7 @@ class FetchPushMovingDoubleObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         return True
 
     def _get_obs(self):
-        obs = super(FetchPushMovingDoubleObstacleEnv, self)._get_obs()
+        obs = super(FetchPushMovingDoubleObstacleEnv3, self)._get_obs()
         body_id = self.sim.model.body_name2id('obstacle')
         pos1 = np.array(self.sim.data.body_xpos[body_id].copy())
         body_id2 = self.sim.model.body_name2id('obstacle2')

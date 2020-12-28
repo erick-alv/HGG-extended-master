@@ -650,10 +650,14 @@ class TestColl():  # this can be used as well for IntervalSelfCollStop, interval
         sim = env.env.sim
         exists_collision = False
         # todo generalize this for other environments
+        object_id = env.env.env.geom_id_object
         for i in range(sim.data.ncon):
             contact = sim.data.contact[i]
-            if (contact.geom1 == 23 and contact.geom2 == 24) or (contact.geom1 == 24 and contact.geom2 == 23):
-                exists_collision = True
+
+            for obstacle_id in env.env.env.geom_ids_obstacles:
+                if (contact.geom1 == object_id and contact.geom2 == obstacle_id) or \
+                        (contact.geom1 == obstacle_id and contact.geom2 == object_id):
+                    exists_collision = True
         obs['collision_check'] = exists_collision
         return obs
 
@@ -870,3 +874,4 @@ class IntervalTestExtendedPAVRel(IntervalWithExtensions):
     def __init__(self, args):
         IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtPAVRel(args),
                                         test_extender=TestColl(args))
+

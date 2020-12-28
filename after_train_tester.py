@@ -39,7 +39,7 @@ if __name__ == '__main__':
     counter = 0
 
     #Testing
-    N_confs = [2, 4, 7, 10]
+    N_confs = [0, 2, 4, 7, 10]
     for n in N_confs:
         print("the current N is {}".format(n))
         tester.coll_tol = n

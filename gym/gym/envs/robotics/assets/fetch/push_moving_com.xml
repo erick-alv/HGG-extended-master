@@ -57,8 +57,8 @@
 
 		<body name="object0" pos="1.095 0.68 0.425">
 			<joint name="object0:joint" type="free" damping="0.001"></joint>
-			<geom size="0.04 0.02" rgba="1 0 0 1" type="cylinder" condim="3" mass="50" solref="0.01 1"
-				  material="block_mat"></geom>
+			<geom name="object0" size="0.04 0.02" rgba="1 0 0 1" type="cylinder" condim="3" mass="50"
+				  solref="0.01 1" material="block_mat"></geom>
 
 			<site name="object0" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 0 0 0" type="sphere"></site>
 		</body>
