@@ -219,13 +219,19 @@ def latents_from_images(images, args):
             images = images.permute([0, 3, 1, 2])
             #todo handle case more than one properly; todo
             #todo cahnge the index through inference
-            if args.env in ['FetchPushMovingObstacleEnv-v1', 'FetchPushMovingObstacleEnv-v2']:
+            if args.env in ['FetchPushMovingObstacleEnv-v1', 'FetchPushMovingObstacleEnv-v2',
+                            'FetchPushMovingObstacleEnv-v3']:
                 goal_index = 1
                 # todo it could be obstacle indices, and then we have to also see if they are present
                 obstacle_idx = [4]
-            elif args.env in ['FetchPushMovingComEnv-v1']:
+            elif args.env in ['FetchPushMovingComEnv-v1', 'FetchPushMovingComEnv-v2',
+                              'FetchPushMovingComEnv-v3']:
                 goal_index = 1
                 obstacle_idx = [0, 2, 4]
+            elif args.env in ['FetchPushMovingDoubleObstacleEnv-v1','FetchPushMovingDoubleObstacleEnv-v2',
+                              'FetchPushMovingDoubleObstacleEnv-v3']:
+                goal_index = 1
+                obstacle_idx = [2, 4]
 
 
             #(B, K, D)

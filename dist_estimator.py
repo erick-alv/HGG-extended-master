@@ -19,7 +19,6 @@ class DistMovEst:
         self.update_calls = 0
         self.update_complete = False
 
-    #todo use other distribution instead of uniform (for example norm), even better a more complex one
     def update(self, obstacle_latent_list, obstacle_size_latent_list):
         if len(obstacle_latent_list[0].shape) > 1:
             new_list_obs = []
@@ -87,10 +86,8 @@ class DistMovEstReal(DistMovEst):
         super(DistMovEstReal, self).__init__()
         self.real = True
 
-
     def update(self, obstacle_real_list, obstacle_size_real_list):
         obstacle_real_array = np.array(obstacle_real_list)
-
         a_x = np.min(obstacle_real_array[:, 0])
         b_x = np.max(obstacle_real_array[:, 0])
         a_y = np.min(obstacle_real_array[:, 1])
@@ -120,26 +117,6 @@ class DistMovEstReal(DistMovEst):
         if self.update_calls == 3:
             self.update_complete = True
 
-    def initialize_internal_distance_graph(self, field, num_vertices, size_increase):
-        obstacles = []
-        size_x = self.max_x - self.x_mid
-        size_y = self.max_y - self.y_mid
-        obstacles.append([self.x_mid, self.y_mid, size_x, size_y])
-        self.obstacles = obstacles
-        graph = DistanceGraph2D(args=None, field=field, num_vertices=num_vertices,
-                                obstacles=obstacles, size_increase=size_increase, use_discrete=False)
-        graph.compute_cs_graph()
-        graph.compute_dist_matrix()
-        self.graph = graph
-        distances = self.calculate_distance_batch(np.array([1.3, 0.9, 0.4]),
-                                                  np.array([[1.3, 0.92, 0.4], [1.4, 1., 0.4]]))
-        print(distances)
-
-    def calculate_distance_batch(self, goal_pos, current_pos_batch):
-        d, _ = self.graph.get_dist_batch(goal_pos, current_pos_batch)
-        indices_inf = d==np.inf
-        d[indices_inf] = 9999
-        return d
 
 
 # Works for estimations in 2D plane
@@ -226,7 +203,6 @@ class MultipleDistReal(MultipleObstacle):#in same principle the same but for eve
         self.x_mid = (self.max_x + self.min_x) / 2.0
         self.y_mid = (self.max_y + self.min_y) / 2.0
 
-
 class MultipleDist(MultipleObstacle):
     def update(self, obstacle_latent_list, obstacle_size_latent_list):
         #todo handle case when obstacle not present
@@ -273,6 +249,125 @@ class MultipleDist(MultipleObstacle):
 
         self.x_mid = (self.max_x + self.min_x) / 2.0
         self.y_mid = (self.max_y + self.min_y) / 2.0
+
+class SubstractArea(MultipleObstacle):
+    def __init__(self):
+        self.max_left = None
+        self.min_right = None
+        self.max_down = None
+        self.min_up = None
+        self.none_vals_yet = True
+
+    def update(self, obstacle_latent_list, obstacle_size_latent_list):
+        max_left, min_right, max_down, min_up = self.get_lims(obstacle_latent_list, obstacle_size_latent_list)
+        if self.none_vals_yet:  # assume everything else is
+            self.max_left = max_left.copy()
+            self.min_right = min_right.copy()
+            self.max_down = max_down.copy()
+            self.min_up = min_up.copy()
+            self.none_vals_yet = False
+        else:
+            indices_to_change = max_left > self.max_left
+            self.max_left[indices_to_change] = max_left[indices_to_change]
+            indices_to_change = min_right < self.min_right
+            self.min_right[indices_to_change] = min_right[indices_to_change]
+            indices_to_change = max_down > self.max_down
+            self.max_down[indices_to_change] = max_down[indices_to_change]
+            indices_to_change = min_up < self.min_up
+            self.min_up[indices_to_change] = min_up[indices_to_change]
+
+    def get_lims(self, obstacle_latent_list, obstacle_size_latent_list):
+        pass
+
+    def initialize_internal_distance_graph(self, field, num_vertices, size_increase):
+        obstacles = []
+        for i in range(len(self.max_left)):
+            max_left = self.max_left[i]
+            min_right = self.min_right[i]
+            max_down = self.max_down[i]
+            min_up = self.min_up[i]
+            if (min_right > max_left) and (min_up > max_down):
+                mid_x = (min_right + max_left) / 2.
+                mid_y = (min_up + max_down) / 2.
+                size_x = (min_right - max_left) / 2.
+                size_y = (min_up - max_down) / 2.
+                obstacles.append([mid_x, mid_y, size_x, size_y])
+        self.obstacles = obstacles
+        graph = DistanceGraph2D(args=None, field=field, num_vertices=num_vertices,
+                                obstacles=obstacles, size_increase=size_increase, use_discrete=False)
+        graph.compute_cs_graph()
+        graph.compute_dist_matrix()
+        self.graph = graph
+
+
+class SubstReal(SubstractArea):
+    def get_lims(self, obstacle_latent_list, obstacle_size_latent_list):
+        # obstacle_size_latent will be actually empty
+        if not isinstance(obstacle_size_latent_list, np.ndarray):
+            obstacle_array = np.array(obstacle_latent_list)
+        else:
+            obstacle_array = obstacle_size_latent_list
+
+        if obstacle_array.ndim == 2:
+            obstacle_array = np.expand_dims(obstacle_array, axis=0)
+
+        else:
+            # shape of obstacle size latent (B, N, D); B number of samples; N number of obstacles, D dimension of attribute
+            # (B, N, D) -> (N, B, D)
+            obstacle_array = np.transpose(obstacle_array, axes=[1, 0, 2])
+        N, B, D = obstacle_array.shape
+
+        # each object info is organized as [x,y,z,size_x,size_y, size_z]
+        s_xs = np.expand_dims(np.mean(obstacle_array[0:N, :, 3], axis=1), axis=1)
+        s_ys = np.expand_dims(np.mean(obstacle_array[0:N, :, 4], axis=1), axis=1)
+        left_s = obstacle_array[0:N, :, 0] - s_xs
+        down_s = obstacle_array[0:N, :, 1] - s_ys
+        up_s = obstacle_array[0:N, :, 1] + s_ys
+        right_s = obstacle_array[0:N, :, 0] + s_xs
+
+        max_left = np.amax(left_s, axis=1)
+        min_right = np.amin(right_s, axis=1)
+        max_down = np.amax(down_s, axis=1)
+        min_up = np.amin(up_s, axis=1)
+        return max_left, min_right, max_down, min_up
+
+class Subst(SubstractArea):
+    def get_lims(self, obstacle_latent_list, obstacle_size_latent_list):
+        if not isinstance(obstacle_latent_list, np.ndarray):
+            obstacle_array = np.array(obstacle_latent_list)
+        else:
+            obstacle_array = obstacle_latent_list
+
+        if not isinstance(obstacle_size_latent_list, np.ndarray):
+            obstacle_array_size = np.array(obstacle_size_latent_list)
+        else:
+            obstacle_array_size = obstacle_size_latent_list
+
+        if obstacle_array.ndim == 2:
+            obstacle_array = np.expand_dims(obstacle_array, axis=0)
+            obstacle_array_size = np.expand_dims(obstacle_array_size, axis=0)
+
+        else:
+            # shape of obstacle size latent (B, N, D); B number of samples; N number of obstacles, D dimension of attribute
+            # (B, N, D) -> (N, B, D)
+            obstacle_array = np.transpose(obstacle_array, axes=[1, 0, 2])
+            obstacle_array_size = np.transpose(obstacle_array_size, axes=[1, 0, 2])
+
+        N, B, D = obstacle_array.shape
+        s_xs = np.expand_dims(np.mean(obstacle_array_size[0:N, :, 0], axis=1), axis=1)
+        s_ys = np.expand_dims(np.mean(obstacle_array_size[0:N, :, 1], axis=1), axis=1)
+        left_s = obstacle_array[0:N, :, 0] - s_xs
+        down_s = obstacle_array[0:N, :, 1] - s_ys
+        up_s = obstacle_array[0:N, :, 1] + s_ys
+        right_s = obstacle_array[0:N, :, 0] + s_xs
+
+        max_left = np.amax(left_s, axis=1)
+        min_right = np.amin(right_s, axis=1)
+        max_down = np.amax(down_s, axis=1)
+        min_up = np.amin(up_s, axis=1)
+        return max_left, min_right, max_down, min_up
+
+
 
 class Estimator_DistNet:
     def __init__(self, net_weights_path, csv_dist_filepath, device='cuda:0'):
