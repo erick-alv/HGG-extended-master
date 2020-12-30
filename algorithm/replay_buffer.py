@@ -388,8 +388,8 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 	if np.abs(direction[1]) > np.abs(direction[0]):
 		dif = np.abs(bbox_obstacle_t1[1] - bbox_obstacle_t0[1])
 
-		# place over, go over
-		extra_dists = np.random.uniform(low=0., high=dif / 2., size=10)
+		# place above, go up
+		extra_dists = np.random.uniform(low=0., high=dif, size=20)
 		for extra_dist in extra_dists:
 			a_ny0 = ely1 + elys1 + oys1 + extra_dist
 			a_new_bbox_t0 = np.array([ox0, a_ny0, oxs0, oys0])
@@ -404,8 +404,8 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
 
-		# place below, go below
-		extra_dists = np.random.uniform(low=0., high=dif / 2., size=10)
+		# place below, go down
+		extra_dists = np.random.uniform(low=0., high=dif, size=20)
 		for extra_dist in extra_dists:
 			b_ny0 = ely1 - elys1 - oys1 - extra_dist
 			b_new_bbox_t0 = np.array([ox0, b_ny0, oxs0, oys0])
@@ -422,8 +422,8 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 
 	else:
 		dif = np.abs(bbox_obstacle_t1[0] - bbox_obstacle_t0[0])
-		# place right
-		extra_dists = np.random.uniform(low=0., high=dif / 2., size=10)
+		# place right, go right
+		extra_dists = np.random.uniform(low=0., high=dif, size=20)
 		for extra_dist in extra_dists:
 			a_nx0 = elx1 + elxs1 + oxs1 + extra_dist
 			a_new_bbox_t0 = np.array([a_nx0, oy0, oxs0, oys0])
@@ -437,8 +437,8 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			dir = np.array(a_new_bbox_t1[0:2] - a_new_bbox_t0[0:2])
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
-		# place left
-		extra_dists = np.random.uniform(low=0., high=dif / 2., size=10)
+		# place left, go left
+		extra_dists = np.random.uniform(low=0., high=dif, size=20)
 		for extra_dist in extra_dists:
 			b_nx0 = elx1 - elxs1 - oxs1 - extra_dist
 			b_new_bbox_t0 = np.array([b_nx0, oy0, oxs0, oys0])

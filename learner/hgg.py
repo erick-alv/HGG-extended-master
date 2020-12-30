@@ -428,7 +428,7 @@ class HGGLearner:
 			# Trajectory is stored in replay buffer, replay buffer can be normal or EBP
 			buffer.store_trajectory(current)
 			agent.normalizer_update(buffer.sample_batch())
-			if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:
+			if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:#120:
 				if args.normalizer_every_counter % args.normalizer_every == 0:
 					agent.normalizer_update(args.imaginary_buffer.sample_batch())
 				args.normalizer_every_counter += 1
@@ -441,7 +441,7 @@ class HGGLearner:
 					args.logger.add_dict(info)
 				# update target network
 				agent.target_update()
-				if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:
+				if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:#120:
 					if args.train_every_counter % args.train_every == 0:
 						for _ in range(3):
 							info2 = agent.train(args.imaginary_buffer.sample_batch())
@@ -660,7 +660,7 @@ class HGGLearner_VAEs(HGGLearner):
 			# Trajectory is stored in replay buffer, replay buffer can be normal or EBP
 			buffer.store_trajectory(current)
 			agent.normalizer_update(buffer.sample_batch())
-			if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:
+			if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:#120:
 				if args.normalizer_every_counter % args.normalizer_every == 0:
 					agent.normalizer_update(args.imaginary_buffer.sample_batch())
 				args.normalizer_every_counter += 1
@@ -675,7 +675,7 @@ class HGGLearner_VAEs(HGGLearner):
 				agent.target_update()
 				#train with imaginary
 				
-				if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:
+				if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:#120:
 					if args.train_every_counter % args.train_every == 0:
 						for _ in range(3):
 							info2 = agent.train(args.imaginary_buffer.sample_batch())
@@ -759,13 +759,13 @@ class NormalLearner:
 				action = agent.step(obs, explore=True)
 				obs, reward, done, info = self.env_List[i].step(action)
 				## just for video
-				tr_env_images.append(take_env_image(self.env_List[i], args.img_size))
+				#tr_env_images.append(take_env_image(self.env_List[i], args.img_size))
 				##
 				if timestep==args.timesteps-1: done = True#this makes that the last obs is as done
 				current.store_step(action, obs, reward, done)
 				if done: break
 			## just for video
-			if (self.learn_calls%100==0 and i == args.episodes-1) or \
+			'''if (self.learn_calls%100==0 and i == args.episodes-1) or \
 					(info['Success'] == 1.0 and self.success_n%100 == 0):
 				#self.env_List[i].goal = self.env_List[i].goal.copy()
 				self.env_List[i].env.env._move_object(position=self.env_List[i].goal.copy())
@@ -776,7 +776,7 @@ class NormalLearner:
 					self.success_n +=1
 				else:
 					create_rollout_video(tr_env_images, goal_image=tr_goal, args=args,
-									 filename='last_rollout_it{}'.format(self.learn_calls))
+									 filename='last_rollout_it{}'.format(self.learn_calls))'''
 			##
 
 			# Trajectory is stored in replay buffer, replay buffer can be normal or EBP

@@ -447,7 +447,7 @@ def experiment_setup(args):
 		args.train_every_counter = 0
 		args.normalizer_every = 5
 		args.normalizer_every_counter = 0
-		args.imaginary_buffer = ReplayBuffer_Imaginary(args, buffer_size=200)
+		args.imaginary_buffer = ReplayBuffer_Imaginary(args, buffer_size=200)#500
 	args.buffer = buffer = ReplayBuffer_Episodic(args)
 	args.learner = learner = create_learner(args)
 	args.agent = agent = create_agent(args)
