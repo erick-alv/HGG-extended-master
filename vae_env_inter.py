@@ -11,98 +11,118 @@ from PIL import Image
 
 
 # todo set to false once is trained with table
-def take_obstacle_image(env, img_size, make_table_invisible=True):
-    env.env.env._set_arm_visible(visible=False)
-    env.env.env._set_visibility(names_list=['obstacle'], alpha_val=1.0)
-    env.env.env._set_visibility(names_list=['object0'], alpha_val=0.0)
+def take_obstacle_image(env, img_size, make_table_invisible=True, direct_env=None):
+    if direct_env is not None:
+        env_to_use = direct_env
+    else:
+        env_to_use = env.env.env
+    env_to_use._set_arm_visible(visible=False)
+    env_to_use._set_visibility(names_list=['obstacle'], alpha_val=1.0)
+    env_to_use._set_visibility(names_list=['object0'], alpha_val=0.0)
     if not make_table_invisible:
-        env.env.env._set_visibility(names_list=['table0'], alpha_val=1.0)
-    rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
+        env_to_use._set_visibility(names_list=['table0'], alpha_val=1.0)
+    rgb_array = np.array(env_to_use.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
     return rgb_array
 
-def take_goal_image(env, img_size, make_table_invisible=True, make_walls_invisible=True):
-    env.env.env._set_arm_visible(visible=False)
-    env.env.env._set_visibility(names_list=['object0'], alpha_val=1.0)
+def take_goal_image(env, img_size, make_table_invisible=True, make_walls_invisible=True, direct_env=None):
+    if direct_env is not None:
+        env_to_use = direct_env
+    else:
+        env_to_use = env.env.env
+    env_to_use._set_arm_visible(visible=False)
+    env_to_use._set_visibility(names_list=['object0'], alpha_val=1.0)
     if not make_table_invisible:
-        env.env.env._set_visibility(names_list=['table0'], alpha_val=1.0)
+        env_to_use._set_visibility(names_list=['table0'], alpha_val=1.0)
     if not make_walls_invisible:
-        if 'wall1' in env.env.env.sim.model.body_names:
-            env.env.env._set_visibility(names_list=['wall1', 'wall2', 'wall3', 'wall4'], alpha_val=1.0)
-    rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
+        if 'wall1' in env_to_use.sim.model.body_names:
+            env_to_use._set_visibility(names_list=['wall1', 'wall2', 'wall3', 'wall4'], alpha_val=1.0)
+    rgb_array = np.array(env_to_use.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
     return rgb_array
 
-def take_env_image(env, img_size):
-    env.env.env._set_arm_visible(visible=False)
-    env.env.env._set_visibility(names_list=['object0'], alpha_val=1.0)
-    env.env.env._set_visibility(names_list=['obstacle'], alpha_val=1.0)
-    env.env.env._set_visibility(names_list=['table0'], alpha_val=1.0)
+def take_env_image(env, img_size, direct_env=None):
+    if direct_env is not None:
+        env_to_use = direct_env
+    else:
+        env_to_use = env.env.env
+    env_to_use._set_arm_visible(visible=False)
+    env_to_use._set_visibility(names_list=['object0'], alpha_val=1.0)
+    env_to_use._set_visibility(names_list=['obstacle'], alpha_val=1.0)
+    env_to_use._set_visibility(names_list=['table0'], alpha_val=1.0)
     # todo think more effective way of doing this
     for name in ['obstacle2', 'obstacle3']:
         try:
-            env.env.env._set_visibility(names_list=[name], alpha_val=1.0)
+            env_to_use._set_visibility(names_list=[name], alpha_val=1.0)
         except:
             pass
     for id in  [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,16, 17, 18, 21]:
-        env.env.env._set_visibility_with_id(id, alpha_val=0.2)
+        env_to_use._set_visibility_with_id(id, alpha_val=0.2)
     #just to activate in case viewer is not intialized
-    if not hasattr(env.env.env.viewer, 'cam'):
-        np.array(env.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
-    #env.env.env.viewer.cam.distance += 0.3
-    #env.env.env.viewer.cam.elevation += 15
+    if not hasattr(env_to_use.viewer, 'cam'):
+        np.array(env_to_use.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
+    #env_to_use.viewer.cam.distance += 0.3
+    #env_to_use.viewer.cam.elevation += 15
     #self.viewer.cam.azimuth = 180.
-    rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
-    #env.env.env.viewer.cam.distance -= 0.3
-    #env.env.env.viewer.cam.elevation -= 15
+    rgb_array = np.array(env_to_use.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
+    #env_to_use.viewer.cam.distance -= 0.3
+    #env_to_use.viewer.cam.elevation -= 15
     return rgb_array
 
-def take_objects_image_training(env, img_size):
-    env.env.env._set_arm_visible(visible=False)
-    env.env.env._set_visibility(names_list=['rectangle'], alpha_val=1.0)
-    env.env.env._set_visibility(names_list=['cube'], alpha_val=1.0)
-    env.env.env._set_visibility(names_list=['cylinder'], alpha_val=1.0)
-    env.env.env._set_visibility(names_list=['table0'], alpha_val=0.0)
+def take_objects_image_training(env, img_size, direct_env=None):
+    if direct_env is not None:
+        env_to_use = direct_env
+    else:
+        env_to_use = env.env.env
+    env_to_use._set_arm_visible(visible=False)
+    env_to_use._set_visibility(names_list=['rectangle'], alpha_val=1.0)
+    env_to_use._set_visibility(names_list=['cube'], alpha_val=1.0)
+    env_to_use._set_visibility(names_list=['cylinder'], alpha_val=1.0)
+    env_to_use._set_visibility(names_list=['table0'], alpha_val=0.0)
     try:
-        env.env.env._set_visibility(names_list=['rectangle1'], alpha_val=1.0)
+        env_to_use._set_visibility(names_list=['rectangle1'], alpha_val=1.0)
     except:
         pass
     try:
-        env.env.env._set_visibility(names_list=['rectangle2'], alpha_val=1.0)
+        env_to_use._set_visibility(names_list=['rectangle2'], alpha_val=1.0)
     except:
         pass
     try:
-        env.env.env._set_visibility(names_list=['rectangle3'], alpha_val=1.0)
+        env_to_use._set_visibility(names_list=['rectangle3'], alpha_val=1.0)
     except:
         pass
     try:
-        env.env.env._set_visibility(names_list=['cube1'], alpha_val=1.0)
+        env_to_use._set_visibility(names_list=['cube1'], alpha_val=1.0)
     except:
         pass
     try:
-        env.env.env._set_visibility(names_list=['cylinder1'], alpha_val=1.0)
+        env_to_use._set_visibility(names_list=['cylinder1'], alpha_val=1.0)
     except:
         pass
 
     # just to activate in case viewer is not initialized
-    if not hasattr(env.env.env.viewer, 'cam'):
-        np.array(env.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
-    rgb_array = np.array(env.render( mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
+    if not hasattr(env_to_use.viewer, 'cam'):
+        np.array(env_to_use.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
+    rgb_array = np.array(env_to_use.render( mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
     return rgb_array
 
-def take_image_objects(env, img_size):
-    env.env.env._set_arm_visible(visible=False)
-    env.env.env._set_visibility(names_list=['object0'], alpha_val=1.0)
-    env.env.env._set_visibility(names_list=['obstacle'], alpha_val=1.0)
+def take_image_objects(env, img_size, direct_env=None):
+    if direct_env is not None:
+        env_to_use = direct_env
+    else:
+        env_to_use = env.env.env
+    env_to_use._set_arm_visible(visible=False)
+    env_to_use._set_visibility(names_list=['object0'], alpha_val=1.0)
+    env_to_use._set_visibility(names_list=['obstacle'], alpha_val=1.0)
     #todo think more effective way of doing this
     for name in ['obstacle2', 'obstacle3']:
         try:
-            env.env.env._set_visibility(names_list=[name], alpha_val=1.0)
+            env_to_use._set_visibility(names_list=[name], alpha_val=1.0)
         except:
             pass
     # just to activate in case viewer is not intialized
-    if not hasattr(env.env.env.viewer, 'cam'):
+    if not hasattr(env_to_use.viewer, 'cam'):
         #using camera name does not call viewer setup
-        np.array(env.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
-    rgb_array = np.array(env.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
+        np.array(env_to_use.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
+    rgb_array = np.array(env_to_use.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
     return rgb_array
 
 

@@ -31,6 +31,8 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	parser.add_argument('--learn', help='type of training method', type=str, default='hgg', choices=learner_collection.keys())
 
 	parser.add_argument('--env', help='gym env id', type=str, default='FetchReach-v1', choices=Robotics_envs_id)
+	parser.add_argument('--extra_sec', help='whether to use extra distance around obstacle',
+						type=str2bool, default=False)
 	args, _ = parser.parse_known_args()
 	if args.env=='HandReach-v0':
 		parser.add_argument('--goal', help='method of goal generation', type=str, default='reach', choices=['vanilla', 'reach'])
@@ -60,6 +62,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 									 ])
 
 
+				# todo write here security distance
 		if args.env[:5]=='Fetch':
 			parser.add_argument('--init_offset', help='initial offset in fetch environments', type=np.float32, default=1.0)
 		elif args.env[:4]=='Hand':
@@ -68,6 +71,8 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	args, _ = parser.parse_known_args()
 	if 'RewMod' in args.goal:
 		parser.add_argument('--rew_mod_val', help='value to subtract on collision', type=np.float32, default=-2.)
+	if args.extra_sec:
+		parser.add_argument('--sec_dist', help='security distance around obstacle', type=np.float32, default=None)
 	parser.add_argument('--graph', help='g-hgg yes or no', type=str2bool, default=False)
 	parser.add_argument('--show_goals', help='number of goals to show', type=np.int32, default=0)
 	parser.add_argument('--play_path', help='path to meta_file directory for play', type=str, default=None)
@@ -152,6 +157,12 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	args.goal_based = (args.env in Robotics_envs_id)
 	args.clip_return_l, args.clip_return_r = clip_return_range(args)
 
+	if args.extra_sec and args.sec_dist is None:
+		if args.vae_dist_help:#distance for latent space
+			args.sec_dist = 0.02
+		else:
+			args.sec_dist = 0.008
+
 
 	base_name = args.alg + '-' + args.env + '-' + args.goal + '-' + args.learn
 	if do_just_test:
@@ -165,6 +176,9 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 					logger_name = 'TEST-' + last
 				else:
 					logger_name = 'TEST-' + base_name
+			if 'secdist' in args.play_path and not args.extra_sec:
+				raise Exception(
+					'using agent trained with security distance, but test not using it. Add the same distance')
 
 		else:
 			logger_name = 'TEST-' + base_name
@@ -181,6 +195,8 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 			logger_name = logger_name +'-'+ args.vae_type
 		if 'RewMod' in args.goal:
 			logger_name = logger_name +'-rewmodVal('+ str(args.rew_mod_val)+')'
+		if args.extra_sec:
+			logger_name = logger_name + '-secdist({})'.format(args.sec_dist)
 		if args.imaginary_obstacle_transitions:
 			logger_name = logger_name + '-IMAGINARY'
 	args.logger = get_logger(logger_name)
@@ -390,8 +406,11 @@ def load_dist_estimator(args, env):
 		args.dist_estimator.initialize_internal_distance_graph([args.field_center[0], args.field_center[1],
 																args.field_size[0], args.field_size[1]],
 															   num_vertices=[n_ve, n_ve], size_increase=0)#size_goal_box[0])#todo use real or other depending of va
+		graph_name = 'env_graph_created_{}_{}'.format(args.env, args.dist_estimator_type)
+		if args.extra_sec:
+			graph_name = graph_name + '_sec_dist({})'.format(args.sec_dist)
 		args.dist_estimator.graph.plot_graph(
-			save_path='env_graph_created_{}_{}'.format(args.env, args.dist_estimator_type), elev=90, azim=0)
+			save_path=graph_name, elev=90, azim=0)
 	plt.clf()
 
 

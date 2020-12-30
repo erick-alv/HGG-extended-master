@@ -388,7 +388,7 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 	if np.abs(direction[1]) > np.abs(direction[0]):
 		dif = np.abs(bbox_obstacle_t1[1] - bbox_obstacle_t0[1])
 
-		# place over
+		# place over, go over
 		extra_dists = np.random.uniform(low=0., high=dif / 2., size=10)
 		for extra_dist in extra_dists:
 			a_ny0 = ely1 + elys1 + oys1 + extra_dist
@@ -404,7 +404,7 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
 
-		# place below
+		# place below, go below
 		extra_dists = np.random.uniform(low=0., high=dif / 2., size=10)
 		for extra_dist in extra_dists:
 			b_ny0 = ely1 - elys1 - oys1 - extra_dist
