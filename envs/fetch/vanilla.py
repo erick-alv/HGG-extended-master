@@ -87,8 +87,14 @@ class VanillaGoalEnv():
 			obs = self.env.env._get_obs()
 			if self.args.extra_sec:
 				to_add = np.zeros_like(obs['real_obstacle_info'])
-				assert obs['real_obstacle_info'].shape[1] == 6
-				to_add[:, -3:] = self.args.sec_dist
+				if obs['real_obstacle_info'].ndims == 1:
+					assert obs['real_obstacle_info'].shape[0] == 6
+					to_add[-3:] = self.args.sec_dist
+				elif obs['real_obstacle_info'].ndims == 2:
+					assert obs['real_obstacle_info'].shape[1] == 6
+					to_add[:, -3:] = self.args.sec_dist
+				else:
+					raise Exception('shape of obstacle is not compatible')
 				obs['real_obstacle_info'] += to_add
 			return obs
 
