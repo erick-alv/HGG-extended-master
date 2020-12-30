@@ -161,7 +161,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 		if args.vae_dist_help:#distance for latent space
 			args.sec_dist = 0.02
 		else:
-			args.sec_dist = 0.008
+			args.sec_dist = 0.009
 
 
 	base_name = args.alg + '-' + args.env + '-' + args.goal + '-' + args.learn
