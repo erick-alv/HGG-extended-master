@@ -4,7 +4,7 @@ import time
 from PIL import Image
 from envs import make_env
 import copy
-from j_vae.common_data import center_obstacle, range_x, range_y, obstacle_size, \
+from vae.common_data import center_obstacle, range_x, range_y, obstacle_size, \
     min_obstacle_size, max_obstacle_size, puck_size, z_table_height
 
 encoding_of = 'goal'

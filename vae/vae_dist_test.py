@@ -4,11 +4,11 @@ from envs import make_env
 from envs.utils import goal_distance
 from utils.stable_baselines_plotter import plot_curves
 import numpy as np
-from j_vae.train_vae import load_Vae
+from vae.train_vae import load_Vae
 
-from j_vae.train_vae_sb import load_Vae as load_Vae_SB
-from j_vae.generate_vae_data import points_file, generate_points
-from j_vae.common_data import obstacle_size
+from vae.train_vae_sb import load_Vae as load_Vae_SB
+from vae.generate_vae_data import points_file, generate_points
+from vae.common_data import obstacle_size
 import torch
 from torchvision.utils import save_image
 
@@ -90,7 +90,7 @@ if __name__ == '__main__':
                 filename='results/distances_latent')
     #plot_curves([(xs, dist_latent)], 'step', 'distance',
     #            window=1, labels=['latent_reparametrized'], title='distances_latent_reparametrized',  # title='distances_latent',
-    #            filename='/home/erick/RL/HGG-extended/HGG-Extended-master/j_vae/distances_latent_reparametrized')
+    #            filename='/home/erick/RL/HGG-extended/HGG-Extended-master/vae/distances_latent_reparametrized')
     images = data
     if doing_goal:
         fn = 'results/env_goals.png'

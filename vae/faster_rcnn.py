@@ -11,7 +11,7 @@ from tqdm import tqdm
 from matplotlib import patches
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 import torchvision.transforms as T
-import j_vae.engine_utils as engine_utils
+import vae.engine_utils as engine_utils
 import math
 import sys
 

@@ -1,5 +1,5 @@
 
-import j_vae.train_goal_vae as VAE_GOAL
+import vae.train_goal_vae as VAE_GOAL
 import numpy as np
 import os
 this_file_dir = os.path.dirname(os.path.abspath(__file__))

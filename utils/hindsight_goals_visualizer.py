@@ -33,7 +33,7 @@ def show_points(points_list, save_file, space_of):
         print('cannot create visualization of shape {}'.format(points_list.shape))
 
 def compare_points(env, save_file, args):
-    from j_vae.latent_space_transformations import table_map_x, table_map_y
+    from vae.latent_space_transformations import table_map_x, table_map_y
     support_points = np.array([[-1., -1., 0.], [-1., 1, 0.], [1, -1., 0.], [1, 1, 0.]])
     obs = env.reset()
     xs = table_map_x(np.array([obs['achieved_goal'][0], obs['desired_goal'][0]]))

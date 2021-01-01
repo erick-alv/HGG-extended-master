@@ -6,7 +6,7 @@ from envs import make_env, clip_return_range, Robotics_envs_id
 from utils.os_utils import make_dir
 from vae_env_inter import take_env_image, take_obstacle_image, take_goal_image, take_objects_image_training
 from PIL import Image
-from j_vae.common_data import train_file_name, puck_size, obstacle_size, z_table_height_obstacle, min_obstacle_size,\
+from vae.common_data import train_file_name, puck_size, obstacle_size, z_table_height_obstacle, min_obstacle_size,\
     max_obstacle_size,z_table_height_goal
 from scipy.spatial.transform import Rotation
 import csv
@@ -544,7 +544,7 @@ def _gen_rectangle():
     pos_obstacle[2] = 0.4 + height_obstacle
     return size, rot_z, pos_obstacle, occuped_area_x, occuped_area_y, bbox
 
-from j_vae.latent_space_transformations import interval_map_function
+from vae.latent_space_transformations import interval_map_function
 def bbox_to_image_coordinates(bbox, args):
     x_min = bbox[0] - bbox[2]
     x_max = bbox[0] + bbox[2]

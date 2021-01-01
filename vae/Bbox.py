@@ -781,7 +781,7 @@ if __name__ == '__main__':
     #just take half the data
     data_set = data_set[:19200]
     
-    from j_vae.train_monet import load_Vae, visualize_masks
+    from vae.train_monet import load_Vae, visualize_masks
     model = load_Vae(path='../data/FetchGenerativeEnv-v1/all_sb_model', img_size=64, latent_size=6)
     model = model.to(device)
     data_size = len(data_set)

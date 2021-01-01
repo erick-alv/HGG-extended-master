@@ -1,9 +1,9 @@
 from envs.utils import goal_distance
 from utils.stable_baselines_plotter import plot_curves
 import numpy as np
-from j_vae.train_vae import load_Vae
-from j_vae.generate_vae_data import random_pos_inside, size_file,random_size_at
-from j_vae.common_data import min_obstacle_size, max_obstacle_size, \
+from vae.train_vae import load_Vae
+from vae.generate_vae_data import random_pos_inside, size_file,random_size_at
+from vae.common_data import min_obstacle_size, max_obstacle_size, \
     range_x, range_y, obstacle_size, upper_limits, lower_limits
 import torch
 from torchvision.utils import save_image

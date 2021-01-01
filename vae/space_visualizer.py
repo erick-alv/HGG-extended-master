@@ -1,20 +1,20 @@
 from PIL import Image
 import numpy as np
 
-from j_vae.generate_vae_data import random_pos_inside, size_file,random_size_at,generate_points
-from j_vae.common_data import  min_obstacle_size, max_obstacle_size, range_x, range_y, obstacle_size, \
+from vae.generate_vae_data import random_pos_inside, size_file,random_size_at,generate_points
+from vae.common_data import  min_obstacle_size, max_obstacle_size, range_x, range_y, obstacle_size, \
     puck_size, z_table_height, center_obstacle, train_file_name, vae_sb_weights_file_name, file_corners_name
 import torch
 import matplotlib.pyplot as plt
-from j_vae.train_vae_sb import load_Vae as load_Vae_SB
+from vae.train_vae_sb import load_Vae as load_Vae_SB
 from envs import make_env
 from vae_env_inter import take_goal_image, take_obstacle_image, take_objects_image_training
-from j_vae.train_vae import load_Vae
-from j_vae.train_monet import load_Vae as load_Monet
-from j_vae.Bbox import load_Model as load_Bbox
+from vae.train_vae import load_Vae
+from vae.train_monet import load_Vae as load_Monet
+from vae.Bbox import load_Model as load_Bbox
 import copy
 
-from j_vae.latent_space_transformations import create_rotation_matrix, rotate_list_of_points, angle_obstacle, angle_goal,\
+from vae.latent_space_transformations import create_rotation_matrix, rotate_list_of_points, angle_obstacle, angle_goal,\
     get_size_in_space
 from vae_env_inter import get_indices_goal_obstacle
 from SPACE.main_space import load_space_model
@@ -231,7 +231,7 @@ def visualization_grid_points_all(env, model, size_to_use, img_size, n, enc_type
     with torch.no_grad():
         model.eval()
         mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
-        from j_vae.train_monet import visualize_masks, numpify
+        from vae.train_monet import visualize_masks, numpify
         visualize_masks(imgs=numpify(data), masks=numpify(torch.cat(masks, dim=1)), recons=numpify(full_reconstruction),
                         file_name=fig_file_name + "_recons.png")
         mu_s, logvar_s, masks = model.encode(data)
@@ -539,7 +539,7 @@ def traversal_all(env, model, img_size,  latent_size, n, fig_file_name):
     data = data.permute([0, 3, 1, 2])
     mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
     #model.eval() Todo!!!!!!! WITH model eval it does not work
-    from j_vae.train_monet import visualize_masks, numpify
+    from vae.train_monet import visualize_masks, numpify
     visualize_masks(imgs=numpify(data), masks=numpify(torch.cat(masks, dim=1)), recons=numpify(full_reconstruction),
                     file_name=fig_file_name+"_recons.png")
     mu_s, logvar_s, masks = model.encode(data)

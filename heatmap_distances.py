@@ -4,7 +4,7 @@ from common import get_args, experiment_setup, load_vaes, make_env, load_field_p
     load_dist_estimator, make_temp_env
 from vae_env_inter import take_env_image, take_image_objects, latents_from_images
 import copy
-from j_vae.latent_space_transformations import interval_map_function
+from vae.latent_space_transformations import interval_map_function
 import matplotlib.pyplot as plt
 from play import Player
 from algorithm.replay_buffer import goal_based_process

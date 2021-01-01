@@ -1,10 +1,10 @@
 import numpy as np
 import copy
 import torch
-from j_vae.train_vae_sb import VAE_SB
-from j_vae.train_vae import VAE
-from j_vae.train_monet import Monet_VAE
-from j_vae.latent_space_transformations import torch_goal_transformation, torch_obstacle_transformation, \
+from vae.train_vae_sb import VAE_SB
+from vae.train_vae import VAE
+from vae.train_monet import Monet_VAE
+from vae.latent_space_transformations import torch_goal_transformation, torch_obstacle_transformation, \
     torch_get_size_in_space
 import torchvision
 from PIL import Image

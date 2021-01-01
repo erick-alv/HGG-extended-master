@@ -1,7 +1,7 @@
  # based on https://github.com/stelzner/monet
 # License: MIT
 # Author: Karl Stelzner
-from j_vae.common_data import train_file_name, vae_sb_weights_file_name
+from vae.common_data import train_file_name, vae_sb_weights_file_name
 import argparse
 import torch
 from torch import nn, optim

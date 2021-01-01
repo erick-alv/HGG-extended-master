@@ -3,7 +3,6 @@ from envs import make_env
 from algorithm.replay_buffer import goal_based_process
 from utils.os_utils import make_dir, LoggerExtra
 from utils.image_util import create_rollout_video
-from j_vae.distance_estimation import calculate_distance, calculate_distance_real
 from hindsight_goals_visualizer import show_points
 from vae_env_inter import take_env_image
 import copy

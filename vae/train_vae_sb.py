@@ -9,7 +9,7 @@ from torch import nn, optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torchvision.utils import save_image
-from j_vae.common_data import train_file_name, vae_sb_weights_file_name
+from vae.common_data import train_file_name, vae_sb_weights_file_name
 this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
 
 #TODO verify why this version of code is not working anymore

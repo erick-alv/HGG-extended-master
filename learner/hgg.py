@@ -6,8 +6,8 @@ from algorithm.replay_buffer import Trajectory, goal_concat
 from utils.gcc_utils import gcc_load_lib, c_double, c_int
 from envs.distance_graph import DistanceGraph, DistanceGraph2D
 from vae_env_inter import take_goal_image, take_obstacle_image, take_env_image, transform_image_to_latent_batch_torch
-from j_vae.latent_space_transformations import torch_goal_transformation, torch_obstacle_transformation, torch_get_size_in_space
-from j_vae.distance_estimation import calculate_distance_batch, calculate_distance
+from vae.latent_space_transformations import torch_goal_transformation, torch_obstacle_transformation, torch_get_size_in_space
+from vae.distance_estimation import calculate_distance_batch, calculate_distance
 from utils.image_util import create_rollout_video
 from PIL import Image
 

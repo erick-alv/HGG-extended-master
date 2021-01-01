@@ -7,15 +7,15 @@ from learner import create_learner, learner_collection
 from test import Tester
 from algorithm.replay_buffer import ReplayBuffer_Episodic, goal_based_process, ReplayBuffer_Imaginary
 import torch
-from j_vae.train_vae_sb import load_Vae as load_Vae_SB
-from j_vae.train_vae import load_Vae
-from j_vae.train_monet import load_Vae as load_Monet
-from j_vae.Bbox import load_Model as load_Bbox
-from j_vae.faster_rcnn import load_faster_rcnn
-from j_vae.common_data import vae_sb_weights_file_name, vae_weights_file_name
+from vae.train_vae_sb import load_Vae as load_Vae_SB
+from vae.train_vae import load_Vae
+from vae.train_monet import load_Vae as load_Monet
+from vae.Bbox import load_Model as load_Bbox
+from vae.faster_rcnn import load_faster_rcnn
+from vae.common_data import vae_sb_weights_file_name, vae_weights_file_name
 from PIL import Image
 from vae_env_inter import take_env_image, take_image_objects
-from j_vae.distance_estimation import calculate_distance
+from vae.distance_estimation import calculate_distance
 from dist_estimator import DistMovEst, DistMovEstReal, MultipleDist, MultipleDistReal, Estimator_DistNet, Subst, SubstReal
 from SPACE.main_space import load_space_model
 import matplotlib.pyplot as plt

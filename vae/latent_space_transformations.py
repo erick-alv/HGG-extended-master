@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from j_vae.common_data import obstacle_size, puck_size, train_file_name, vae_sb_weights_file_name, file_corners_name
+from vae.common_data import obstacle_size, puck_size, train_file_name, vae_sb_weights_file_name, file_corners_name
 
 def calculate_angle(model, corners_file,  enc_type, ind_1, ind_2):
     corner_imgs = np.load(corners_file)
@@ -368,7 +368,7 @@ if __name__ == '__main__':
     cuda = torch.cuda.is_available()
     device = torch.device("cuda" if cuda else "cpu")
 
-    from j_vae.train_vae_sb import load_Vae as load_Vae_SB
+    from vae.train_vae_sb import load_Vae as load_Vae_SB
     model = load_Vae_SB(weights_path, args.img_size, args.latent_size)
     if args.task == 'analyze_components':
         analyze_lowest_variance_components(model, args.latent_size, train_file, args.batch_size, device)
@@ -397,7 +397,7 @@ if __name__ == '__main__':
 
 '''def get_interpolation_points_obstacle():
     g_corner_imgs = np.load('../data/FetchPushObstacle/goal_corners.npy')
-    from j_vae.train_vae_sb import load_Vae as load_Vae_SB
+    from vae.train_vae_sb import load_Vae as load_Vae_SB
     vae_model_goal = load_Vae_SB(path='../data/FetchPushObstacle/vae_sb_model_goal')
 
     cuda = torch.cuda.is_available()
