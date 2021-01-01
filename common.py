@@ -237,10 +237,7 @@ def load_vaes(args):
 		args.vae_model = load_Bbox(path='data/FetchGenerativeEnv-v1/model_bbox',img_size=args.img_size, latent_size=0,
 								   device='cuda:0', num_slots=5)#latent size is not being used for now
 		args.vae_model.eval()
-		file_index_object = 'data/'+args.env+'/'+args.vae_type+'_obj_i.npy'
-		file_indices_obstacle = 'data/'+args.env+'/'+args.vae_type+'_obstacles_indices.npy'
-		args.obj_index = np.load(file_index_object)
-		args.obstacles_indices = np.load(file_indices_obstacle)
+
 		return
 	elif args.vae_type == 'faster_rcnn':
 		args.vae_model = load_faster_rcnn(path='data/FetchGenerativeEnv-v1/model_rcnn.pth', device='cuda:0')  # latent size is not being used for now
@@ -419,6 +416,11 @@ def load_dist_estimator(args, env):
 def experiment_setup(args):
 	if args.vae_dist_help:
 		load_vaes(args)
+		if args.vae_type == 'bbox':
+			file_index_object = 'data/' + args.env + '/' + args.vae_type + '_obj_i.npy'
+			file_indices_obstacle = 'data/' + args.env + '/' + args.vae_type + '_obstacles_indices.npy'
+			args.obj_index = np.load(file_index_object)
+			args.obstacles_indices = np.load(file_indices_obstacle)
 
 	#since some extensions of the envs use the distestimator this load is used with the interval wrapper#todo use other?
 	load_field_parameters(args)
