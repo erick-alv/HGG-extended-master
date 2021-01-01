@@ -61,8 +61,6 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 									 'intervalPAVRelRewMod', 'intervalPAVRelRewModStop', 'intervalTestExtendedPAVRel'
 									 ])
 
-
-				# todo write here security distance
 		if args.env[:5]=='Fetch':
 			parser.add_argument('--init_offset', help='initial offset in fetch environments', type=np.float32, default=1.0)
 		elif args.env[:4]=='Hand':
