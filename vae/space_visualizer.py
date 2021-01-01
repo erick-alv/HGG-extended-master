@@ -88,7 +88,7 @@ def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, in
     all_ims = Image.fromarray(all_array.astype(np.uint8))
     if fig_file_name is not None:
         all_ims.save('{}_ims.png'.format(fig_file_name))
-        from hindsight_goals_visualizer import show_points
+        from utils.hindsight_goals_visualizer import show_points
         show_points(points, '{}_vis'.format(fig_file_name),'real')
     else:
         all_ims.show()
@@ -220,7 +220,7 @@ def visualization_grid_points_all(env, model, size_to_use, img_size, n, enc_type
     all_ims = Image.fromarray(all_array.astype(np.uint8))
     if fig_file_name is not None:
         all_ims.save('{}_ims.png'.format(fig_file_name))
-        from hindsight_goals_visualizer import show_points
+        from utils.hindsight_goals_visualizer import show_points
         show_points(points, '{}_vis'.format(fig_file_name),'real')
     else:
         all_ims.show()

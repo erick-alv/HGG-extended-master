@@ -1,7 +1,7 @@
 import numpy as np
 import time
 from common import get_args, experiment_setup
-from hindsight_goals_visualizer import show_points
+from utils.hindsight_goals_visualizer import show_points
 from copy import deepcopy
 import pickle
 import torch
