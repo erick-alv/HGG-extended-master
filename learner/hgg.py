@@ -428,7 +428,7 @@ class HGGLearner:
 			# Trajectory is stored in replay buffer, replay buffer can be normal or EBP
 			buffer.store_trajectory(current)
 			agent.normalizer_update(buffer.sample_batch())
-			if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:#120:
+			if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > #120:#50
 				if args.normalizer_every_counter % args.normalizer_every == 0:
 					agent.normalizer_update(args.imaginary_buffer.sample_batch())
 				args.normalizer_every_counter += 1
@@ -441,7 +441,7 @@ class HGGLearner:
 					args.logger.add_dict(info)
 				# update target network
 				agent.target_update()
-				if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:#120:
+				if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 120:#50:
 					if args.train_every_counter % args.train_every == 0:
 						for _ in range(3):
 							info2 = agent.train(args.imaginary_buffer.sample_batch())
@@ -660,7 +660,7 @@ class HGGLearner_VAEs(HGGLearner):
 			# Trajectory is stored in replay buffer, replay buffer can be normal or EBP
 			buffer.store_trajectory(current)
 			agent.normalizer_update(buffer.sample_batch())
-			if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:#120:
+			if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 120:#50:
 				if args.normalizer_every_counter % args.normalizer_every == 0:
 					agent.normalizer_update(args.imaginary_buffer.sample_batch())
 				args.normalizer_every_counter += 1
@@ -675,7 +675,7 @@ class HGGLearner_VAEs(HGGLearner):
 				agent.target_update()
 				#train with imaginary
 				
-				if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 50:#120:
+				if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 120:#50:
 					if args.train_every_counter % args.train_every == 0:
 						for _ in range(3):
 							info2 = agent.train(args.imaginary_buffer.sample_batch())

@@ -387,9 +387,38 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 	extra_info = []
 	if np.abs(direction[1]) > np.abs(direction[0]):
 		dif = np.abs(bbox_obstacle_t1[1] - bbox_obstacle_t0[1])
+		# place above, go down not reach
+		extra_dists = np.random.uniform(low=0., high=dif / 2, size=10)
+		for extra_dist in extra_dists:
+			# size of obstacle not considered so it is colliding and when moving more chance to not collide any
+			to_move = np.abs(direction[1])
+			a_ny0 = ely1 + elys1 + extra_dist + elys1 + to_move
+			a_new_bbox_t0 = np.array([ox0, a_ny0, oxs0, oys0])
+			a_ny1 = a_ny0 - to_move
+			a_new_bbox_t1 = np.array([ox1, a_ny1, oxs1, oys1])
+			new_bboxes_t0.append(a_new_bbox_t0)
+			new_bboxes_t1.append(a_new_bbox_t1)
+			dir = np.array(a_new_bbox_t1[0:2] - a_new_bbox_t0[0:2])
+			extra_info.append({'dir_not_scaled': dir.copy()})
+
+		# place above, go down pass
+		extra_dists = np.random.uniform(low=0., high=dif/2, size=10)
+		for extra_dist in extra_dists:
+			#size of obstacle not considered so it is colliding and when moving more chance to not collide any
+			a_ny0 = ely1 + elys1 + extra_dist - elys1
+			a_new_bbox_t0 = np.array([ox0, a_ny0, oxs0, oys0])
+			to_move = np.abs(direction[1])
+			if np.random.randint(2) == 0:
+				to_move += elys1 + extra_dist
+			a_ny1 = a_ny0 - to_move
+			a_new_bbox_t1 = np.array([ox1, a_ny1, oxs1, oys1])
+			new_bboxes_t0.append(a_new_bbox_t0)
+			new_bboxes_t1.append(a_new_bbox_t1)
+			dir = np.array(a_new_bbox_t1[0:2] - a_new_bbox_t0[0:2])
+			extra_info.append({'dir_not_scaled': dir.copy()})
 
 		# place above, go up
-		extra_dists = np.random.uniform(low=0., high=dif, size=20)
+		extra_dists = np.random.uniform(low=0., high=dif, size=10)
 		for extra_dist in extra_dists:
 			a_ny0 = ely1 + elys1 + oys1 + extra_dist
 			a_new_bbox_t0 = np.array([ox0, a_ny0, oxs0, oys0])
@@ -403,9 +432,8 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			dir = np.array(a_new_bbox_t1[0:2] - a_new_bbox_t0[0:2])
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
-
 		# place below, go down
-		extra_dists = np.random.uniform(low=0., high=dif, size=20)
+		extra_dists = np.random.uniform(low=0., high=dif, size=10)
 		for extra_dist in extra_dists:
 			b_ny0 = ely1 - elys1 - oys1 - extra_dist
 			b_new_bbox_t0 = np.array([ox0, b_ny0, oxs0, oys0])
@@ -419,11 +447,40 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			dir = np.array(b_new_bbox_t1[0:2] - b_new_bbox_t0[0:2])
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
+		# place below, go up not reach
+		extra_dists = np.random.uniform(low=0., high=dif / 2, size=10)
+		for extra_dist in extra_dists:
+			# size of obstacle not considered so it is colliding and when moving more chance to not collide any
+			to_move = np.abs(direction[1])
+			a_ny0 = ely1 - elys1 - extra_dist - elys1 - to_move
+			a_new_bbox_t0 = np.array([ox0, a_ny0, oxs0, oys0])
+			a_ny1 = a_ny0 + to_move
+			a_new_bbox_t1 = np.array([ox1, a_ny1, oxs1, oys1])
+			new_bboxes_t0.append(a_new_bbox_t0)
+			new_bboxes_t1.append(a_new_bbox_t1)
+			dir = np.array(a_new_bbox_t1[0:2] - a_new_bbox_t0[0:2])
+			extra_info.append({'dir_not_scaled': dir.copy()})
+
+		# place below, go up pass
+		extra_dists = np.random.uniform(low=0., high=dif / 2, size=10)
+		for extra_dist in extra_dists:
+			# size of obstacle not considered so it is colliding and when moving more chance to not collide any
+			a_ny0 = ely1 - elys1 - extra_dist + elys1
+			a_new_bbox_t0 = np.array([ox0, a_ny0, oxs0, oys0])
+			to_move = np.abs(direction[1])
+			if np.random.randint(2) == 0:
+				to_move += elys1 + extra_dist
+			a_ny1 = a_ny0 + to_move
+			a_new_bbox_t1 = np.array([ox1, a_ny1, oxs1, oys1])
+			new_bboxes_t0.append(a_new_bbox_t0)
+			new_bboxes_t1.append(a_new_bbox_t1)
+			dir = np.array(a_new_bbox_t1[0:2] - a_new_bbox_t0[0:2])
+			extra_info.append({'dir_not_scaled': dir.copy()})
 
 	else:
 		dif = np.abs(bbox_obstacle_t1[0] - bbox_obstacle_t0[0])
 		# place right, go right
-		extra_dists = np.random.uniform(low=0., high=dif, size=20)
+		extra_dists = np.random.uniform(low=0., high=dif, size=10)
 		for extra_dist in extra_dists:
 			a_nx0 = elx1 + elxs1 + oxs1 + extra_dist
 			a_new_bbox_t0 = np.array([a_nx0, oy0, oxs0, oys0])
@@ -437,8 +494,36 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			dir = np.array(a_new_bbox_t1[0:2] - a_new_bbox_t0[0:2])
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
+		# place right, go left no reach
+		extra_dists = np.random.uniform(low=0., high=dif, size=10)
+		for extra_dist in extra_dists:
+			to_move = np.abs(direction[0])
+			a_nx0 = elx1 + elxs1 + extra_dist + oxs1 + to_move
+			a_new_bbox_t0 = np.array([a_nx0, oy0, oxs0, oys0])
+			a_nx1 = a_nx0 - to_move
+			a_new_bbox_t1 = np.array([a_nx1, oy1, oxs1, oys1])
+			new_bboxes_t0.append(a_new_bbox_t0)
+			new_bboxes_t1.append(a_new_bbox_t1)
+			dir = np.array(a_new_bbox_t1[0:2] - a_new_bbox_t0[0:2])
+			extra_info.append({'dir_not_scaled': dir.copy()})
+
+		# place right, go left pass
+		extra_dists = np.random.uniform(low=0., high=dif, size=10)
+		for extra_dist in extra_dists:
+			a_nx0 = elx1 + elxs1 + extra_dist - oxs1
+			a_new_bbox_t0 = np.array([a_nx0, oy0, oxs0, oys0])
+			to_move = np.abs(direction[0])
+			if np.random.randint(2) == 0:
+				to_move += elxs1
+			a_nx1 = a_nx0 - to_move
+			a_new_bbox_t1 = np.array([a_nx1, oy1, oxs1, oys1])
+			new_bboxes_t0.append(a_new_bbox_t0)
+			new_bboxes_t1.append(a_new_bbox_t1)
+			dir = np.array(a_new_bbox_t1[0:2] - a_new_bbox_t0[0:2])
+			extra_info.append({'dir_not_scaled': dir.copy()})
+
 		# place left, go left
-		extra_dists = np.random.uniform(low=0., high=dif, size=20)
+		extra_dists = np.random.uniform(low=0., high=dif, size=10)
 		for extra_dist in extra_dists:
 			b_nx0 = elx1 - elxs1 - oxs1 - extra_dist
 			b_new_bbox_t0 = np.array([b_nx0, oy0, oxs0, oys0])
@@ -450,6 +535,34 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			new_bboxes_t0.append(b_new_bbox_t0)
 			new_bboxes_t1.append(b_new_bbox_t1)
 			dir = np.array(b_new_bbox_t1[0:2] - b_new_bbox_t0[0:2])
+			extra_info.append({'dir_not_scaled': dir.copy()})
+
+		# place left, go right no reach
+		extra_dists = np.random.uniform(low=0., high=dif, size=10)
+		for extra_dist in extra_dists:
+			to_move = np.abs(direction[0])
+			a_nx0 = elx1 - elxs1 - extra_dist - oxs1 - to_move
+			a_new_bbox_t0 = np.array([a_nx0, oy0, oxs0, oys0])
+			a_nx1 = a_nx0 + to_move
+			a_new_bbox_t1 = np.array([a_nx1, oy1, oxs1, oys1])
+			new_bboxes_t0.append(a_new_bbox_t0)
+			new_bboxes_t1.append(a_new_bbox_t1)
+			dir = np.array(a_new_bbox_t1[0:2] - a_new_bbox_t0[0:2])
+			extra_info.append({'dir_not_scaled': dir.copy()})
+
+		# place left, go right pass
+		extra_dists = np.random.uniform(low=0., high=dif, size=10)
+		for extra_dist in extra_dists:
+			a_nx0 = elx1 - elxs1 - extra_dist + oxs1
+			a_new_bbox_t0 = np.array([a_nx0, oy0, oxs0, oys0])
+			to_move = np.abs(direction[0])
+			if np.random.randint(2) == 0:
+				to_move += elxs1
+			a_nx1 = a_nx0 + to_move
+			a_new_bbox_t1 = np.array([a_nx1, oy1, oxs1, oys1])
+			new_bboxes_t0.append(a_new_bbox_t0)
+			new_bboxes_t1.append(a_new_bbox_t1)
+			dir = np.array(a_new_bbox_t1[0:2] - a_new_bbox_t0[0:2])
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
 

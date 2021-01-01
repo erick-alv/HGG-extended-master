@@ -239,19 +239,9 @@ def latents_from_images(images, args):
             images = images.permute([0, 3, 1, 2])
             #todo handle case more than one properly; todo
             #todo cahnge the index through inference
-            if args.env in ['FetchPushMovingObstacleEnv-v1', 'FetchPushMovingObstacleEnv-v2',
-                            'FetchPushMovingObstacleEnv-v3']:
-                goal_index = 1
-                # todo it could be obstacle indices, and then we have to also see if they are present
-                obstacle_idx = [4]
-            elif args.env in ['FetchPushMovingComEnv-v1', 'FetchPushMovingComEnv-v2',
-                              'FetchPushMovingComEnv-v3']:
-                goal_index = 1
-                obstacle_idx = [0, 2, 4]
-            elif args.env in ['FetchPushMovingDoubleObstacleEnv-v1','FetchPushMovingDoubleObstacleEnv-v2',
-                              'FetchPushMovingDoubleObstacleEnv-v3']:
-                goal_index = 1
-                obstacle_idx = [2, 4]
+
+            goal_index = args.obj_index
+            obstacle_idx = args.obstacles_indices
 
 
             #(B, K, D)
@@ -268,7 +258,7 @@ def latents_from_images(images, args):
         #todo handle case when obstacle not present
         indices_goal_not_present = np.logical_not(indices_goal_present)
         #set those goals far away
-        goal_pos[indices_goal_not_present] = np.array([100., 100.])#todo these goals should be avoided as hgg so this needs also to be passed
+        goal_pos[indices_goal_not_present] = np.array([100., 100.])
         goal_size[indices_goal_not_present] = np.array([0., 0.])
 
         return goal_pos, goal_size, obstacles_pos, obstacles_size
@@ -339,7 +329,6 @@ def latents_from_images(images, args):
         return lg.detach().cpu().numpy(), lo.detach().cpu().numpy(), lo_s.detach().cpu().numpy()
 
 
-#todo this must be inferred
 def get_indices_goal_obstacle(z_char, goal_val=0.8, goal_val2=3.8, obstacle_val=1.3, obstacle_val2=3.2):#goal_val=-1.19, goal_val2=3.8, obstacle_val=1.3, obstacle_val2=3.2):
     #mean = 0.5 * z_char[:, 2] + 0.5 * z_char[:, 3]
     #goal_indices = mean <= -0.65#-0.9
