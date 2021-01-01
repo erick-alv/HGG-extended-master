@@ -428,7 +428,7 @@ class HGGLearner:
 			# Trajectory is stored in replay buffer, replay buffer can be normal or EBP
 			buffer.store_trajectory(current)
 			agent.normalizer_update(buffer.sample_batch())
-			if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > #120:#50
+			if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 120:#50
 				if args.normalizer_every_counter % args.normalizer_every == 0:
 					agent.normalizer_update(args.imaginary_buffer.sample_batch())
 				args.normalizer_every_counter += 1
