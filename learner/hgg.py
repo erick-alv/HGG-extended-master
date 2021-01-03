@@ -498,6 +498,7 @@ def check_conditions_after_step(obs, trajectory, args):
 			if len(trajectory.ep['acts']) > 1:
 				#select just cases with moving obstacles
 				diff = obs['obstacle_st_t'][:, 0:2] - trajectory.ep['obs'][-2]['obstacle_st_t'][:, 0:2]
+				diff = diff[indices]
 				diff = np.atleast_2d(diff)
 				dist = np.sqrt(np.sum(np.square(diff), axis=1))
 				#todo check which one is a good value
