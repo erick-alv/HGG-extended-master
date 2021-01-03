@@ -11,6 +11,7 @@ from torch.distributions.normal import Normal
 
 this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
 
+
 def double_conv(in_channels, out_channels):
     return nn.Sequential(
         nn.Conv2d(in_channels, out_channels, 3, padding=1),

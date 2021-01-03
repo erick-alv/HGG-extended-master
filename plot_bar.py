@@ -186,7 +186,9 @@ if __name__ == "__main__":
     for i in range(len(labels)):
         number = ''.join([i for i in labels[i][:15] if i.isdigit()])
         labels[i] = number
-    mappings = {'2575':"minDist",'2275':"Pos,Vel,Angle", '2276':"Pos,Vel,Angle. Imaginary"}
+    #mappings = {'2575':"minDist",'2275':"Pos,Vel,Angle", '2276':"Pos,Vel,Angle. Imaginary"}
+
+    mappings = {}
     for i in range(len(labels)):
         if labels[i] in mappings.keys():
             labels[i] = mappings[labels[i]]
