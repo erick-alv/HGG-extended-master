@@ -323,64 +323,66 @@ class Monet2_VAE(nn.Module):
                 full_reconstruction2 += x_recon_s[i] * mask_pred_s_probs[:, i:i + 1, :, :]
 
 
-
         if training:
-            '''p_xs = torch.zeros(
-                            (B, self.num_slots, self.color_channels, self.width, self.height)
-                        ).to(x.device)'''
             fg_sigma = params_dict['fg_sigma']
             bg_sigma = params_dict['bg_sigma']
             beta = params_dict['beta']
             gamma = params_dict['gamma']
-            #calculates the loss
+            # calculates the loss
             batch_size = x.shape[0]
 
-            full_reconstruction_bg = torch.zeros(
-                (B, self.color_channels, self.width, self.height)).to(self.device)
-            full_reconstruction_bg += x_recon_s[0] * masks[0]
-            full_reconstruction_fg = torch.zeros(
-                (B, self.color_channels, self.width, self.height)).to(self.device)
-            full_reconstruction_fg += full_reconstruction
-            full_reconstruction_fg -= full_reconstruction_bg
-            dist_bg = dists.Normal(full_reconstruction_bg, bg_sigma)
-            p_x_bg = dist_bg.log_prob(x)
-            p_x_bg *= masks[0]
-            p_x_bg = torch.sum(p_x_bg, [1, 2, 3])
-            dist_fg = dists.Normal(full_reconstruction_fg, fg_sigma)
-            p_x_fg = dist_fg.log_prob(x)
-            fg_masks = torch.sum(torch.stack(masks[1:], dim=1), dim=1)
-            p_x_fg *= fg_masks
-            p_x_fg = torch.sum(p_x_fg, [1, 2, 3])
-            p_xs = -p_x_fg - p_x_bg
-            kl_z = torch.zeros(batch_size).to(x.device)
-            for i in range(len(masks)):
-                kld = -0.5 * torch.sum(1 + logvar_s[i] - mu_s[i].pow(2) - logvar_s[i].exp(), dim=1)
-                for t in kld:
-                    assert not torch.isnan(t)
-                    assert not torch.isinf(t)
-                kl_z += kld
+            l_not_fg = loss_not_fg_region(masks, x_recon_s)
+            tr_type = 0
+            if tr_type == 0:
+                p_xs = torch.zeros(batch_size).to(x.device)
+                kl_z = torch.zeros(batch_size).to(x.device)
+                for i in range(len(masks)):
+                    kld = -0.5 * torch.sum(1 + logvar_s[i] - mu_s[i].pow(2) - logvar_s[i].exp(), dim=1)
+                    for t in kld:
+                        assert not torch.isnan(t)
+                        assert not torch.isinf(t)
+                    kl_z += kld
+                    if i == 0:
+                        sigma = bg_sigma
+                    else:
+                        sigma = fg_sigma
+                    dist = dists.Normal(x_recon_s[i], sigma)
+                    p_x = dist.log_prob(x)
+                    p_x *= masks[i]
+                    p_x = torch.sum(p_x, [1, 2, 3])
+                    for t in p_x:
+                        assert not torch.isnan(t)
+                        assert not torch.isinf(t)
+                    p_xs += -p_x
+            if tr_type == 1:
+                pass
+                full_reconstruction_bg = torch.zeros(
+                    (B, self.color_channels, self.width, self.height)).to(self.device)
+                full_reconstruction_bg += x_recon_s[0] * masks[0]
+                full_reconstruction_fg = torch.zeros(
+                    (B, self.color_channels, self.width, self.height)).to(self.device)
+                full_reconstruction_fg += full_reconstruction
+                full_reconstruction_fg -= full_reconstruction_bg
+                dist_bg = dists.Normal(full_reconstruction_bg, bg_sigma)
+                p_x_bg = dist_bg.log_prob(x)
+                p_x_bg *= masks[0]
+                p_x_bg = torch.sum(p_x_bg, [1, 2, 3])
+                dist_fg = dists.Normal(full_reconstruction_fg, fg_sigma)
+                p_x_fg = dist_fg.log_prob(x)
+                combination_fg_masks = torch.sum(torch.stack(masks[1:], dim=1), dim=1)
+                p_x_fg *= combination_fg_masks
+                p_x_fg = torch.sum(p_x_fg, [1, 2, 3])
+                p_xs = -p_x_fg - p_x_bg
+                kl_z = torch.zeros(batch_size).to(x.device)
+                for i in range(len(masks)):
+                    kld = -0.5 * torch.sum(1 + logvar_s[i] - mu_s[i].pow(2) - logvar_s[i].exp(), dim=1)
+                    for t in kld:
+                        assert not torch.isnan(t)
+                        assert not torch.isinf(t)
+                    kl_z += kld
 
 
-            '''p_xs = torch.zeros(batch_size).to(x.device)
-            kl_z = torch.zeros(batch_size).to(x.device)
-            for i in range(len(masks)):
-                kld = -0.5 * torch.sum(1 + logvar_s[i] - mu_s[i].pow(2) - logvar_s[i].exp(), dim=1)
-                for t in kld:
-                    assert not torch.isnan(t)
-                    assert not torch.isinf(t)
-                kl_z += kld
-                if i == 0:
-                    sigma = bg_sigma
-                else:
-                    sigma = fg_sigma
-                dist = dists.Normal(x_recon_s[i], sigma)
-                p_x = dist.log_prob(x)
-                p_x *= masks[i]
-                p_x = torch.sum(p_x, [1, 2, 3])
-                for t in p_x:
-                    assert not torch.isnan(t)
-                    assert not torch.isinf(t)
-                p_xs += -p_x'''
+
 
             mask_pred_s = [m.unsqueeze(dim=1) for m in mask_pred_s]
             mask_pred_s = torch.cat(mask_pred_s, 1)
@@ -400,10 +402,19 @@ class Monet2_VAE(nn.Module):
             for t in kl_masks:
                 assert not torch.isnan(t)
                 assert not torch.isinf(t)
-            loss_batch = gamma * kl_masks + p_xs + beta * kl_z
-            loss = torch.mean(loss_batch)
 
-            return loss, mu_s, logvar_s, masks, full_reconstruction, full_reconstruction2, x_recon_s, mask_pred_s
+
+            l_type = 1
+            if l_type == 0:
+                loss_batch = gamma * kl_masks + p_xs + beta * kl_z
+                loss = torch.mean(loss_batch)
+                return loss, mu_s, logvar_s, masks, full_reconstruction, full_reconstruction2, x_recon_s, mask_pred_s
+            elif l_type == 1:
+                loss_batch = gamma * kl_masks + p_xs + beta * kl_z + l_not_fg
+                loss = torch.mean(loss_batch)
+                return loss, mu_s, logvar_s, masks, full_reconstruction, full_reconstruction2, x_recon_s, mask_pred_s
+
+
         else:
             masks = torch.cat(masks, dim=1)
             #transform to probs with softmax
@@ -602,6 +613,20 @@ def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1, num_blocks=5, c
     model.load_state_dict(checkpoint['model_state_dict'])
 
     return model
+
+def loss_not_fg_region(masks, x_recon_s):
+    batch_size = masks[0].shape[0]
+    combination_fg_masks = torch.sum(torch.stack(masks[1:], dim=1), dim=1)
+    not_fg_region = torch.zeros(size=combination_fg_masks.size()).to(combination_fg_masks.device) - combination_fg_masks
+    not_fg_loss = torch.zeros(batch_size).to(combination_fg_masks.device)
+    for t in range(len(masks) - 1):
+        i = t+1
+        l = x_recon_s[i] * not_fg_region
+        l = torch.sum(l, [1, 2, 3])
+        not_fg_loss += l
+    return not_fg_loss
+
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
