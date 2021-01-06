@@ -320,21 +320,48 @@ class Monet2_VAE(nn.Module):
             # -> (B, 8, H, W)
             mask_pred_s_probs = mask_pred_s_probs.permute((0, 3, 1, 2))
             for i in range(mask_pred_s_probs.shape[1]):
-                full_reconstruction2 += x_recon_s[i] * mask_pred_s_probs[:,i:i+1,:, :]
+                full_reconstruction2 += x_recon_s[i] * mask_pred_s_probs[:, i:i + 1, :, :]
+
 
 
         if training:
+            '''p_xs = torch.zeros(
+                            (B, self.num_slots, self.color_channels, self.width, self.height)
+                        ).to(x.device)'''
             fg_sigma = params_dict['fg_sigma']
             bg_sigma = params_dict['bg_sigma']
             beta = params_dict['beta']
             gamma = params_dict['gamma']
             #calculates the loss
-
             batch_size = x.shape[0]
-            '''p_xs = torch.zeros(
-                (B, self.num_slots, self.color_channels, self.width, self.height)
-            ).to(x.device)'''
-            p_xs = torch.zeros(batch_size).to(x.device)
+
+            full_reconstruction_bg = torch.zeros(
+                (B, self.color_channels, self.width, self.height)).to(self.device)
+            full_reconstruction_bg += x_recon_s[0] * masks[0]
+            full_reconstruction_fg = torch.zeros(
+                (B, self.color_channels, self.width, self.height)).to(self.device)
+            full_reconstruction_fg += full_reconstruction
+            full_reconstruction_fg -= full_reconstruction_bg
+            dist_bg = dists.Normal(full_reconstruction_bg, bg_sigma)
+            p_x_bg = dist_bg.log_prob(x)
+            p_x_bg *= masks[0]
+            p_x_bg = torch.sum(p_x_bg, [1, 2, 3])
+            dist_fg = dists.Normal(full_reconstruction_fg, fg_sigma)
+            p_x_fg = dist_fg.log_prob(x)
+            fg_masks = torch.sum(torch.stack(masks[1:], dim=1), dim=1)
+            p_x_fg *= fg_masks
+            p_x_fg = torch.sum(p_x_fg, [1, 2, 3])
+            p_xs = -p_x_fg - p_x_bg
+            kl_z = torch.zeros(batch_size).to(x.device)
+            for i in range(len(masks)):
+                kld = -0.5 * torch.sum(1 + logvar_s[i] - mu_s[i].pow(2) - logvar_s[i].exp(), dim=1)
+                for t in kld:
+                    assert not torch.isnan(t)
+                    assert not torch.isinf(t)
+                kl_z += kld
+
+
+            '''p_xs = torch.zeros(batch_size).to(x.device)
             kl_z = torch.zeros(batch_size).to(x.device)
             for i in range(len(masks)):
                 kld = -0.5 * torch.sum(1 + logvar_s[i] - mu_s[i].pow(2) - logvar_s[i].exp(), dim=1)
@@ -353,7 +380,7 @@ class Monet2_VAE(nn.Module):
                 for t in p_x:
                     assert not torch.isnan(t)
                     assert not torch.isinf(t)
-                p_xs += -p_x
+                p_xs += -p_x'''
 
             mask_pred_s = [m.unsqueeze(dim=1) for m in mask_pred_s]
             mask_pred_s = torch.cat(mask_pred_s, 1)
@@ -582,7 +609,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=16)#8)
+    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=8)#8)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=40)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
