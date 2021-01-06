@@ -7,6 +7,7 @@ import numpy as np
 from PIL import Image
 import os
 import torch.nn.functional as F
+from utils.os_utils import make_dir
 from torch.distributions.normal import Normal
 
 this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
@@ -581,7 +582,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=8)#8)
+    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=16)#8)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=40)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
@@ -596,6 +597,8 @@ if __name__ == '__main__':
     # get names corresponding folders, and files where to store data
     #make_dir(this_file_dir+'results/', clear=False)
     base_data_dir = this_file_dir + '../data/'
+    vae_results_dir = this_file_dir+'results/'
+    make_dir(vae_results_dir, clear=False)
     data_dir = base_data_dir + args.env + '/'
 
     train_file = data_dir + train_file_name[args.enc_type]
