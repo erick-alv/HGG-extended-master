@@ -616,9 +616,10 @@ def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1, num_blocks=5, c
 
 def loss_not_fg_region(masks, x_recon_s):
     batch_size = masks[0].shape[0]
-    combination_fg_masks = torch.sum(torch.stack(masks[1:], dim=1), dim=1)
-    not_fg_region = torch.zeros(size=combination_fg_masks.size()).to(combination_fg_masks.device) - combination_fg_masks
-    not_fg_loss = torch.zeros(batch_size).to(combination_fg_masks.device)
+    with torch.no_grad():
+        combination_fg_masks = torch.sum(torch.stack(masks[1:], dim=1), dim=1)
+        not_fg_region = torch.zeros(size=combination_fg_masks.size()).to(combination_fg_masks.device) - combination_fg_masks
+        not_fg_loss = torch.zeros(batch_size).to(combination_fg_masks.device)
     for t in range(len(masks) - 1):
         i = t+1
         l = x_recon_s[i] * not_fg_region
