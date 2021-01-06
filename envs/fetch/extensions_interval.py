@@ -86,6 +86,15 @@ class ObsExtender(ABC):
     def reset_ep(self):
         self.counter = 0
 
+#leaves everything as it is, used for test of HGG
+class DummyExtender(ObsExtender):
+    def __init__(self, args):
+        super(DummyExtender, self).__init__(args)
+
+    def extend_obs(self, obs, env):
+        return obs
+
+
 
 class ObsExtenderBbox(ObsExtender):
     def __init__(self, args):
@@ -649,7 +658,6 @@ class TestColl():  # this can be used as well for IntervalSelfCollStop, interval
     def extend_obs(self, obs, env):
         sim = env.env.sim
         exists_collision = False
-        # todo generalize this for other environments
         object_id = env.env.env.geom_id_object
         for i in range(sim.data.ncon):
             contact = sim.data.contact[i]
@@ -763,6 +771,12 @@ class IntervalRewVec(IntervalWithExtensions):
         IntervalWithExtensions.__init__(self, args,
                                         obs_extender=ObsExtenderBboxAndColl(args),
                                         on_coll_extender=OnCollRewVec(args))
+
+
+class IntervalTest(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=DummyExtender(args),
+                                        test_extender=TestColl(args))
 
 #with this test every class with a obs extender that inherits ObsExtenderBbox and do not change more observation state
 class IntervalTestExtendedBbox(IntervalWithExtensions):

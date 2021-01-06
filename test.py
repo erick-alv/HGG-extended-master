@@ -36,7 +36,8 @@ class Tester:
 
 	def test_acc(self, key, env, agent):
 		if self.args.goal in self.args.colls_test_check_envs:
-			envs_collision = [self.coll_tol for _ in range(len(self.env_List))]
+			# +1 since when it becomes 0 then not considered as success
+			envs_collision = [self.coll_tol + 1 for _ in range(len(self.env_List))]
 		if self.calls % 40 == 0 or self.calls in [0, 1, 2, 5, 8, 10]:
 			eps_idx = [0, 5, 8, 10, 15, 20, self.test_rollouts-1]
 			acc_sum, obs = 0.0, []
@@ -61,8 +62,9 @@ class Tester:
 					obs.append(goal_based_process(ob))
 					#this should be used just for testing after training
 					if self.args.goal in self.args.colls_test_check_envs:
-						if envs_collision[i] <= 0 or ob['collision_check']:
+						if ob['collision_check']:
 							envs_collision[i] -= 1
+						if envs_collision[i] <= 0:
 							info['Success'] = 0.0
 					infos.append(info)
 
@@ -91,8 +93,9 @@ class Tester:
 					ob, _, _, info = env[i].step(actions[i])
 					obs.append(goal_based_process(ob))
 					if self.args.goal in self.args.colls_test_check_envs:
-						if envs_collision[i] <= 0 or ob['collision_check']:
+						if ob['collision_check']:
 							envs_collision[i] -= 1
+						if envs_collision[i] <= 0:
 							info['Success'] = 0.0
 					infos.append(info)
 		minDist = infos[0]['Distance']

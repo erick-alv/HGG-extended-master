@@ -38,7 +38,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 		parser.add_argument('--goal', help='method of goal generation', type=str, default='reach', choices=['vanilla', 'reach'])
 	else:
 		parser.add_argument('--goal', help='method of goal generation', type=str, default='interval',
-							choices=['vanilla','fixobj','interval','custom' ,'intervalCollision','intervalExt',
+							choices=['vanilla','fixobj','interval','custom' ,'intervalTest','intervalExt',
 									 'intervalColl',
 									'intervalRewSub',
 									'intervalRewVec',
@@ -218,7 +218,8 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 		args.reward_dims = 1
 
 	args.colls_test_check_envs = ['intervalTestExtendedBbox', 'intervalTestExtendedMinDist', 'intervalTestExtendedP',
-								  'intervalTestExtendedPAV', 'intervalTestExtendedPRel', 'intervalTestExtendedPAVRel']
+								  'intervalTestExtendedPAV', 'intervalTestExtendedPRel', 'intervalTestExtendedPAVRel',
+								  'intervalTest']
 
 
 	return args
@@ -468,6 +469,11 @@ def experiment_setup_test(args):
 
 	if args.vae_dist_help:
 		load_vaes(args)
+		if args.vae_type == 'bbox':
+			file_index_object = 'data/' + args.env + '/' + args.vae_type + '_obj_i.npy'
+			file_indices_obstacle = 'data/' + args.env + '/' + args.vae_type + '_obstacles_indices.npy'
+			args.obj_index = np.load(file_index_object)
+			args.obstacles_indices = np.load(file_indices_obstacle)
 
 	load_field_parameters(args)
 	if args.dist_estimator_type is not None:

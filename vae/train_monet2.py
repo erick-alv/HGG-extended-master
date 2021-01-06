@@ -330,9 +330,10 @@ class Monet2_VAE(nn.Module):
             #calculates the loss
 
             batch_size = x.shape[0]
-            p_xs = torch.zeros(
+            '''p_xs = torch.zeros(
                 (B, self.num_slots, self.color_channels, self.width, self.height)
-            ).to(x.device)
+            ).to(x.device)'''
+            p_xs = torch.zeros(batch_size).to(x.device)
             kl_z = torch.zeros(batch_size).to(x.device)
             for i in range(len(masks)):
                 kld = -0.5 * torch.sum(1 + logvar_s[i] - mu_s[i].pow(2) - logvar_s[i].exp(), dim=1)
@@ -345,33 +346,17 @@ class Monet2_VAE(nn.Module):
                 else:
                     sigma = fg_sigma
                 dist = dists.Normal(x_recon_s[i], sigma)
-                # log(p_theta(x|z_k))
-                #p_x = dist.log_prob(x)
-                #p_x *= masks[i]
-                #log_mask_k + log_prob(x|z_k) = mask_k * prob(x|z_k)
-                p_x = masks[i].log() + dist.log_prob(x)
+                p_x = dist.log_prob(x)
+                p_x *= masks[i]
+                p_x = torch.sum(p_x, [1, 2, 3])
                 for t in p_x:
-                    assert not torch.isnan(t.sum())
-                    assert not torch.isinf(t.sum())
-                #trying with loss of other paper
-                #p_x2 = dist.log_prob(x*masks[i])
-                #p_x = p_x1 + p_x2
-                #p_x = torch.sum(p_x, [1, 2, 3])
-                #p_xs += -p_x  # this iterartive sum might not be correct since log(x*y) = log(x)+log(y)
-                p_xs[:, i] = p_x
-            p_xs = -torch.logsumexp(p_xs, dim=1)
-            # -> (B)
-            p_xs = torch.sum(p_xs, [1,2,3])
+                    assert not torch.isnan(t)
+                    assert not torch.isinf(t)
+                p_xs += -p_x
 
             mask_pred_s = [m.unsqueeze(dim=1) for m in mask_pred_s]
             mask_pred_s = torch.cat(mask_pred_s, 1)
-
-            '''mask_pred_softmaxed = F.softmax(mask_pred_s, dim=1)
-            mask_pred_softmaxed_permuted = mask_pred_softmaxed.permute([0, 2, 3, 1])
-            summed = mask_pred_softmaxed.sum(dim=1)'''
-
             mask_pred_s_permuted = mask_pred_s.permute([0, 2, 3, 1])
-
             masks= torch.cat(masks, 1)
             masks_permuted = masks.permute([0, 2, 3, 1])
             #masks_permuted = masks.transpose(3, 1)
@@ -381,8 +366,6 @@ class Monet2_VAE(nn.Module):
             smallest_num = torch.finfo(q_masks_recon.probs.dtype).tiny
             q_masks_recon.probs[q_masks_recon.probs == 0.] = smallest_num
 
-            '''q_test = dists.Categorical(probs=mask_pred_softmaxed_permuted)
-            kl_test = dists.kl_divergence(q_masks_recon, q_test)'''
 
             kl_masks = dists.kl_divergence(q_masks, q_masks_recon)
             kl_masks = torch.sum(kl_masks, [1, 2])
@@ -417,7 +400,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
     #creates indexes and shuffles them. So it can acces the data
     idx_set = np.arange(data_size)
     np.random.shuffle(idx_set)
-    idx_set = idx_set[:1280]
+    idx_set = idx_set[:320]#[:1280]
     idx_set = np.split(idx_set, len(idx_set) / batch_size)
     for batch_idx, idx_select in enumerate(idx_set):
         data = data_set[idx_select]
@@ -427,8 +410,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
         optimizer.zero_grad()
         loss, mu_s, logvar_s, masks, full_reconstruction, \
         full_reconstruction2, x_recon_s, mask_pred_s = model(data, training=True, params_dict ={'fg_sigma':fg_sigma,
-                                                                                                'bg_sigma':bg_sigma,
-                                                                                                'beta':beta,
+                                                                                                'bg_sigma':bg_sigma,                                                                                  'beta':beta,
                                                                                                 'gamma':gamma})
         loss.backward()
         optimizer.step()
@@ -599,13 +581,13 @@ if __name__ == '__main__':
 
     parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
                         default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
-    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=32)#8)
+    parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=8)#8)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=40)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
     parser.add_argument('--latent_size', help='latent size to train the VAE', type=np.int32, default=6)
     parser.add_argument('--num_slots', help='number of slots', type=np.int32, default=6)#8)
-    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=8.)#8.)#5#8
-    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=5.)###6.)#5.)
+    parser.add_argument('--beta', help='beta val for the reconstruction loss', type=np.float, default=8)#8.)#5#8
+    parser.add_argument('--gamma', help='gamma val for the mask loss', type=np.float, default=5)###6.)#5.)
     parser.add_argument('--bg_sigma', help='', type=np.float, default=0.09)
     parser.add_argument('--fg_sigma', help='', type=np.float, default=0.11)
 

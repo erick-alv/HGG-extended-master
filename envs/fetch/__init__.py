@@ -2,14 +2,13 @@ from .vanilla import VanillaGoalEnv
 from .fixobj import FixedObjectGoalEnv
 from .interval import IntervalGoalEnv
 from .custom import CustomGoalEnv
-from .interval_with_contact_detection import IntervalWithCollisionDetection
 from .extensions_interval import IntervalExt, IntervalColl, IntervalRewSub, IntervalRewVec, IntervalCollStopRegion,\
 	IntervalCollStop, IntervalRewMod, IntervalRewModStop, IntervalRewModRegion, IntervalRewModRegionStop, \
 	IntervalTestExtendedBbox, IntervalCollMinDist, IntervalMinDistRewMod,IntervalMinDistRewModStop, \
 	IntervalTestExtendedMinDist, IntervalP,IntervalPRewMod,IntervalPRewModStop,IntervalTestExtendedP,IntervalPAV,\
 	IntervalPAVRewMod,IntervalPAVRewModStop,IntervalTestExtendedPAV,IntervalPRel,IntervalPRelRewMod,\
 	IntervalPRelRewModStop,IntervalTestExtendedPRel,IntervalPAVRel,IntervalPAVRelRewMod,\
-	IntervalPAVRelRewModStop,IntervalTestExtendedPAVRel
+	IntervalPAVRelRewModStop,IntervalTestExtendedPAVRel, IntervalTest
 
 # TODO: change this file for new env handling!
 def make_env(args):
@@ -18,7 +17,7 @@ def make_env(args):
 		'fixobj': FixedObjectGoalEnv,
 		'interval': IntervalGoalEnv,
 		'custom': CustomGoalEnv,
-		'intervalCollision':IntervalWithCollisionDetection,
+		'intervalTest':IntervalTest,
 		'intervalExt':IntervalExt,
 		'intervalColl':IntervalColl,
 		'intervalRewSub':IntervalRewSub,
