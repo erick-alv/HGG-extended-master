@@ -303,6 +303,9 @@ def load_field_parameters(args):
 						'FetchPushMovingDoubleObstacleEnv-v3']:
 			args.real_field_center = [1.3, 0.75]
 			args.real_field_size = [0.25, 0.25]
+		elif args.env in ['FetchSlideMovingObstacle-v1']:
+			args.real_field_center = [1.3, 0.75]
+			args.real_field_size = [0.625, 0.45]
 		else:
 			raise Warning(
 				'The environment used does not have predefined field dimensions. Assure they are not needed')

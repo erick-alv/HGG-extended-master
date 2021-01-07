@@ -178,7 +178,15 @@ class FetchEnv(robot_env.RobotEnv):
     ##def _sample_goal_old(self):
     def _sample_goal(self):
         if self.has_object:
-            goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-self.target_range, self.target_range, size=3)
+            if isinstance(self.target_range, np.ndarray):
+                if self.target_range.size == 2:
+                    range_to_use = np.concatenate([self.target_range, np.zeros(shape=1)])
+                elif self.target_range.size == 3:
+                    range_to_use = self.target_range, np.zeros(shape=1)
+                offset = np.random.uniform(-range_to_use, range_to_use)
+            else:
+                offset = np.random.uniform(-self.target_range, self.target_range, size=3)
+            goal = self.initial_gripper_xpos[:3] + offset
             goal += self.target_offset
             goal[2] = self.height_offset
             if self.target_in_the_air and self.np_random.uniform() < 0.5:

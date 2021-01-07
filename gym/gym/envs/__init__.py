@@ -384,6 +384,14 @@ for reward_type in ['sparse', 'dense']:
         max_episode_steps=50,
     )
 
+
+    register(
+        id='FetchSlideMovingObstacle{}-v1'.format(suffix),
+        entry_point='gym.envs.robotics:FetchSlideMovingObstacleEnv',
+        kwargs=kwargs,
+        max_episode_steps=50,
+    )
+
     register(
         id='FetchPickAndPlace{}-v1'.format(suffix),
         entry_point='gym.envs.robotics:FetchPickAndPlaceEnv',

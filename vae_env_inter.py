@@ -54,7 +54,7 @@ def take_env_image(env, img_size, direct_env=None):
         except:
             pass
     for id in  [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,16, 17, 18, 21]:
-        env_to_use._set_visibility_with_id(id, alpha_val=0.2)
+        env_to_use._set_visibility_with_id(id, alpha_val=0.7)
     #just to activate in case viewer is not intialized
     if not hasattr(env_to_use.viewer, 'cam'):
         np.array(env_to_use.render(mode='rgb_array', width=img_size, height=img_size, camera_name='cam_top'))
@@ -110,9 +110,8 @@ def take_image_objects(env, img_size, direct_env=None):
         env_to_use = env.env.env
     env_to_use._set_arm_visible(visible=False)
     env_to_use._set_visibility(names_list=['object0'], alpha_val=1.0)
-    env_to_use._set_visibility(names_list=['obstacle'], alpha_val=1.0)
-    #todo think more effective way of doing this
-    for name in ['obstacle2', 'obstacle3']:
+    env_to_use._set_visibility(names_list=[], alpha_val=1.0)
+    for name in ['obstacle', 'obstacle2', 'obstacle3']:
         try:
             env_to_use._set_visibility(names_list=[name], alpha_val=1.0)
         except:

@@ -13,7 +13,15 @@ class IntervalGoalEnv(FixedObjectGoalEnv):
 
 	def generate_goal(self):
 		if self.target_goal_center is not None:
-			goal = self.target_goal_center + np.random.uniform(-self.target_range, self.target_range, size=3)
+			if isinstance(self.target_range, np.ndarray):
+				if self.target_range.size == 2:
+					range_to_use = np.concatenate([self.target_range, np.zeros(shape=1)])
+				elif self.target_range.size == 3:
+					range_to_use = self.target_range, np.zeros(shape=1)
+				offset = np.random.uniform(-range_to_use, range_to_use)
+			else:
+				offset = np.random.uniform(-self.target_range, self.target_range, size=3)
+			goal = self.target_goal_center + offset
 			goal[2] = self.target_goal_center[2]
 		else:
 			if self.has_object:
