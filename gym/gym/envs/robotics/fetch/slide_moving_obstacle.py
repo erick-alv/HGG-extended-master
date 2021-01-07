@@ -21,7 +21,7 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.adapt_dict = dict()
         self.adapt_dict["field"] = [1.3, 0.75, 0.6, 0.25, 0.25, 0.2]
         # centers of the interval where goal and initial position will be sampled
-        self.target_goal_center = np.array([1.6, 0.75, 0.425])
+        self.target_goal_center = np.array([1.8, 0.75, 0.425])
         self.object_center = np.array([1., 0.75, 0.425])
         # for moving
         self.vel_lims = [0.7, 1.]
@@ -36,7 +36,7 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         fetch_env.FetchEnv.__init__(
             self, MODEL_XML_PATH, has_object=True, block_gripper=True, n_substeps=20,
             gripper_extra_height=-0.02, target_in_the_air=False, target_offset=0.0,
-            obj_range=np.array([0.04, 0.1]), target_range=np.array([0.2, 0.3]), distance_threshold=0.05,
+            obj_range=np.array([0.04, 0.08]), target_range=np.array([0.1, 0.3]), distance_threshold=0.05,
             initial_qpos=initial_qpos, reward_type=reward_type)
         utils.EzPickle.__init__(self)
         self.obstacle1_slider_idx = self.sim.model.joint_names.index('obstacle:joint')
