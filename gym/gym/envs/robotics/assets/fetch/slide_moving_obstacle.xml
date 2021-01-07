@@ -21,13 +21,13 @@
 
 		<body pos="1.25 1.19 0.5" name="obstacle">
 			<!--limited="true" range="-.05 .05"  damping='0.01' armature='0' frictionloss='0.1'-->
-			<geom name="o" pos="0 0 0" size="0.04 0.35 0.1" type="box" rgba="0 0 1 1" mass="2000" material="table_mat"></geom>
+			<geom name="o" pos="0 0 0" size="0.04 0.365 0.1" type="box" rgba="0 0 1 1" mass="2000" material="table_mat"></geom>
 			<joint name="obstacle:joint" type="slide" axis="0 1 0" limited="true" damping="0.01" range="-0.21 0.21" margin="0.03"></joint>
 		</body>
 
 		<body pos="1.25 0.31 0.5" name="obstacle2">
 			<!--limited="true" range="-.05 .05"  damping='0.01' armature='0' frictionloss='0.1'-->
-			<geom name="o2" pos="0 0 0" size="0.04 0.35 0.1" type="box" rgba="0.5 0. 0.5 1" mass="2000" material="table_mat"></geom>
+			<geom name="o2" pos="0 0 0" size="0.04 0.365 0.1" type="box" rgba="0.5 0. 0.5 1" mass="2000" material="table_mat"></geom>
 			<joint name="obstacle2:joint" type="slide" axis="0 1 0" limited="true" damping="0.01" range="-0.21 0.21" margin="0.03"></joint>
 		</body>
 
