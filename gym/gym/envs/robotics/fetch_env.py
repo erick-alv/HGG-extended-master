@@ -187,20 +187,6 @@ class FetchEnv(robot_env.RobotEnv):
             goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-0.15, 0.15, size=3)
         return goal.copy()
 
-    #
-    '''def _sample_goal(self):
-        return self._sample_goal_old()
-        goal = goal_set[np.random.randint(20)]
-        goal = self.goal_vae.format(goal)
-        # path = 'videos/goal/goal_' + str(self.goal_counter) + '.png'
-        #save_image(goal.cpu().view(-1, 3, self.img_size, self.img_size), 'videos/goal/goal.png')
-        self.goal_counter += 1
-        x, y = self.goal_vae.encode(goal)
-        goal = self.goal_vae.reparameterize(x, y)
-        goal = goal.detach().cpu().numpy()
-        goal = np.squeeze(goal)
-        return goal.copy()#TODO..'''
-
     def _is_success(self, achieved_goal, desired_goal):
         d = goal_distance(achieved_goal, desired_goal)
         return (d < self.distance_threshold).astype(np.float32)
@@ -239,41 +225,12 @@ class FetchEnv(robot_env.RobotEnv):
     # Extra methods for the environment
     # ----------------------------
 
-    '''def _get_image(self, img_name='default'):
-        local_vae = self.obs_vae if img_name == 'obs.png' else self.goal_vae
-        np.array(self.render(mode='rgb_array',
-                             width=84, height=84))
-        rgb_array = np.array(self.render(mode='rgb_array',
-                                         width=84, height=84))
-        tensor = local_vae.format(rgb_array)
-        x, y = local_vae.encode(tensor)
-        obs = local_vae.reparameterize(x, y)
-        obs = obs.detach().cpu().numpy()
-        obs = np.squeeze(obs)
-        return obs'''
+
 
     def _set_gripper(self, pos):
         self.sim.data.mocap_pos[:] = pos
         self.sim.data.mocap_quat[:] = [1., 0., 1., 0.]
 
-    '''def _generate_state(self):
-        threshold = 0.2  # originally 0.2
-        self._set_gripper([random.uniform(1.08 - threshold, 1.52 + threshold),
-                          random.uniform(1.3 - threshold, 1.3 + threshold) - 0.55, 0.43])
-        self.sim.forward()
-        #for _ in range(1):
-        #    self.sim.step()
-
-        offset = 0.03
-        goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-self.target_range-offset, self.target_range+offset, size=3)
-        object_qpos = self.sim.data.get_joint_qpos('object0:joint')
-        object_qpos[:2] = goal[:2]
-        object_qpos[2] = 0.43
-        object_qpos[3:] = [1, 0, 0, 0]
-        self.sim.data.set_joint_qpos('object0:joint', object_qpos)
-        for _ in range(1):
-            self.sim.step()
-        self._step_callback()'''
 
     def _set_arm_visible(self, visible=True):
         cylinder_id = np.where(self.sim.model.geom_bodyid

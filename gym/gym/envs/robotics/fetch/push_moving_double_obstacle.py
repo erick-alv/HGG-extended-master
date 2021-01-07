@@ -179,7 +179,7 @@ class FetchPushMovingDoubleObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         pos1 = np.array(self.sim.data.body_xpos[body_id].copy())
         body_id2 = self.sim.model.body_name2id('obstacle2')
         pos2 = np.array(self.sim.data.body_xpos[body_id2].copy())
-        dims = np.array([0.14, 0.018, 0.035])
+        dims = np.array([0.11, 0.02, 0.035])
         ob1 = np.concatenate((pos1, dims.copy()))
         ob2 = np.concatenate((pos2, dims.copy()))
         obs['real_obstacle_info'] = np.array([ob1, ob2])

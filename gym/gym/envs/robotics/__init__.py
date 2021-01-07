@@ -11,7 +11,6 @@ from gym.envs.robotics.fetch.push_moving_double_obstacle import FetchPushMovingD
 from gym.envs.robotics.fetch.push_moving_double_obstacle2 import FetchPushMovingDoubleObstacleEnv2
 from gym.envs.robotics.fetch.push_moving_double_obstacle3 import FetchPushMovingDoubleObstacleEnv3
 from gym.envs.robotics.fetch.generative_fetch import FetchGenerativeEnv
-from gym.envs.robotics.fetch.push_twinkle_obstacle import FetchTwinkleObstacleEnv
 from gym.envs.robotics.fetch.push_moving_com import FetchPushMovingComEnv
 from gym.envs.robotics.fetch.push_moving_com2 import FetchPushMovingComEnv2
 from gym.envs.robotics.fetch.push_moving_com3 import FetchPushMovingComEnv3

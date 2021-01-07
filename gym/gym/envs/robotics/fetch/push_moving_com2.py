@@ -11,13 +11,12 @@ class FetchPushMovingComEnv2(fetch_env.FetchEnv, utils.EzPickle):
     def __init__(self, reward_type='sparse'):
         self.further = False
 
-        # TODO: configure adaption parameters
         self.adapt_dict = dict()
         self.adapt_dict["field"] = [1.3, 0.75, 0.6, 0.25, 0.25, 0.2]
 
         #centers of the interval where goal and initial position will be sampld
-        self.target_goal_center = np.array([1.405, 0.7, 0.425])
-        self.object_center = np.array([1.08, 0.68, 0.425])
+        self.target_goal_center = np.array([1.4, 0.7, 0.425])
+        self.object_center = np.array([1.09, 0.65, 0.425])
 
         #for moving
         self.vel_lims = [0.7, 1.]
@@ -26,7 +25,7 @@ class FetchPushMovingComEnv2(fetch_env.FetchEnv, utils.EzPickle):
         self.obstacle_direction = 1
         #the object must be in the middle from both limits in the xml
         self.obstacle_upper_limit = 1.46
-        self.obstacle_lower_limit = 1.308
+        self.obstacle_lower_limit = 1.255
         self.pos_dif = (self.obstacle_upper_limit - self.obstacle_lower_limit) / 2.
 
 
@@ -35,12 +34,12 @@ class FetchPushMovingComEnv2(fetch_env.FetchEnv, utils.EzPickle):
             'robot0:slide0': 0.405,
             'robot0:slide1': 0.48,
             'robot0:slide2': 0.0,
-            'object0:joint': [1.095, 0.68, 0.425, 1., 0., 0., 0.],  # origin 0.53
+            'object0:joint': [1.09, 0.65, 0.425, 1., 0., 0., 0.],  # origin 0.53
         }
         fetch_env.FetchEnv.__init__(
             self, MODEL_XML_PATH, has_object=True, block_gripper=True, n_substeps=20,
             gripper_extra_height=0.0, target_in_the_air=False, target_offset=0.0,
-            obj_range=0.0, target_range=0.005, distance_threshold=0.05,
+            obj_range=0.02, target_range=0.03, distance_threshold=0.05,
             initial_qpos=initial_qpos, reward_type=reward_type)
         utils.EzPickle.__init__(self)
         self.obstacle_slider_idx = self.sim.model.joint_names.index('obstacle:joint')
@@ -156,8 +155,8 @@ class FetchPushMovingComEnv2(fetch_env.FetchEnv, utils.EzPickle):
         pos = self.sim.data.body_xpos[body_id].copy()
         dims = np.array([0.09, 0.03, 0.025])
         o1 = np.concatenate((pos, dims.copy()))
-        o2 = np.array([1.3, 0.58, 0.44, 0.3, 0.02, 0.04])
-        o3 = np.array([1.158, 0.73, 0.44, 0.02, 0.15, 0.04])
+        o2 = np.array([1.3, 0.51, 0.44, 0.3, 0.02, 0.04])
+        o3 = np.array([1.185, 0.68, 0.44, 0.02, 0.15, 0.04])
         obs['real_obstacle_info'] = np.array([o1, o2, o3])
         obs['real_size_goal'] = np.array([0.04, 0.04, 0.02])
         return obs

@@ -46,10 +46,9 @@ def take_env_image(env, img_size, direct_env=None):
         env_to_use = env.env.env
     env_to_use._set_arm_visible(visible=False)
     env_to_use._set_visibility(names_list=['object0'], alpha_val=1.0)
-    env_to_use._set_visibility(names_list=['obstacle'], alpha_val=1.0)
     env_to_use._set_visibility(names_list=['table0'], alpha_val=1.0)
     # todo think more effective way of doing this
-    for name in ['obstacle2', 'obstacle3']:
+    for name in ['obstacle', 'obstacle2', 'obstacle3']:
         try:
             env_to_use._set_visibility(names_list=[name], alpha_val=1.0)
         except:
