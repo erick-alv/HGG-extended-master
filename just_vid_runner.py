@@ -96,7 +96,7 @@ if __name__ == '__main__':
         obs.append(o)
         prev_obs.append(o)
         #env_images.append(take_image_objects(env, args.img_size))
-        env_images.append(take_env_image(env, args.img_size))
+        env_images.append(take_env_image(env, args.img_vid_size))
         #actions = [[-0.001, 0.77, 0., 0.]]*3 + [[.1, -.1, 0., 0.]]*100
         #actions = [[0., .9, 0., 0.]]*10+ [[1., 0., 0., 0.]]*5 + [[0., -1., 0., 0.]]*8+[[1., 0., 0., 0.]]*5 +[[1., 0., 0., 0.]]*100
         actions = [[0., 0., 0., 0.]]*100
@@ -122,7 +122,7 @@ if __name__ == '__main__':
             #print('size: {}'.format(o['obstacle_size_latent']))
             obs.append(o)
             #env_images.append(take_image_objects(env, args.img_size))
-            env_images.append(take_env_image(env, args.img_size))
+            env_images.append(take_env_image(env, args.img_vid_size))
         create_rollout_video(env_images, args=args, filename='vid_{}_env'.format(vid))
     env_images = np.array(env_images)
     '''with torch.no_grad():

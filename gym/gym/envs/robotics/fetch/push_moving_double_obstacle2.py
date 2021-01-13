@@ -19,22 +19,19 @@ class FetchPushMovingDoubleObstacleEnv2(fetch_env.FetchEnv, utils.EzPickle):
         self.target_goal_center = np.array([1.3, 0.57, 0.425])
         self.object_center = np.array([1.3, 0.93, 0.425])
         #for moving
-        self.vel_lims = [1., 1.2]
+        self.vel_lims = [0.6, 0.9]
         self.n_moving_obstacles = 2
         self.current_obstacle_vels = []
-        self.initial_obstacle_directions = []
         self.obstacle_directions = []
         self.obstacle_upper_limits = []
         self.obstacle_lower_limits = []
         self.pos_difs = []
         for _ in range(self.n_moving_obstacles):
-            self.current_obstacle_vels.append(1.2)
+            self.current_obstacle_vels.append(0.9)
             self.obstacle_directions.append(1)
 
-        self.initial_obstacle_directions.append(1)
         self.obstacle_upper_limits.append(1.39)
         self.obstacle_lower_limits.append(1.16)
-        self.initial_obstacle_directions.append(-1)
         self.obstacle_upper_limits.append(1.44)
         self.obstacle_lower_limits.append(1.21)
         for i in range(self.n_moving_obstacles):
@@ -59,6 +56,7 @@ class FetchPushMovingDoubleObstacleEnv2(fetch_env.FetchEnv, utils.EzPickle):
         self.geom_ids_obstacles = []
         for name in ['o', 'o2']:
             self.geom_ids_obstacles.append(self.sim.model.geom_name2id(name))
+        self.use_reset_sim = True
 
     # RobotEnv methods
     # ----------------------------
@@ -152,7 +150,11 @@ class FetchPushMovingDoubleObstacleEnv2(fetch_env.FetchEnv, utils.EzPickle):
 
     def _reset_sim(self):
         self.sim.set_state(self.initial_state)
-        self.obstacle_directions = self.initial_obstacle_directions
+        a = np.random.randint(2)
+        if a == 0:
+            self.obstacle_directions = [1, -1]
+        else:
+            self.obstacle_directions = [-1, 1]
         velocities = []
 
         for i in range(self.n_moving_obstacles):

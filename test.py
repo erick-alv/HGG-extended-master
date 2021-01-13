@@ -51,7 +51,7 @@ class Tester:
 				prev_obs.append(o)
 				if i in eps_idx:
 					t = eps_idx.index(i)
-					env_images[t].append(take_env_image(env[i], self.args.img_size))
+					env_images[t].append(take_env_image(env[i], self.args.img_vid_size))
 					if self.args.vae_dist_help:
 						latent_points[t].append(o['achieved_goal_latent'])
 			for timestep in range(self.args.timesteps):
@@ -71,7 +71,7 @@ class Tester:
 
 					if i in eps_idx:
 						t = eps_idx.index(i)
-						env_images[t].append(take_env_image(env[i], self.args.img_size))
+						env_images[t].append(take_env_image(env[i], self.args.img_vid_size))
 						if self.args.vae_dist_help:
 							latent_points[t].append(ob['achieved_goal_latent'])
 					prev_obs[i] = copy.deepcopy(ob)

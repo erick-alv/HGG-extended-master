@@ -59,11 +59,11 @@
 			<site name="object0" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 0 0 0" type="sphere"></site>
 		</body>
 
-		<!--body name="lookat" pos="1.095 0.68 0.3">
+		<!--body name="lookat" pos="1.1 0.64 0.35">
 			<geom size="0.005 0.005 0.005" type="sphere" rgba="1 0 1 0"></geom>
 		</body>
 
-		<body name="camera rig" pos="1.05 0.9 1.1">
+		<body name="camera rig" pos="1.03 0.92 0.8">
 			<camera name="cam_top" mode="targetbody" target="lookat" pos="0 0 0" fovy="15"></camera>
 		</body-->
 

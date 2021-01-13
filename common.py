@@ -123,6 +123,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	#arguments for VAEs and images
 	parser.add_argument('--vae_dist_help', help='using vaes yes or no', type=str2bool, default=False)
 	parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=84)
+	parser.add_argument('--img_vid_size', help='size image in pixels', type=np.int32, default=500)
 	#type of VAE
 	parser.add_argument('--vae_type', help='', type=str,
 						default=None, choices=['sb', 'mixed', 'monet', 'space', 'bbox','faster_rcnn'])

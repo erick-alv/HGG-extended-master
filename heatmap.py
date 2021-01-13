@@ -32,7 +32,7 @@ def create_heatmap_qvalues(args, env, player):
             action = [0., 0., 0., 0.]
             env.step(action)
 
-        env_image = take_env_image(env, args.img_size)
+        env_image = take_env_image(env, args.img_vid_size)
         im_current = Image.fromarray(env_image.astype(np.uint8))
         im_current.save('log/heatmaps/env_at_timestep_{}.png'.format(timestep))
 

@@ -16,38 +16,37 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
             'robot0:slide0': 0.05,
             'robot0:slide1': 0.48,
             'robot0:slide2': 0.0,
-            'object0:joint': [1.7, 1.1, 0.41, 1., 0., 0., 0.],
+            'object0:joint': [1.11, 0.75, 0.422, 1., 0., 0., 0.],
         }
         self.adapt_dict = dict()
         self.adapt_dict["field"] = [1.3, 0.75, 0.6, 0.25, 0.25, 0.2]
         # centers of the interval where goal and initial position will be sampled
-        self.target_goal_center = np.array([1.8, 0.75, 0.425])
-        self.object_center = np.array([1., 0.75, 0.425])
+        self.target_goal_center = np.array([[1.7, 1.1, 0.42], [1.7, 0.2, 0.42]])
+        self.object_center = np.array([1.11, 0.75, 0.422])
         # for moving
         self.vel_lims = [0.8, 1.1]
         self.current_obstacle_vel = 2.1
-        self.initial_obstacle_direction = 1
         self.obstacle_direction = 1
         # the object must be in the middle from both limits in the xml
-        self.obstacle_upper_limit = 1.4
-        self.obstacle_lower_limit = 0.98
+        self.obstacle_upper_limit = 0.98
+        self.obstacle_lower_limit = 0.52
         self.pos_dif = (self.obstacle_upper_limit - self.obstacle_lower_limit) / 2.
         #
         fetch_env.FetchEnv.__init__(
             self, MODEL_XML_PATH, has_object=True, block_gripper=True, n_substeps=20,
             gripper_extra_height=-0.02, target_in_the_air=False, target_offset=0.0,
-            obj_range=np.array([0.04, 0.08]), target_range=np.array([0.1, 0.15]), distance_threshold=0.05,
+            obj_range=np.array([0.02, 0.08]),
+            target_range=np.array([0.1, 0.05]), distance_threshold=0.05,
             initial_qpos=initial_qpos, reward_type=reward_type)
         utils.EzPickle.__init__(self)
         self.obstacle1_slider_idx = self.sim.model.joint_names.index('obstacle:joint')
-        self.obstacle2_slider_idx = self.sim.model.joint_names.index('obstacle2:joint')
         self.geom_id_object = self.sim.model.geom_name2id('object0')
         self.geom_ids_obstacles = []
-
-        for name in ['o', 'o2']:
+        self.use_reset_sim = True
+        for name in ['o']:
             self.geom_ids_obstacles.append(self.sim.model.geom_name2id(name))
 
-    def test_setup(self, new_vel_lims=[1., 1.2]):
+    def test_setup(self, new_vel_lims=[0.9, 1.2]):
         '''
         changes the parameter for further tests after training an agent
         '''
@@ -59,7 +58,6 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         # move obstacle
         qpos = self.sim.data.qpos.flat[:]
         qpos[self.obstacle1_slider_idx] = pos
-        qpos[self.obstacle2_slider_idx] = pos
         to_mod = copy.deepcopy(self.sim.get_state())
         to_mod = to_mod._replace(qpos=qpos)
         self.sim.set_state(to_mod)
@@ -68,7 +66,6 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
     def set_obstacle_slide_vel(self, vel):
         qvel = self.sim.data.qvel.flat[:]
         qvel[self.obstacle1_slider_idx] = vel
-        qvel[self.obstacle2_slider_idx] = vel
         to_mod = copy.deepcopy(self.sim.get_state())
         to_mod = to_mod._replace(qvel=qvel)
         self.sim.set_state(to_mod)
@@ -115,7 +112,8 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
 
     def _reset_sim(self):
         self.sim.set_state(self.initial_state)
-        self.obstacle_direction = self.initial_obstacle_direction
+
+        self.obstacle_direction = np.random.choice([1, -1])
 
         possible_vels = np.linspace(start=self.vel_lims[0], stop=self.vel_lims[1], num=10, endpoint=True)
         self.current_obstacle_vel = np.random.choice(possible_vels)
@@ -136,12 +134,13 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
     def _get_obs(self):
         obs = super(FetchSlideMovingObstacleEnv, self)._get_obs()
         body_id = self.sim.model.body_name2id('obstacle')
-        body_id2 = self.sim.model.body_name2id('obstacle2')
         pos1 = np.array(self.sim.data.body_xpos[body_id].copy())
-        pos2 = np.array(self.sim.data.body_xpos[body_id2].copy())
-        dims = np.array([0.04, 0.365, 0.1])
+        dims = np.array([0.04, 0.22, 0.1])
         ob1 = np.concatenate((pos1, dims.copy()))
-        ob2 = np.concatenate((pos2, dims.copy()))
-        obs['real_obstacle_info'] = np.array([ob1, ob2])
+        obs['real_obstacle_info'] = np.array([ob1])
         obs['real_size_goal'] = np.array([0.05, 0.05, 0.02])
         return obs
+
+
+
+

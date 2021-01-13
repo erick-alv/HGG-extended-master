@@ -154,7 +154,7 @@ def calculate_comparison_player(args, args_real, env, player):
 			action = player.my_step_batch([goal_based_process(o)])[0]
 		o, _, _, info = env.step(action)
 	image_objects_current = take_image_objects(env, args.img_size)
-	image_env_current = take_env_image(env, args.img_size)
+	image_env_current = take_env_image(env, args.img_vid_size)
 	lg, lg_s, lo, lo_s = [], [], [], []
 	for _ in range(10):
 		slg, slg_s, slo, slo_s = latents_from_images(np.array([image_objects_current.copy()]), args)
@@ -253,7 +253,7 @@ def calculate_comparison_player(args, args_real, env, player):
 	o = env.reset()
 	env_images = []
 	obs.append(o)
-	env_images.append(take_env_image(env, args.img_size))
+	env_images.append(take_env_image(env, args.img_vid_size))
 
 	for timestep in range(100):
 		if player is None:
@@ -262,7 +262,7 @@ def calculate_comparison_player(args, args_real, env, player):
 			action = player.my_step_batch([goal_based_process(o)])[0]
 		o, _, _, info = env.step(action)
 		obs.append(o)
-		env_images.append(take_env_image(env, args.img_size))
+		env_images.append(take_env_image(env, args.img_vid_size))
 	create_rollout_video(env_images, args=args,
 						 filename='episode_{}'.format(name))
 

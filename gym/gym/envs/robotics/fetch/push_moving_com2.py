@@ -16,12 +16,11 @@ class FetchPushMovingComEnv2(fetch_env.FetchEnv, utils.EzPickle):
 
         #centers of the interval where goal and initial position will be sampld
         self.target_goal_center = np.array([1.4, 0.7, 0.425])
-        self.object_center = np.array([1.09, 0.65, 0.425])
+        self.object_center = np.array([1.1, 0.65, 0.425])
 
         #for moving
-        self.vel_lims = [0.7, 1.]
+        self.vel_lims = [0.6, 0.8]
         self.current_obstacle_vel = 2.1
-        self.initial_obstacle_direction = 1
         self.obstacle_direction = 1
         #the object must be in the middle from both limits in the xml
         self.obstacle_upper_limit = 1.46
@@ -34,12 +33,13 @@ class FetchPushMovingComEnv2(fetch_env.FetchEnv, utils.EzPickle):
             'robot0:slide0': 0.405,
             'robot0:slide1': 0.48,
             'robot0:slide2': 0.0,
-            'object0:joint': [1.09, 0.65, 0.425, 1., 0., 0., 0.],  # origin 0.53
+            'object0:joint': [1.095, 0.68, 0.425, 1., 0., 0., 0.],  # origin 0.53
         }
         fetch_env.FetchEnv.__init__(
             self, MODEL_XML_PATH, has_object=True, block_gripper=True, n_substeps=20,
             gripper_extra_height=0.0, target_in_the_air=False, target_offset=0.0,
-            obj_range=0.02, target_range=0.03, distance_threshold=0.05,
+            obj_range=0.02,
+            target_range=0.03, distance_threshold=0.05,
             initial_qpos=initial_qpos, reward_type=reward_type)
         utils.EzPickle.__init__(self)
         self.obstacle_slider_idx = self.sim.model.joint_names.index('obstacle:joint')
@@ -47,6 +47,7 @@ class FetchPushMovingComEnv2(fetch_env.FetchEnv, utils.EzPickle):
         self.geom_ids_obstacles = []
         for name in ['o', 'o2', 'o3']:
             self.geom_ids_obstacles.append(self.sim.model.geom_name2id(name))
+        self.use_reset_sim = True
 
     def test_setup(self, new_vel_lims=[1., 1.2]):
         '''
@@ -131,7 +132,7 @@ class FetchPushMovingComEnv2(fetch_env.FetchEnv, utils.EzPickle):
 
     def _reset_sim(self):
         self.sim.set_state(self.initial_state)
-        self.obstacle_direction = self.initial_obstacle_direction
+        self.obstacle_direction = np.random.choice([1, -1])
 
         possible_vels = np.linspace(start=self.vel_lims[0], stop=self.vel_lims[1], num=10, endpoint=True)
         self.current_obstacle_vel = np.random.choice(possible_vels)

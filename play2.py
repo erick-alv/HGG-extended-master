@@ -7,6 +7,7 @@ import tensorflow as tf
 from vae_env_inter import take_goal_image, take_obstacle_image, take_env_image, transform_image_to_latent_batch_torch
 from utils.image_util import create_rollout_video
 import matplotlib.pyplot as plt
+from mujoco_py import functions
 
 class Player:
     def __init__(self, args):
@@ -18,7 +19,7 @@ class Player:
         self.args.timesteps = self.env.env.env.spec.max_episode_steps
         self.env_test = make_env(args)
         self.info = []
-        self.test_rollouts = 1
+        self.test_rollouts = 12
 
         # get current policy from path (restore tf session + graph)
         self.play_dir = args.play_path
@@ -41,11 +42,32 @@ class Player:
         # play policy on env
         env = self.env
         acc_sum, obs = 0.0, []
-        #acs = [np.array([0., 1., 0., 0.]) for _ in range(25)] + [np.array([0., 0., 0., 0.]) for _ in range(110)]
-        for t in range(self.test_rollouts):
-            ob = env.reset()
-            #env.env.env._move_object(position=[1.13, 0.75, 0.425])
 
+        for t in range(self.test_rollouts):
+            '''rand_steps_wait = np.random.randint(low=4, high=10)
+            acs = [np.array([0., 0., 0., 0.]) for _ in range(rand_steps_wait)] + [
+                np.array([-1., 0., 0., 0.]) for _ in range(3)] + [np.array([0., -1., 0., 0.]) for _ in range(7)] + [
+                np.array([1., 1., 0., 0.]) for _ in range(100)]'''
+            rand_steps_wait = np.random.randint(low=2, high=8)
+            '''acs = [np.array([0., 0., -.5, 0.]) for _ in range(3)] + [np.array([0.672, -0.8, 0, 0.]) for _ in range(3)] + \
+                  [np.array([0., 0., -.4, 0.]) for _ in range(2)]+ \
+                  [np.array([0., 0.5, 0., 0.]) for _ in range(10)] + [np.array([-0.1, 0., 0., 0.]) for _ in range(2)]+ \
+                  [np.array([0.2, -0.8, 0., 0.]) for _ in range(3)] + [np.array([0.4, 0., 0., 0.]) for _ in range(3)] + \
+                  [np.array([0., 1., 0., 0.]) for _ in range(4)] + [np.array([-0.6, -0.2, 0., 0.]) for _ in range(4)] + \
+                  [np.array([0., 0.89, 0., 0.]) for _ in range(4)] + [np.array([0., 0., 0., 0.]) for _ in range(rand_steps_wait)] + \
+                  [np.array([1., 0., 0., 0.]) for _ in range(5)] + [np.array([0.5, -0.5, 0., 0.]) for _ in range(8)] + \
+                  [np.array([0., 0., 0., 0.]) for _ in range(110)]'''
+            acs = [np.array([1., 0., 0., 0.]) for _ in range(3)] + \
+                  [np.array([0., -.5, 0., 0.]) for _ in range(6)] + \
+                  [np.array([0., 0., -.6, 0.]) for _ in range(2)] + \
+                  [np.array([-0.9, 0., 0, 0.]) for _ in range(10)] + \
+                  [np.array([0., 1., 0., 0.]) for _ in range(4)] + \
+                  [np.array([-0.8, 0., 0., 0.]) for _ in range(2)] + \
+                  [np.array([0., 0., 0., 0.]) for _ in range(rand_steps_wait)] +\
+                  [np.array([0., -1., 0., 0.]) for _ in range(15)]+ \
+                  [np.array([0., 0., 0., 0.]) for _ in range(110)]
+            #env.env.env._move_object(position=[1.13, 0.75, 0.425])
+            ob = env.reset()
             obs.append(goal_based_process(ob))
             trajectory_goals = [ob['achieved_goal'].copy()]
             #trajectory_goals_latents = [ob['achieved_goal_latent'].copy()]
@@ -54,15 +76,12 @@ class Player:
             #trajectory_obstacles_latents = [ob['obstacle_latent'].copy()]
             #trajectory_obstacles_latents_sizes = [ob['obstacle_size_latent'].copy()]
 
-            tr_env_images = [take_env_image(self.env, args.img_size)]
-
-
-
+            tr_env_images = [take_env_image(self.env, args.img_vid_size)]
 
             for timestep in range(self.args.timesteps):
-                actions = self.my_step_batch(obs)
+                #actions = self.my_step_batch(obs)
                 #actions = [env.action_space.sample() for _ in range(len(obs))]
-                #actions = [acs[timestep]]
+                actions = [acs[timestep]]
                 obs, infos = [], []
                 ob, _, _, info = env.step(actions[0])
                 obs.append(goal_based_process(ob))
@@ -73,12 +92,38 @@ class Player:
                 #trajectory_obstacles_latents.append(ob['obstacle_latent'].copy())
                 #trajectory_obstacles_latents_sizes.append(ob['obstacle_size_latent'].copy())
 
-                tr_env_images.append(take_env_image(self.env, args.img_size))
-
+                tr_env_images.append(take_env_image(self.env, args.img_vid_size))
                 infos.append(info)
+                sim = env.sim
+                '''print('________ contacts at step {} -------'.format(timestep))
+                for i in range(sim.data.ncon):
+                    # Note that the contact array has more than `ncon` entries,
+                    # so be careful to only read the valid entries.
+
+                    contact = sim.data.contact[i]
+                    geom1_name = sim.model.geom_id2name(contact.geom1)
+                    geom2_name = sim.model.geom_id2name(contact.geom2)
+                    if geom1_name == 'object0' or geom2_name == 'object0':
+
+                        print('contact', i)
+                        print('dist', contact.dist)
+                        print('geom1', contact.geom1, sim.model.geom_id2name(contact.geom1))
+                        print('geom2', contact.geom2, sim.model.geom_id2name(contact.geom2))
+                        # There's more stuff in the data structure
+                        # See the mujoco documentation for more info!
+                        geom2_body = sim.model.geom_bodyid[sim.data.contact[i].geom2]
+                        print(' Contact force on geom2 body', sim.data.cfrc_ext[geom2_body])
+                        print('norm', np.sqrt(np.sum(np.square(sim.data.cfrc_ext[geom2_body]))))
+                        # Use internal functions to read out mj_contactForce
+                        c_array = np.zeros(6, dtype=np.float64)
+                        print('c_array', c_array)
+                        functions.mj_contactForce(sim.model, sim.data, i, c_array)
+                        print('c_array', c_array)
+
+                print('done')'''
 
 
-            if t % 5 == 0 or t == self.test_rollouts -1:
+            if t % 1 == 0 or t == self.test_rollouts -1:
                 steps = np.arange(len(tr_env_images))
                 #latent_ind_x = 1
                 #latent_ind_y = 0
@@ -130,6 +175,8 @@ class Player:
                 plt.close()'''
 
                 create_rollout_video(tr_env_images, args=self.args, filename='play_it_{}'.format(t))
+        if hasattr(env.env.env, 'reset_sim_counter'):
+            print(env.env.env.reset_sim_counter)
 
 def interval_map_function(a,b,c, d):
     def map(x):

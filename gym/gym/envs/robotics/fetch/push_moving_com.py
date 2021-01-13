@@ -15,11 +15,10 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.adapt_dict["field"] = [1.3, 0.75, 0.6, 0.25, 0.25, 0.2]
         #centers of the interval where goal and initial position will be sampld
         self.target_goal_center = np.array([1.4, 0.7, 0.425])
-        self.object_center = np.array([1.09, 0.65, 0.425])
+        self.object_center = np.array([1.1, 0.65, 0.425])
         #for moving
-        self.vel_lims = [0.7, 1.]
+        self.vel_lims = [0.6, 0.8]
         self.current_obstacle_vel = 2.1
-        self.initial_obstacle_direction = 1
         self.obstacle_direction = 1
         #the object must be in the middle from both limits in the xml
         self.obstacle_upper_limit = 1.45
@@ -30,7 +29,7 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
             'robot0:slide0': 0.405,
             'robot0:slide1': 0.48,
             'robot0:slide2': 0.0,
-            'object0:joint': [1.09, 0.65, 0.425, 1., 0., 0., 0.],  # origin 0.53
+            'object0:joint': [1.095, 0.68, 0.425, 1., 0., 0., 0.],  # origin 0.53
         }
         fetch_env.FetchEnv.__init__(
             self, MODEL_XML_PATH, has_object=True, block_gripper=True, n_substeps=20,
@@ -43,6 +42,7 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.geom_ids_obstacles = []
         for name in ['o', 'o2', 'o3']:
             self.geom_ids_obstacles.append(self.sim.model.geom_name2id(name))
+        self.use_reset_sim = True
 
     def test_setup(self, new_vel_lims=[1., 1.2]):
         '''
@@ -127,7 +127,7 @@ class FetchPushMovingComEnv(fetch_env.FetchEnv, utils.EzPickle):
 
     def _reset_sim(self):
         self.sim.set_state(self.initial_state)
-        self.obstacle_direction = self.initial_obstacle_direction
+        self.obstacle_direction = np.random.choice([1, -1])
 
         possible_vels = np.linspace(start=self.vel_lims[0], stop=self.vel_lims[1], num=10, endpoint=True)
         self.current_obstacle_vel = np.random.choice(possible_vels)

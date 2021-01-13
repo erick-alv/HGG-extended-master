@@ -10,9 +10,14 @@ class IntervalGoalEnv(FixedObjectGoalEnv):
 		self.img_size = args.img_size
 		FixedObjectGoalEnv.__init__(self, args)
 
-
 	def generate_goal(self):
 		if self.target_goal_center is not None:
+			ndim = self.target_goal_center.ndim
+			if ndim > 1:
+				ind = np.random.randint(len(self.target_goal_center))
+				goal_center = self.target_goal_center[ind]
+			else:
+				goal_center = self.target_goal_center
 			if isinstance(self.target_range, np.ndarray):
 				if self.target_range.size == 2:
 					range_to_use = np.concatenate([self.target_range, np.zeros(shape=1)])
@@ -21,8 +26,8 @@ class IntervalGoalEnv(FixedObjectGoalEnv):
 				offset = np.random.uniform(-range_to_use, range_to_use)
 			else:
 				offset = np.random.uniform(-self.target_range, self.target_range, size=3)
-			goal = self.target_goal_center + offset
-			goal[2] = self.target_goal_center[2]
+			goal = goal_center + offset
+			goal[2] = goal_center[2]
 		else:
 			if self.has_object:
 				goal = self.initial_gripper_xpos[:3] + self.target_offset
