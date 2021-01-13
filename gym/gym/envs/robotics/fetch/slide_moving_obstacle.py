@@ -28,8 +28,8 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.current_obstacle_vel = 2.1
         self.obstacle_direction = 1
         # the object must be in the middle from both limits in the xml
-        self.obstacle_upper_limit = 0.98
-        self.obstacle_lower_limit = 0.52
+        self.obstacle_upper_limit = 0.95
+        self.obstacle_lower_limit = 0.55
         self.pos_dif = (self.obstacle_upper_limit - self.obstacle_lower_limit) / 2.
         #
         fetch_env.FetchEnv.__init__(

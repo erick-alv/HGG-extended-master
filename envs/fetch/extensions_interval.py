@@ -4,6 +4,7 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import math
 
 #todo first run jsut the algorithm with the minimizer of collision along side to see what Q values it does create
 #A space visualizer V value will be needed that(heat map)
@@ -70,6 +71,7 @@ def calc_angles(a_bbox, b_bboxes):
     angles = np.expand_dims(angles, axis=1)
     return angles
 
+
 class ObsExtender(ABC):
     def __init__(self, args):
         self.args = args
@@ -85,6 +87,7 @@ class ObsExtender(ABC):
 
     def reset_ep(self):
         self.counter = 0
+
 
 #leaves everything as it is, used for test of HGG
 class DummyExtender(ObsExtender):
@@ -343,8 +346,12 @@ class ObsExtP(ObsExtMinDist):
 class ObsExtPAV(ObsExtMinDist):
     def __init__(self, args):
         super(ObsExtPAV, self).__init__(args)
+        self.length_extension = None
+        self.env_dt = None
 
     def extend_obs(self, obs, env):
+        if self.env_dt is None:
+            self.env_dt = env.env.env.dt
         obs = super(ObsExtPAV, self).extend_obs(obs, env)
         goal_bbox = obs['goal_st_t']
         obstacle_bboxes = obs['obstacle_st_t']
@@ -359,8 +366,10 @@ class ObsExtPAV(ObsExtMinDist):
         angles = calc_angles(goal_bbox, obstacle_bboxes)
 
         observation_without_dist = obs['observation'][:-len_dists]
-        extension = np.concatenate([dists, pos, angles, vel], axis=1)
-        new_state = np.concatenate([observation_without_dist, np.ravel(extension)])
+        extension = np.ravel(np.concatenate([dists, pos, angles, vel], axis=1))
+        if self.length_extension is None:
+            self.length_extension = len(extension)
+        new_state = np.concatenate([observation_without_dist, extension])
         obs['observation'] = new_state
         return obs
     
@@ -384,13 +393,91 @@ class ObsExtPAV(ObsExtMinDist):
         vel = unmodified_extension[:, -2:]
 
         dir_not_scaled = extra_info['dir_not_scaled']
-        vel[index] = dir_not_scaled / env_dt
+        if self.env_dt is None:
+            raise Exception('this was called before modification of obs')
+
+        vel[index] = dir_not_scaled / self.env_dt
 
         extension = np.ravel(np.concatenate([dists, pos, angles, vel], axis=1))
         len_extension = len(extension)
         new_obs['observation'][-len_extension:] = extension
 
         return new_obs
+
+    def visualize(self, obs, file_name):
+        extension = obs['observation'][- self.length_extension:].copy()
+        extension = np.reshape(extension, (-1, 6))
+        dists = extension[:, 0:1]
+        pos = extension[:, 1:3]
+        angles = extension[:, 3:4]
+        vel = extension[:, 4:6]
+        goal_bbox = obs['goal_st_t']
+        obstacle_bboxes = obs['obstacle_st_t']
+        fig, ax = plt.subplots()
+        if True:
+            c_x, c_y = self.args.field_center[0], self.args.field_center[1]
+            d_x, d_y = self.args.field_size[0], self.args.field_size[1]
+            support_points = np.array([[c_x - d_x, c_y - d_y],
+                                       [c_x - d_x, c_y + d_y],
+                                       [c_x + d_x, c_y - d_y],
+                                       [c_x + d_x, c_y + d_y]])
+            ax.scatter(support_points[:, 0], support_points[:, 1], c='black')
+        ax.scatter(pos[:, 0], pos[:, 1], c='blue')
+
+        ax.scatter(pos[:, 0], pos[:, 1], s=dists[:, 0], c='blue', alpha=0.8)
+        ax.scatter([goal_bbox[0]], [goal_bbox[1]], c='red')
+        ax.quiver(pos[:, 0], pos[:, 1], vel[:, 0], vel[:, 1])
+
+        def plot_point_angle(x, y, a, length, color):
+            # find the end point
+            endy = y + length * math.sin(math.radians(a))
+            endx = x + length * math.cos(math.radians(a))
+            # plot the points
+            ax.plot([x, endx], [y, endy], '--', c=color)
+
+
+        colors_extended_area = ['yellow', 'green', 'orange']
+        if True:
+            for i in range(len(obstacle_bboxes)):
+                bb = obstacle_bboxes[i]
+                #half of extended area
+                ax.add_patch(
+                    patches.Rectangle(
+                        (bb[0] - bb[2], bb[1] - bb[3]),
+                        bb[2] * 2,
+                        bb[3] * 2,
+                        edgecolor='blue',
+                        facecolor='blue',
+                        fill=True,
+                        alpha = 0.6
+                    ))
+                #extended area
+                e_h = dists[i]
+                ax.add_patch(
+                    patches.Rectangle(
+                        (goal_bbox[0] - goal_bbox[2] - e_h, goal_bbox[1] - goal_bbox[3] - e_h),
+                        (goal_bbox[2]+e_h) * 2,
+                        (goal_bbox[3]+e_h) * 2,
+                        edgecolor=colors_extended_area[i],
+                        facecolor=colors_extended_area[i],
+                        fill=True,
+                        alpha=0.2
+                    ))
+                #todo visualization for corner cases
+                l = np.linalg.norm(pos[i] - goal_bbox[:2])
+                plot_point_angle(goal_bbox[0], goal_bbox[1], angles[i], l, colors_extended_area[i])
+
+            #goal
+            ax.add_patch(
+                patches.Rectangle(
+                    (goal_bbox[0] - goal_bbox[2], goal_bbox[1] - goal_bbox[3]),
+                    goal_bbox[2] * 2,goal_bbox[3] * 2,
+                    edgecolor='red',facecolor='red',
+                    fill=True,
+                    alpha=0.5
+                ))
+        plt.savefig(file_name)
+        plt.close()
 
 
 #calculates position realitve to goal object
@@ -704,10 +791,13 @@ class IntervalWithExtensions(IntervalGoalEnv):
             rew = self.on_coll_extender.compute_reward(observation_current, observation_old, goal, rew)
         return rew
 
-    #this sshould be called just by the imaginary replay_buffer
+    #this should be called just by the imaginary replay_buffer
     def _modify_obs(self, obs, new_obstacle_list, extra_info, index):
         new_obs = self.obs_extender._modify_obs(obs, new_obstacle_list, extra_info, index)
         return new_obs
+
+    def visualize(self, obs, file_name):
+        self.obs_extender.visualize(obs, file_name)
 
 
 class IntervalExt(IntervalWithExtensions):

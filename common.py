@@ -68,7 +68,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 
 	args, _ = parser.parse_known_args()
 	if 'RewMod' in args.goal:
-		parser.add_argument('--rew_mod_val', help='value to subtract on collision', type=np.float32, default=-2.)
+		parser.add_argument('--rew_mod_val', help='value to subtract on collision', type=np.float32, default=-5.)
 	if args.extra_sec:
 		parser.add_argument('--sec_dist', help='security distance around obstacle', type=np.float32, default=None)
 	parser.add_argument('--graph', help='g-hgg yes or no', type=str2bool, default=False)

@@ -393,9 +393,29 @@ class HGGLearner:
 			## just for video
 			tr_env_images = [take_env_image(self.env_List[i], args.img_size)]
 			##
+			'''rand_steps_wait = np.random.randint(low=2, high=8)
+			acs = [np.array([0., 0., -.5, 0.]) for _ in range(3)] + [np.array([0.672, -0.8, 0, 0.]) for _ in range(3)] + \
+				  [np.array([0., 0., -.4, 0.]) for _ in range(2)] + \
+				  [np.array([0., 0.5, 0., 0.]) for _ in range(10)] + [np.array([-0.1, 0., 0., 0.]) for _ in range(2)] + \
+				  [np.array([0.2, -0.8, 0., 0.]) for _ in range(3)] + [np.array([0.4, 0., 0., 0.]) for _ in range(3)] + \
+				  [np.array([0., 1., 0., 0.]) for _ in range(4)] + [np.array([-0.6, -0.2, 0., 0.]) for _ in range(4)] + \
+				  [np.array([0., 0.89, 0., 0.]) for _ in range(4)] + [np.array([0., 0., 0., 0.]) for _ in
+																	  range(rand_steps_wait)] + \
+				  [np.array([1., 0., 0., 0.]) for _ in range(5)] + [np.array([0.5, -0.5, 0., 0.]) for _ in range(8)] + \
+				  [np.array([0., 0., 0., 0.]) for _ in range(110)]
+			acs = [np.array([1., 0., 0., 0.]) for _ in range(3)] + \
+				  [np.array([0., -.5, 0., 0.]) for _ in range(6)] + \
+				  [np.array([0., 0., -.6, 0.]) for _ in range(2)] + \
+				  [np.array([-0.9, 0., 0, 0.]) for _ in range(10)] + \
+				  [np.array([0., 1., 0., 0.]) for _ in range(4)] + \
+				  [np.array([-0.8, 0., 0., 0.]) for _ in range(2)] + \
+				  [np.array([0., 0., 0., 0.]) for _ in range(rand_steps_wait)] + \
+				  [np.array([0., -1., 0., 0.]) for _ in range(15)] + \
+				  [np.array([0., 0., 0., 0.]) for _ in range(110)]'''
 			for timestep in range(args.timesteps):
 				# get action from the policy
 				action = agent.step(obs, explore=True)
+				#action = acs[timestep]
 				obs, reward, done, info = self.env_List[i].step(action)
 				trajectory.append(obs['achieved_goal'].copy())
 				## just for video
@@ -405,7 +425,7 @@ class HGGLearner:
 				current.store_step(action, obs, reward, done)
 				stop_trajectory, im_info = check_conditions_after_step(obs, current, args)
 				if args.imaginary_obstacle_transitions and im_info is not None:
-					args.imaginary_buffer.store_im_info(im_info)
+					args.imaginary_buffer.store_im_info(im_info, env=self.env_List[i])
 				if done or stop_trajectory: break
 
 
@@ -624,6 +644,7 @@ class HGGLearner_VAEs(HGGLearner):
 			# just for video
 			tr_env_images = [take_env_image(self.env_List[i], args.img_size)]
 
+
 			for timestep in range(args.timesteps):
 				# get action from the ddpg policy
 				action = agent.step(obs, explore=True)
@@ -640,7 +661,7 @@ class HGGLearner_VAEs(HGGLearner):
 				current.store_step(action, obs, reward, done)
 				stop_trajectory, im_info = check_conditions_after_step(obs, current, args)
 				if args.imaginary_obstacle_transitions and im_info is not None:
-					args.imaginary_buffer.store_im_info(im_info)
+					args.imaginary_buffer.store_im_info(im_info, env=self.env_List[i])
 				if done or stop_trajectory: break
 			achieved_trajectories.append(np.array(trajectory))
 			achieved_init_states.append(init_state)

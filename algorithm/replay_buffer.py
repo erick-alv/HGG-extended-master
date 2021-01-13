@@ -268,14 +268,21 @@ class ReplayBuffer_Imaginary:
 		self.buffer_size = buffer_size
 
 
-	def store_im_info(self, im_info):
+	def store_im_info(self, im_info, env):
 		index, imaginary_info_dict = im_info
 		obs_t0 = imaginary_info_dict['obs'][0]
 		obs_t1 = imaginary_info_dict['obs'][1]
 
+
 		if self.counter==0:
 			for key in imaginary_info_dict.keys():
 				self.buffer[key] = []
+
+		'''if self.args.goal == 'intervalPAVRewMod':
+			fname0 = self.args.logger.my_log_dir + 'original_{}_t0.png'.format(self.counter)
+			fname1 = self.args.logger.my_log_dir + 'original_{}_t1.png'.format(self.counter)
+			env.visualize(obs_t0, fname0)
+			env.visualize(obs_t1, fname1)'''
 
 		bbox_obstacle_t0 = obs_t0['obstacle_st_t'][index]
 		bbox_obstacle_t1 = obs_t1['obstacle_st_t'][index]
@@ -292,8 +299,13 @@ class ReplayBuffer_Imaginary:
 			new_list_bboxes_t1 = obs_t1['obstacle_st_t'].copy()
 			new_list_bboxes_t1[index] = new_bboxes_t1[i]
 
-			new_obst0 = self.args.learner.env._modify_obs(obs_t0, new_list_bboxes_t0, extra_info[i], index)
-			new_obst1 = self.args.learner.env._modify_obs(obs_t1, new_list_bboxes_t1, extra_info[i], index)
+			new_obst0 = env._modify_obs(obs_t0, new_list_bboxes_t0, extra_info[i], index)
+			new_obst1 = env._modify_obs(obs_t1, new_list_bboxes_t1, extra_info[i], index)
+			'''if self.args.goal == 'intervalPAVRewMod':
+				fname0 = self.args.logger.my_log_dir + 'imaginary_{}_{}_t0.png'.format(self.counter, i)
+				fname1 = self.args.logger.my_log_dir + 'imaginary_{}_{}_t1.png'.format(self.counter, i)
+				env.visualize(new_obst0, fname0)
+				env.visualize(new_obst1, fname1)'''
 			im_ep = {'obs':[new_obst0, new_obst1]}
 			for key in imaginary_info_dict:
 				if key == 'obs':
