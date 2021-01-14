@@ -21,7 +21,7 @@
 		</body>
 
 		<body pos="1.32 0.75 0.5" name="obstacle">
-			<geom name="o" pos="0 0 0" size="0.04 0.22 0.1"
+			<geom name="o" pos="0 0 0" size="0.04 0.2 0.1"
 				  type="box" rgba="0 0 1 1" mass="2000"
 				  material="table_mat"></geom>
 			<joint name="obstacle:joint" type="slide" axis="0 1 0" limited="true"
