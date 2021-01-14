@@ -21,7 +21,7 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.adapt_dict = dict()
         self.adapt_dict["field"] = [1.3, 0.75, 0.6, 0.25, 0.25, 0.2]
         # centers of the interval where goal and initial position will be sampled
-        self.target_goal_center = np.array([[1.7, 1.12, 0.42], [1.7, 0.38, 0.42]])
+        self.target_goal_center = np.array([[1.65, 1.12, 0.42], [1.65, 0.38, 0.42]])
         self.object_center = np.array([1.11, 0.75, 0.422])
         # for moving
         self.vel_lims = [0.8, 1.1]
@@ -46,7 +46,7 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         for name in ['o']:
             self.geom_ids_obstacles.append(self.sim.model.geom_name2id(name))
 
-    def test_setup(self, new_vel_lims=[0.9, 1.2]):
+    def test_setup(self, new_vel_lims=[0.8, 1.2]):
         '''
         changes the parameter for further tests after training an agent
         '''
@@ -107,6 +107,7 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
                     self.set_obstacle_slide_pos(new_pos)
 
     def step(self, action):
+        orig_pos = self.sim.data.get_site_xpos('robot0:grip')
         self.move_obstacle()
         return super(FetchSlideMovingObstacleEnv, self).step(action)
 

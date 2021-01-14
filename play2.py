@@ -57,7 +57,7 @@ class Player:
                   [np.array([0., 0.89, 0., 0.]) for _ in range(4)] + [np.array([0., 0., 0., 0.]) for _ in range(rand_steps_wait)] + \
                   [np.array([1., 0., 0., 0.]) for _ in range(5)] + [np.array([0.5, -0.5, 0., 0.]) for _ in range(8)] + \
                   [np.array([0., 0., 0., 0.]) for _ in range(110)]'''
-            acs = [np.array([1., 0., 0., 0.]) for _ in range(3)] + \
+            '''acs = [np.array([1., 0., 0., 0.]) for _ in range(3)] + \
                   [np.array([0., -.5, 0., 0.]) for _ in range(6)] + \
                   [np.array([0., 0., -.6, 0.]) for _ in range(2)] + \
                   [np.array([-0.9, 0., 0, 0.]) for _ in range(10)] + \
@@ -65,7 +65,8 @@ class Player:
                   [np.array([-0.8, 0., 0., 0.]) for _ in range(2)] + \
                   [np.array([0., 0., 0., 0.]) for _ in range(rand_steps_wait)] +\
                   [np.array([0., -1., 0., 0.]) for _ in range(15)]+ \
-                  [np.array([0., 0., 0., 0.]) for _ in range(110)]
+                  [np.array([0., 0., 0., 0.]) for _ in range(110)]'''
+            acs = [np.array([0., 0., 0., 0.]) for _ in range(100)]
             #env.env.env._move_object(position=[1.13, 0.75, 0.425])
             ob = env.reset()
             obs.append(goal_based_process(ob))
