@@ -5,10 +5,8 @@ from .custom import CustomGoalEnv
 from .extensions_interval import IntervalExt, IntervalColl, IntervalRewSub, IntervalRewVec, IntervalCollStopRegion,\
 	IntervalCollStop, IntervalRewMod, IntervalRewModStop, IntervalRewModRegion, IntervalRewModRegionStop, \
 	IntervalTestExtendedBbox, IntervalCollMinDist, IntervalMinDistRewMod,IntervalMinDistRewModStop, \
-	IntervalTestExtendedMinDist, IntervalP,IntervalPRewMod,IntervalPRewModStop,IntervalTestExtendedP,IntervalPAV,\
-	IntervalPAVRewMod,IntervalPAVRewModStop,IntervalTestExtendedPAV,IntervalPRel,IntervalPRelRewMod,\
-	IntervalPRelRewModStop,IntervalTestExtendedPRel,IntervalPAVRel,IntervalPAVRelRewMod,\
-	IntervalPAVRelRewModStop,IntervalTestExtendedPAVRel, IntervalTest
+	IntervalTestExtendedMinDist,IntervalPAV,IntervalPAVRewMod,IntervalPAVRewModStop,IntervalTestExtendedPAV,\
+	IntervalPAVRel,IntervalPAVRelRewMod,IntervalPAVRelRewModStop,IntervalTestExtendedPAVRel, IntervalTest
 
 # TODO: change this file for new env handling!
 def make_env(args):
@@ -33,18 +31,10 @@ def make_env(args):
 		'intervalMinDistRewMod':IntervalMinDistRewMod,
 		'intervalMinDistRewModStop':IntervalMinDistRewModStop,
 		'intervalTestExtendedMinDist': IntervalTestExtendedMinDist,
-		'intervalP': IntervalP,
-		'intervalPRewMod':IntervalPRewMod,
-		'intervalPRewModStop':IntervalPRewModStop,
-		'intervalTestExtendedP':IntervalTestExtendedP,
 		'intervalPAV':IntervalPAV,
 		'intervalPAVRewMod':IntervalPAVRewMod,
 		'intervalPAVRewModStop':IntervalPAVRewModStop,
 		'intervalTestExtendedPAV':IntervalTestExtendedPAV,
-		'intervalPRel':IntervalPRel,
-		'intervalPRelRewMod':IntervalPRelRewMod,
-		'intervalPRelRewModStop':IntervalPRelRewModStop,
-		'intervalTestExtendedPRel':IntervalTestExtendedPRel,
 		'intervalPAVRel':IntervalPAVRel,
 		'intervalPAVRelRewMod':IntervalPAVRelRewMod,
 		'intervalPAVRelRewModStop':IntervalPAVRelRewModStop,

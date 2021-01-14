@@ -402,8 +402,8 @@ class HGGLearner:
 				  [np.array([0., 0.89, 0., 0.]) for _ in range(4)] + [np.array([0., 0., 0., 0.]) for _ in
 																	  range(rand_steps_wait)] + \
 				  [np.array([1., 0., 0., 0.]) for _ in range(5)] + [np.array([0.5, -0.5, 0., 0.]) for _ in range(8)] + \
-				  [np.array([0., 0., 0., 0.]) for _ in range(110)]
-			acs = [np.array([1., 0., 0., 0.]) for _ in range(3)] + \
+				  [np.array([0., 0., 0., 0.]) for _ in range(110)]'''
+			'''acs = [np.array([1., 0., 0., 0.]) for _ in range(3)] + \
 				  [np.array([0., -.5, 0., 0.]) for _ in range(6)] + \
 				  [np.array([0., 0., -.6, 0.]) for _ in range(2)] + \
 				  [np.array([-0.9, 0., 0, 0.]) for _ in range(10)] + \
