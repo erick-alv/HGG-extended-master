@@ -561,9 +561,6 @@ class Bbox(nn.Module):
         return z_pres, z_depth, z_scale, z_pos, z_where, loss, final_recs
 
 
-
-
-
     def calculate_kl_loss(self, z_pres_logits, z_depth_post, z_scale_post, z_pos_post):
         kl_z_pres = kl_divergence_bern_bern(z_pres_logits, self.prior_z_pres_prob)
         kl_z_depth = kl_divergence(z_depth_post, self.z_depth_prior)

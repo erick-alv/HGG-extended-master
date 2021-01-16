@@ -24,18 +24,18 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.target_goal_center = np.array([[1.65, 1.12, 0.42], [1.65, 0.38, 0.42]])
         self.object_center = np.array([1.11, 0.75, 0.422])
         # for moving
-        self.vel_lims = [0.8, 1.1]
-        self.current_obstacle_vel = 2.1
+        self.vel_lims = [0.9, 1.2]
+        self.current_obstacle_vel = 0.9
         self.obstacle_direction = 1
         # the object must be in the middle from both limits in the xml
-        self.obstacle_upper_limit = 1.
-        self.obstacle_lower_limit = 0.5
+        self.obstacle_upper_limit = 1.02
+        self.obstacle_lower_limit = 0.48
         self.pos_dif = (self.obstacle_upper_limit - self.obstacle_lower_limit) / 2.
         #
         fetch_env.FetchEnv.__init__(
             self, MODEL_XML_PATH, has_object=True, block_gripper=True, n_substeps=20,
             gripper_extra_height=-0.02, target_in_the_air=False, target_offset=0.0,
-            obj_range=np.array([0.02, 0.08]),
+            obj_range=np.array([0.02, 0.04]),
             target_range=np.array([0.08, 0.05]), distance_threshold=0.05,
             initial_qpos=initial_qpos, reward_type=reward_type)
         utils.EzPickle.__init__(self)
@@ -46,7 +46,7 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         for name in ['o']:
             self.geom_ids_obstacles.append(self.sim.model.geom_name2id(name))
 
-    def test_setup(self, new_vel_lims=[0.8, 1.2]):
+    def test_setup(self, new_vel_lims=[1., 1.3]):
         '''
         changes the parameter for further tests after training an agent
         '''
@@ -136,7 +136,7 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         obs = super(FetchSlideMovingObstacleEnv, self)._get_obs()
         body_id = self.sim.model.body_name2id('obstacle')
         pos1 = np.array(self.sim.data.body_xpos[body_id].copy())
-        dims = np.array([0.04, 0.2, 0.1])
+        dims = np.array([0.04, 0.18, 0.1])
         ob1 = np.concatenate((pos1, dims.copy()))
         obs['real_obstacle_info'] = np.array([ob1])
         obs['real_size_goal'] = np.array([0.05, 0.05, 0.02])

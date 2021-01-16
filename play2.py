@@ -47,8 +47,8 @@ class Player:
             '''rand_steps_wait = np.random.randint(low=4, high=10)
             acs = [np.array([0., 0., 0., 0.]) for _ in range(rand_steps_wait)] + [
                 np.array([-1., 0., 0., 0.]) for _ in range(3)] + [np.array([0., -1., 0., 0.]) for _ in range(7)] + [
-                np.array([1., 1., 0., 0.]) for _ in range(100)]'''
-            rand_steps_wait = np.random.randint(low=2, high=8)
+                np.array([1., 1., 0., 0.]) for _ in range(100)]
+            rand_steps_wait = np.random.randint(low=2, high=8)'''
             '''acs = [np.array([0., 0., -.5, 0.]) for _ in range(3)] + [np.array([0.672, -0.8, 0, 0.]) for _ in range(3)] + \
                   [np.array([0., 0., -.4, 0.]) for _ in range(2)]+ \
                   [np.array([0., 0.5, 0., 0.]) for _ in range(10)] + [np.array([-0.1, 0., 0., 0.]) for _ in range(2)]+ \
@@ -80,9 +80,9 @@ class Player:
             tr_env_images = [take_env_image(self.env, args.img_vid_size)]
 
             for timestep in range(self.args.timesteps):
-                #actions = self.my_step_batch(obs)
+                actions = self.my_step_batch(obs)
                 #actions = [env.action_space.sample() for _ in range(len(obs))]
-                actions = [acs[timestep]]
+                #actions = [acs[timestep]]
                 obs, infos = [], []
                 ob, _, _, info = env.step(actions[0])
                 obs.append(goal_based_process(ob))
