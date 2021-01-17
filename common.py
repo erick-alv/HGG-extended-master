@@ -110,8 +110,6 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	parser.add_argument('--her', help='type of hindsight experience replay', type=str, default='future', choices=['none', 'final', 'future'])
 	parser.add_argument('--her_ratio', help='ratio of hindsight experience replay', type=np.float32, default=0.8)
 	parser.add_argument('--pool_rule', help='rule of collecting achieved states', type=str, default='full', choices=['full', 'final'])
-	parser.add_argument('--imaginary_obstacle_transitions',
-						help='expand obstacle transition', type=bool, default=False)
 
 
 	parser.add_argument('--hgg_c', help='weight of initial distribution in flow learner', type=np.float32, default=3.0)
@@ -148,8 +146,19 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	parser.add_argument('--dist_estimator_type', help='the type if dist estimator to use or None if not using',
 						type=str, default=None,
 						choices=['normal', 'realCoords', 'multiple', 'multipleReal', 'net', 'subst', 'substReal'])
-	#for dense reward transformation
-	parser.add_argument('--transform_dense', help='if transform to dense with VAES or not', type=str2bool, default=False)
+
+	#for imaginary obstacle interactions
+	parser.add_argument('--imaginary_obstacle_transitions',
+						help='expand obstacle transition', type=bool, default=False)
+	args, _ = parser.parse_known_args()
+	if args.imaginary_obstacle_transitions:
+		parser.add_argument('--im_train_freq', help='how often the imaginary transitions are used',
+							type=np.int, default=5)
+		parser.add_argument('--im_buffer_size', help='size of the imagniary buffer', type=np.int, default=400)
+		parser.add_argument('--im_warmup', help='minimum amount of transitions to start sampling', type=np.int,
+							default=120)
+		parser.add_argument('--im_n_per_type', help='amount fake interactions per type of interaction', type=np.int,
+							default=5)
 
 	args = parser.parse_args()
 	args.num_vertices = [args.n_x, args.n_y, args.n_z]
@@ -161,6 +170,11 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 			args.sec_dist = 0.02
 		else:
 			args.sec_dist = 0.009
+
+	if args.imaginary_obstacle_transitions:
+		args.im_train_counter = 0
+		args.im_norm_freq = copy.copy(args.im_train_freq)
+		args.im_norm_counter = 0
 
 
 	base_name = args.alg + '-' + args.env + '-' + args.goal + '-' + args.learn
@@ -438,11 +452,6 @@ def experiment_setup(args):
 	env = make_env(args)
 	env_test = make_env(args)
 
-	#rgb_array = take_env_image(env, args.img_size)
-	#img = Image.fromarray(rgb_array)
-	#img.show()
-	#img.close()
-
 	if args.goal_based:
 
 		args.obs_dims = list(goal_based_process(env.reset()).shape)
@@ -452,11 +461,7 @@ def experiment_setup(args):
 
 	if args.imaginary_obstacle_transitions:
 		#relative small buffer size so it always have most recent collisions
-		args.train_every = 5
-		args.train_every_counter = 0
-		args.normalizer_every = 5
-		args.normalizer_every_counter = 0
-		args.imaginary_buffer = ReplayBuffer_Imaginary(args, buffer_size=400)#200)
+		args.imaginary_buffer = ReplayBuffer_Imaginary(args, buffer_size=args.im_buffer_size)
 	args.buffer = buffer = ReplayBuffer_Episodic(args)
 	args.learner = learner = create_learner(args)
 	args.agent = agent = create_agent(args)

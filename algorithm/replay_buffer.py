@@ -290,7 +290,8 @@ class ReplayBuffer_Imaginary:
 		bbox_elem_t1 = obs_t1['goal_st_t']
 
 		new_bboxes_t0, new_bboxes_t1, extra_info = create_new_interactions(
-			bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bbox_elem_t1
+			bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bbox_elem_t1,
+			n_per_type=self.args.im_n_per_type
 		)
 		episodes = []
 		for i in range(len(new_bboxes_t0)):
@@ -329,7 +330,7 @@ class ReplayBuffer_Imaginary:
 
 	def sample_batch(self, batch_size=-1, normalizer=False, plain=False):
 		assert int(normalizer) + int(plain) <= 1
-		if batch_size == -1: batch_size = max(self.args.batch_size / 100, 100)
+		if batch_size == -1: batch_size = max(int(self.args.batch_size / 100), 100)
 		batch = dict(obs=[], obs_next=[], acts=[], rews=[], done=[])
 
 		for i in range(batch_size):
@@ -387,7 +388,7 @@ def check_collisions(a_bbox, b_bboxes):
 	return np.logical_not(d_bools)
 
 
-def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bbox_elem_t1):
+def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bbox_elem_t1, n_per_type):
 	ox0, oy0, oxs0, oys0 = bbox_obstacle_t0
 	ox1, oy1, oxs1, oys1 = bbox_obstacle_t1
 	elx0, ely0, elxs0, elys0 = bbox_elem_t0
@@ -400,7 +401,7 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 	if np.abs(direction[1]) > np.abs(direction[0]):
 		dif = np.abs(bbox_obstacle_t1[1] - bbox_obstacle_t0[1])
 		# place above, go down not reach
-		extra_dists = np.random.uniform(low=0., high=dif / 2, size=5)
+		extra_dists = np.random.uniform(low=0., high=dif, size=n_per_type)
 		for extra_dist in extra_dists:
 			# size of obstacle not considered so it is colliding and when moving more chance to not collide any
 			to_move = np.abs(direction[1])
@@ -414,7 +415,7 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
 		# place above, go down pass
-		extra_dists = np.random.uniform(low=0., high=dif/2, size=5)
+		extra_dists = np.random.uniform(low=0., high=dif, size=n_per_type)
 		for extra_dist in extra_dists:
 			#size of obstacle not considered so it is colliding and when moving more chance to not collide any
 			a_ny0 = ely1 + elys1 + extra_dist - elys1
@@ -430,7 +431,7 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
 		# place above, go up
-		extra_dists = np.random.uniform(low=0., high=dif, size=5)
+		extra_dists = np.random.uniform(low=0., high=dif, size=n_per_type)
 		for extra_dist in extra_dists:
 			a_ny0 = ely1 + elys1 + oys1 + extra_dist
 			a_new_bbox_t0 = np.array([ox0, a_ny0, oxs0, oys0])
@@ -445,7 +446,7 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
 		# place below, go down
-		extra_dists = np.random.uniform(low=0., high=dif, size=5)
+		extra_dists = np.random.uniform(low=0., high=dif, size=n_per_type)
 		for extra_dist in extra_dists:
 			b_ny0 = ely1 - elys1 - oys1 - extra_dist
 			b_new_bbox_t0 = np.array([ox0, b_ny0, oxs0, oys0])
@@ -460,7 +461,7 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
 		# place below, go up not reach
-		extra_dists = np.random.uniform(low=0., high=dif / 2, size=5)
+		extra_dists = np.random.uniform(low=0., high=dif , size=n_per_type)
 		for extra_dist in extra_dists:
 			# size of obstacle not considered so it is colliding and when moving more chance to not collide any
 			to_move = np.abs(direction[1])
@@ -474,7 +475,7 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
 		# place below, go up pass
-		extra_dists = np.random.uniform(low=0., high=dif / 2, size=5)
+		extra_dists = np.random.uniform(low=0., high=dif , size=n_per_type)
 		for extra_dist in extra_dists:
 			# size of obstacle not considered so it is colliding and when moving more chance to not collide any
 			a_ny0 = ely1 - elys1 - extra_dist + elys1
@@ -492,7 +493,7 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 	else:
 		dif = np.abs(bbox_obstacle_t1[0] - bbox_obstacle_t0[0])
 		# place right, go right
-		extra_dists = np.random.uniform(low=0., high=dif, size=5)
+		extra_dists = np.random.uniform(low=0., high=dif, size=n_per_type)
 		for extra_dist in extra_dists:
 			a_nx0 = elx1 + elxs1 + oxs1 + extra_dist
 			a_new_bbox_t0 = np.array([a_nx0, oy0, oxs0, oys0])
@@ -507,7 +508,7 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
 		# place right, go left no reach
-		extra_dists = np.random.uniform(low=0., high=dif, size=5)
+		extra_dists = np.random.uniform(low=0., high=dif, size=n_per_type)
 		for extra_dist in extra_dists:
 			to_move = np.abs(direction[0])
 			a_nx0 = elx1 + elxs1 + extra_dist + oxs1 + to_move
@@ -520,7 +521,7 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
 		# place right, go left pass
-		extra_dists = np.random.uniform(low=0., high=dif, size=5)
+		extra_dists = np.random.uniform(low=0., high=dif, size=n_per_type)
 		for extra_dist in extra_dists:
 			a_nx0 = elx1 + elxs1 + extra_dist - oxs1
 			a_new_bbox_t0 = np.array([a_nx0, oy0, oxs0, oys0])
@@ -535,7 +536,7 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
 		# place left, go left
-		extra_dists = np.random.uniform(low=0., high=dif, size=5)
+		extra_dists = np.random.uniform(low=0., high=dif, size=n_per_type)
 		for extra_dist in extra_dists:
 			b_nx0 = elx1 - elxs1 - oxs1 - extra_dist
 			b_new_bbox_t0 = np.array([b_nx0, oy0, oxs0, oys0])
@@ -550,7 +551,7 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
 		# place left, go right no reach
-		extra_dists = np.random.uniform(low=0., high=dif, size=5)
+		extra_dists = np.random.uniform(low=0., high=dif, size=n_per_type)
 		for extra_dist in extra_dists:
 			to_move = np.abs(direction[0])
 			a_nx0 = elx1 - elxs1 - extra_dist - oxs1 - to_move
@@ -563,7 +564,7 @@ def create_new_interactions(bbox_obstacle_t0, bbox_obstacle_t1, bbox_elem_t0, bb
 			extra_info.append({'dir_not_scaled': dir.copy()})
 
 		# place left, go right pass
-		extra_dists = np.random.uniform(low=0., high=dif, size=5)
+		extra_dists = np.random.uniform(low=0., high=dif, size=n_per_type)
 		for extra_dist in extra_dists:
 			a_nx0 = elx1 - elxs1 - extra_dist + oxs1
 			a_new_bbox_t0 = np.array([a_nx0, oy0, oxs0, oys0])

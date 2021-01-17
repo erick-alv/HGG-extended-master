@@ -332,7 +332,10 @@ class HGGLearner:
 			self.env_List.append(make_env(args))
 			self.goal_env_List.append(make_env(args))
 
-		self.achieved_trajectory_pool = TrajectoryPool(args, args.hgg_pool_size)
+		if args.vae_dist_help:
+			self.achieved_trajectory_pool = TrajectoryPool_VAEs(args, args.hgg_pool_size)
+		else:
+			self.achieved_trajectory_pool = TrajectoryPool(args, args.hgg_pool_size)
 		self.sampler = MatchSampler(args, self.achieved_trajectory_pool)
 
 		self.stop_hgg_threshold = self.args.stop_hgg_threshold
@@ -345,6 +348,9 @@ class HGGLearner:
 		initial_goals = []
 		desired_goals = []
 		goal_list = []
+		if args.vae_dist_help:
+			initial_goals_latents = []
+			desired_goals_latents = []
 
 		# get initial position and goal from environment for each episode
 		for i in range(args.episodes):
@@ -353,16 +359,30 @@ class HGGLearner:
 			goal_d = obs['desired_goal'].copy()
 			initial_goals.append(goal_a.copy())
 			desired_goals.append(goal_d.copy())
+			if args.vae_dist_help:
+				initial_goals_latents.append(obs['achieved_goal_latent'].copy())
+				desired_goals_latents.append(obs['desired_goal_latent'].copy())
 
 		# if HGG has not been stopped yet, perform crucial HGG update step here
 		# by updating the sampler, a set of intermediate goals is provided and stored in sampler
 		# based on distance to target goal distribution, similarity of initial states and expected reward (see paper)
 		# by bipartite matching
 		if not self.stop:
-			self.sampler.update(initial_goals, desired_goals)
+			if args.vae_dist_help:
+				if self.learn_calls > 0:
+					self.sampler.update(initial_goals, desired_goals, initial_goals_latents, desired_goals_latents)
+				else:
+					self.sampler.update(initial_goals, desired_goals, None, None)
+			else:
+				self.sampler.update(initial_goals, desired_goals)
 
 		achieved_trajectories = []
 		achieved_init_states = []
+		if args.vae_dist_help:
+			achieved_trajectory_goals_latents = []
+			achieved_trajectory_init_goals_latents = []
+			achieved_trajectory_obstacle_latents = []
+			achieved_trajectory_obstacle_latents_sizes = []
 
 		explore_goals = []
 		test_goals = []
@@ -381,45 +401,36 @@ class HGGLearner:
 
 			# store goals in explore_goals list to check whether goals are within goal space later
 			explore_goals.append(explore_goal)
-			test_goals.append(self.env.generate_goal())
+			test_goal = self.env.generate_goal()
+			test_goals.append(test_goal)
 
 			# Perform HER training by interacting with the environment
 			self.env_List[i].goal = explore_goal.copy()
+			obs = self.env_List[i].get_obs()
 			if write_goals != 0 and len(goal_list)<write_goals:
 				goal_list.append(explore_goal.copy())
-			obs = self.env_List[i].get_obs()
+
 			current = Trajectory(obs)
 			trajectory = [obs['achieved_goal'].copy()]
+			if args.vae_dist_help:
+				trajectory_goals_latents = [obs['achieved_goal_latent'].copy()]
+				trajectory_obstacles_latents = [obs['obstacle_latent'].copy()]
+				trajectory_obstacles_latents_sizes = [obs['obstacle_size_latent'].copy()]
 			## just for video
-			tr_env_images = [take_env_image(self.env_List[i], args.img_size)]
+			#tr_env_images = [take_env_image(self.env_List[i], args.img_size)]
 			##
-			'''rand_steps_wait = np.random.randint(low=2, high=8)
-			acs = [np.array([0., 0., -.5, 0.]) for _ in range(3)] + [np.array([0.672, -0.8, 0, 0.]) for _ in range(3)] + \
-				  [np.array([0., 0., -.4, 0.]) for _ in range(2)] + \
-				  [np.array([0., 0.5, 0., 0.]) for _ in range(10)] + [np.array([-0.1, 0., 0., 0.]) for _ in range(2)] + \
-				  [np.array([0.2, -0.8, 0., 0.]) for _ in range(3)] + [np.array([0.4, 0., 0., 0.]) for _ in range(3)] + \
-				  [np.array([0., 1., 0., 0.]) for _ in range(4)] + [np.array([-0.6, -0.2, 0., 0.]) for _ in range(4)] + \
-				  [np.array([0., 0.89, 0., 0.]) for _ in range(4)] + [np.array([0., 0., 0., 0.]) for _ in
-																	  range(rand_steps_wait)] + \
-				  [np.array([1., 0., 0., 0.]) for _ in range(5)] + [np.array([0.5, -0.5, 0., 0.]) for _ in range(8)] + \
-				  [np.array([0., 0., 0., 0.]) for _ in range(110)]'''
-			'''acs = [np.array([1., 0., 0., 0.]) for _ in range(3)] + \
-				  [np.array([0., -.5, 0., 0.]) for _ in range(6)] + \
-				  [np.array([0., 0., -.6, 0.]) for _ in range(2)] + \
-				  [np.array([-0.9, 0., 0, 0.]) for _ in range(10)] + \
-				  [np.array([0., 1., 0., 0.]) for _ in range(4)] + \
-				  [np.array([-0.8, 0., 0., 0.]) for _ in range(2)] + \
-				  [np.array([0., 0., 0., 0.]) for _ in range(rand_steps_wait)] + \
-				  [np.array([0., -1., 0., 0.]) for _ in range(15)] + \
-				  [np.array([0., 0., 0., 0.]) for _ in range(110)]'''
 			for timestep in range(args.timesteps):
 				# get action from the policy
 				action = agent.step(obs, explore=True)
 				#action = acs[timestep]
 				obs, reward, done, info = self.env_List[i].step(action)
 				trajectory.append(obs['achieved_goal'].copy())
+				if args.vae_dist_help:
+					trajectory_goals_latents.append(obs['achieved_goal_latent'].copy())
+					trajectory_obstacles_latents.append(obs['obstacle_latent'].copy())
+					trajectory_obstacles_latents_sizes.append(obs['obstacle_size_latent'].copy())
 				## just for video
-				tr_env_images.append(take_env_image(self.env_List[i], args.img_size))
+				#tr_env_images.append(take_env_image(self.env_List[i], args.img_size))
 				##
 				if timestep==args.timesteps-1: done = True#this makes that the last obs is as done
 				current.store_step(action, obs, reward, done)
@@ -427,47 +438,51 @@ class HGGLearner:
 				if args.imaginary_obstacle_transitions and im_info is not None:
 					args.imaginary_buffer.store_im_info(im_info, env=self.env_List[i])
 				if done or stop_trajectory: break
-
-
-			## just for video
-			if (self.learn_calls % 100 == 0 and i == args.episodes - 1) or \
-					(info['Success'] == 1.0 and self.success_n % 100 == 0):
-				self.goal_env_List[i].goal = explore_goal.copy()
-				self.goal_env_List[i].env.env._move_object(position=explore_goal.copy())
-				tr_goal = take_goal_image(self.goal_env_List[i], args.img_size)
-				if info['Success'] == 1.0:
-					create_rollout_video(tr_env_images, goal_image=tr_goal, args=args,
-										 filename='success_rollout_it{}'.format(self.learn_calls))
-					self.success_n += 1
-				else:
-					create_rollout_video(tr_env_images, goal_image=tr_goal, args=args,
-										 filename='last_rollout_it{}'.format(self.learn_calls))
-			##
 			achieved_trajectories.append(np.array(trajectory))
 			achieved_init_states.append(init_state)
+			if args.vae_dist_help:
+				achieved_trajectory_goals_latents.append(np.array(trajectory_goals_latents))
+				achieved_trajectory_init_goals_latents.append(trajectory_goals_latents[0].copy())
+				achieved_trajectory_obstacle_latents.append(np.array(trajectory_obstacles_latents))
+				achieved_trajectory_obstacle_latents_sizes.append(np.array(trajectory_obstacles_latents_sizes))
+
 			# Trajectory is stored in replay buffer, replay buffer can be normal or EBP
 			buffer.store_trajectory(current)
-			agent.normalizer_update(buffer.sample_batch())
-			if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 120:#50
-				if args.normalizer_every_counter % args.normalizer_every == 0:
-					agent.normalizer_update(args.imaginary_buffer.sample_batch())
-				args.normalizer_every_counter += 1
-				args.normalizer_every_counter = args.normalizer_every_counter % args.normalizer_every
+			#update normalizer
+			norm_batch = buffer.sample_batch()
+			if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > args.im_warmup:
+				if args.im_norm_counter % args.im_norm_freq == 0:
+					#use obs to get size
+					len_b = len(norm_batch['obs'])
+					im_norm_batch = args.imaginary_buffer.sample_batch()
+					len_im = len(im_norm_batch['obs'])
+					indices = np.random.choice(len_b, size=len_im, replace=False)
+					for im_it, idx in enumerate(indices):
+						for key in norm_batch.keys():
+							norm_batch[key][idx] = im_norm_batch[key][im_it]
+				args.im_norm_counter += 1
+			agent.normalizer_update(norm_batch)
 
 			if buffer.steps_counter>=args.warmup:
 				for _ in range(args.train_batches):
+					batch = buffer.sample_batch()
+					if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > args.im_warmup:
+						if args.im_train_counter % args.im_train_freq == 0:
+							#replaces samples with samples of the imaginary buffer
+							imaginary_batch = args.imaginary_buffer.sample_batch()
+							len_b = len(batch['obs'])
+							len_im = len(imaginary_batch['obs'])
+							indices = np.random.choice(len_b, size=len_im, replace=False)
+							for im_it, idx in enumerate(indices):
+								for key in norm_batch.keys():
+									batch[key][idx] = imaginary_batch[key][im_it]
+						args.im_train_counter += 1
 					# train with Hindsight Goals (HER step)
-					info = agent.train(buffer.sample_batch())
+					info = agent.train(batch)
 					args.logger.add_dict(info)
 				# update target network
 				agent.target_update()
-				if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 120:#50:
-					if args.train_every_counter % args.train_every == 0:
-						for _ in range(3):
-							info2 = agent.train(args.imaginary_buffer.sample_batch())
-						agent.target_update()
-					args.train_every_counter +=1
-					args.train_every_counter = args.train_every_counter % args.train_every
+
 
 		selection_trajectory_idx = {}
 		for i in range(self.args.episodes):
@@ -475,7 +490,16 @@ class HGGLearner:
 			if goal_distance(achieved_trajectories[i][0], achieved_trajectories[i][-1])>0.01:#todo?? use here distance as well?
 				selection_trajectory_idx[i] = True
 		for idx in selection_trajectory_idx.keys():
-			self.achieved_trajectory_pool.insert(achieved_trajectories[idx].copy(), achieved_init_states[idx].copy())
+			if args.vae_dist_help:
+				self.achieved_trajectory_pool.insert(achieved_trajectories[idx].copy(),
+													 achieved_init_states[idx].copy(),
+													 achieved_trajectory_goals_latents[idx].copy(),
+													 achieved_trajectory_init_goals_latents[idx].copy(),
+													 achieved_trajectory_obstacle_latents[idx].copy(),
+													 achieved_trajectory_obstacle_latents_sizes[idx].copy())
+			else:
+				self.achieved_trajectory_pool.insert(achieved_trajectories[idx].copy(),
+													 achieved_init_states[idx].copy())
 
 		# unless in first call:
 		# Check which of the explore goals are inside the target goal space
@@ -556,196 +580,6 @@ def check_conditions_after_step(obs, trajectory, args):
 		else:
 			return False, None
 
-
-class HGGLearner_VAEs(HGGLearner):
-	def __init__(self, args):
-		self.args = args
-		self.env = make_env(args)
-		self.env_test = make_env(args)
-
-		self.env_List = []
-		self.goal_env_List = []
-		for i in range(args.episodes):
-			self.env_List.append(make_env(args))
-			self.goal_env_List.append(make_env(args))
-
-		self.achieved_trajectory_pool = TrajectoryPool_VAEs(args, args.hgg_pool_size)
-		self.sampler = MatchSampler(args, self.achieved_trajectory_pool)
-
-		self.stop_hgg_threshold = self.args.stop_hgg_threshold
-		self.stop = False
-		self.learn_calls = 0
-		self.success_n = 0
-
-	def learn(self, args, env, env_test, agent, buffer, write_goals=0, epoch=None, cycle=None):
-		# Actual learning cycle takes place here!
-		initial_goals = []
-		desired_goals = []
-		goal_list = []
-		initial_goals_latents= []
-		desired_goals_latents = []
-
-		# get initial position and goal from environment for each episode
-		for i in range(args.episodes):
-			obs = self.env_List[i].reset()
-			goal_a = obs['achieved_goal'].copy()
-			goal_d = obs['desired_goal'].copy()
-			initial_goals.append(goal_a.copy())
-			desired_goals.append(goal_d.copy())
-			initial_goals_latents.append(obs['achieved_goal_latent'].copy())
-			desired_goals_latents.append(obs['desired_goal_latent'].copy())
-
-		if not self.stop:
-			if self.learn_calls > 0:
-				self.sampler.update(initial_goals, desired_goals, initial_goals_latents, desired_goals_latents)
-			else:
-				self.sampler.update(initial_goals, desired_goals, None, None)
-
-		achieved_trajectories = []
-		achieved_init_states = []
-		achieved_trajectory_goals_latents = []
-		achieved_trajectory_init_goals_latents = []
-		achieved_trajectory_obstacle_latents = []
-		achieved_trajectory_obstacle_latents_sizes = []
-
-		explore_goals = []
-		test_goals = []
-		inside = []
-
-		for i in range(args.episodes):
-			obs = self.env_List[i].get_obs()
-			init_state = obs['observation'].copy()
-
-			# if HGG has not been stopped yet, sample from the goals provided by the update step
-			# if it has been stopped, the goal to explore is simply the one generated by the environment
-			if not self.stop:
-				explore_goal = self.sampler.sample(i)
-			else:
-				explore_goal = desired_goals[i]
-
-
-			# store goals in explore_goals list to check whether goals are within goal space later
-			explore_goals.append(explore_goal)
-			test_goal = self.env.generate_goal()
-			test_goals.append(test_goal.copy())
-
-			# Perform HER training by interacting with the environment
-			self.env_List[i].goal = explore_goal.copy()
-			obs = self.env_List[i].get_obs()
-
-			if write_goals != 0 and len(goal_list)<write_goals:
-				goal_list.append(explore_goal.copy())
-
-			current = Trajectory(obs)
-			trajectory = [obs['achieved_goal'].copy()]
-			trajectory_goals_latents = [obs['achieved_goal_latent'].copy()]
-			trajectory_obstacles_latents = [obs['obstacle_latent'].copy()]
-			trajectory_obstacles_latents_sizes = [obs['obstacle_size_latent'].copy()]
-			# just for video
-			tr_env_images = [take_env_image(self.env_List[i], args.img_size)]
-
-
-			for timestep in range(args.timesteps):
-				# get action from the ddpg policy
-				action = agent.step(obs, explore=True)
-				obs, reward, done, info = self.env_List[i].step(action)
-				trajectory.append(obs['achieved_goal'].copy())
-				trajectory_goals_latents.append(obs['achieved_goal_latent'].copy())
-				trajectory_obstacles_latents.append(obs['obstacle_latent'].copy())
-				trajectory_obstacles_latents_sizes.append(obs['obstacle_size_latent'].copy())
-
-				#just for video
-				#tr_env_images.append(take_env_image(self.env_List[i], args.img_size))
-
-				if timestep==args.timesteps-1: done = True#this makes that the last obs is as done
-				current.store_step(action, obs, reward, done)
-				stop_trajectory, im_info = check_conditions_after_step(obs, current, args)
-				if args.imaginary_obstacle_transitions and im_info is not None:
-					args.imaginary_buffer.store_im_info(im_info, env=self.env_List[i])
-				if done or stop_trajectory: break
-			achieved_trajectories.append(np.array(trajectory))
-			achieved_init_states.append(init_state)
-			achieved_trajectory_goals_latents.append(np.array(trajectory_goals_latents))
-			achieved_trajectory_init_goals_latents.append(trajectory_goals_latents[0].copy())
-			achieved_trajectory_obstacle_latents.append(np.array(trajectory_obstacles_latents))
-			achieved_trajectory_obstacle_latents_sizes.append(np.array(trajectory_obstacles_latents_sizes))
-
-			#just for video
-			#todo comment after correcting
-			#print('exploration goal: {}'.format(explore_goal))
-			#print('test goal: {}'.format(test_goal))
-			#self.env_List[i].env.env._move_object(position=self.env_List[i].goal.copy())
-			#tr_goal = take_goal_image(self.env_List[i], args.img_size)
-			#create_rollout_video(tr_env_images, args=args, goal_image=tr_goal,
-			#					 filename='rollout_call_{}_it_{}'.format(self.learn_calls, i))
-
-			# Trajectory is stored in replay buffer, replay buffer can be normal or EBP
-			buffer.store_trajectory(current)
-			agent.normalizer_update(buffer.sample_batch())
-			if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 120:#50:
-				if args.normalizer_every_counter % args.normalizer_every == 0:
-					agent.normalizer_update(args.imaginary_buffer.sample_batch())
-				args.normalizer_every_counter += 1
-				args.normalizer_every_counter = args.normalizer_every_counter % args.normalizer_every
-
-			if buffer.steps_counter>=args.warmup:
-				for _ in range(args.train_batches):
-					# train with Hindsight Goals (HER step)
-					info = agent.train(buffer.sample_batch())
-					args.logger.add_dict(info)
-				# update target network
-				agent.target_update()
-				#train with imaginary
-				
-				if args.imaginary_obstacle_transitions and args.imaginary_buffer.counter > 120:#50:
-					if args.train_every_counter % args.train_every == 0:
-						for _ in range(3):
-							info2 = agent.train(args.imaginary_buffer.sample_batch())
-						agent.target_update()
-					args.train_every_counter += 1
-					args.train_every_counter = args.train_every_counter % args.train_every
-
-		selection_trajectory_idx = {}
-		for i in range(self.args.episodes):
-			# only add trajectories with movement to the trajectory pool --> use default (L2) distance measure!
-			if goal_distance(achieved_trajectories[i][0], achieved_trajectories[i][-1])>0.01:#todo?? use here distance as well?
-				selection_trajectory_idx[i] = True
-		for idx in selection_trajectory_idx.keys():
-			self.achieved_trajectory_pool.insert(achieved_trajectories[idx].copy(), achieved_init_states[idx].copy(),
-												 achieved_trajectory_goals_latents[idx].copy(),
-												 achieved_trajectory_init_goals_latents[idx].copy(),
-												 achieved_trajectory_obstacle_latents[idx].copy(),
-												 achieved_trajectory_obstacle_latents_sizes[idx].copy())
-
-
-		# unless in first call:
-		# Check which of the explore goals are inside the target goal space
-		# target goal space is represented by a sample of test_goals directly generated from the environemnt
-		# an explore goal is considered inside the target goal space, if it is closer than the distance_threshold to one of the test goals
-		# (i.e. would yield a non-negative reward if that test goal was to be achieved)
-		if self.learn_calls > 0:
-			assert len(explore_goals) == len(test_goals)
-			for ex in explore_goals:
-				is_inside = 0
-				for te in test_goals:
-					if goal_distance(ex, te) <= self.env.env.env.distance_threshold:
-						is_inside = 1
-				inside.append(is_inside)
-			assert len(inside) == len(test_goals)
-			inside_sum = 0
-			for i in inside:
-				inside_sum += i
-			# If more than stop_hgg_threshold (e.g. 0.9) of the explore goals are inside the target goal space, stop HGG
-			# and continue with normal HER.
-			# By default, stop_hgg_threshold is disabled (set to a value > 1)
-			average_inside = inside_sum / len(inside)
-			self.args.logger.info("Average inside: {}".format(average_inside))
-			if average_inside > self.stop_hgg_threshold:
-				self.stop = True
-				self.args.logger.info("Continue with normal HER")
-
-		self.learn_calls += 1
-		return goal_list if len(goal_list)>0 else None
 
 class NormalLearner:
 	def __init__(self, args):
