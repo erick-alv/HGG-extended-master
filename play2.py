@@ -80,9 +80,9 @@ class Player:
             tr_env_images = [take_env_image(self.env, args.img_vid_size)]
 
             for timestep in range(self.args.timesteps):
-                actions = self.my_step_batch(obs)
+                #actions = self.my_step_batch(obs)
                 #actions = [env.action_space.sample() for _ in range(len(obs))]
-                #actions = [acs[timestep]]
+                actions = [acs[timestep]]
                 obs, infos = [], []
                 ob, _, _, info = env.step(actions[0])
                 obs.append(goal_based_process(ob))
