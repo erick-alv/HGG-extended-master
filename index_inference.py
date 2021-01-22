@@ -38,7 +38,7 @@ if __name__ == "__main__":
     make_dir(env_data_dir, clear=False)
 
     assert args.vae_dist_help
-    load_vaes(args)
+    load_vaes(args, doing_inference=True)
     load_field_parameters(args)
     env = gym.make(args.env)
 
