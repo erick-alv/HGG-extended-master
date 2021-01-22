@@ -24,8 +24,8 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.target_goal_center = np.array([[1.65, 1.12, 0.42], [1.65, 0.38, 0.42]])
         self.object_center = np.array([1.11, 0.75, 0.422])
         # for moving
-        self.vel_lims = [0.9, 1.2]
-        self.current_obstacle_vel = 0.9
+        self.vel_lims = [0.6, 0.77]#0.6
+        self.current_obstacle_vel = 0.6
         self.obstacle_direction = 1
         # the object must be in the middle from both limits in the xml
         self.obstacle_upper_limit = 1.02

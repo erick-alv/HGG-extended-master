@@ -81,7 +81,9 @@ if __name__ == "__main__":
             continue
         clean_path = curr_path.replace(env_id, '')
         clean_path = os.path.basename(os.path.normpath(clean_path))
+        tag_path = clean_path.split('-')[0]
         clean_path = ''.join([i for i in clean_path if not i.isdigit()])
+
         # divide path into run (number in the beginning) and config (information on configuration, included in the path name)
         if args.naming == 0:
             config = clean_path
@@ -170,6 +172,8 @@ if __name__ == "__main__":
                 config = "HER"
             else:
                 raise Exception("Naming failed!")
+        elif args.naming == 8:
+            config = tag_path
 
         # Test:
         run = config
