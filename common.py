@@ -240,7 +240,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	return args
 
 
-def load_vaes(args):
+def load_vaes(args, doing_inference=False):
 	base_data_dir = 'data/'
 	data_dir = base_data_dir + args.env + '/'
 
@@ -253,10 +253,11 @@ def load_vaes(args):
 		args.vae_model = load_Bbox(path='data/FetchGenerativeEnv-v1/model_bbox',img_size=args.img_size, latent_size=0,
 								   device='cuda:0', num_slots=5)#latent size is not being used for now
 		args.vae_model.eval()
-		file_index_object = 'data/' + args.env + '/' + args.vae_type + '_obj_i.npy'
-		file_indices_obstacle = 'data/' + args.env + '/' + args.vae_type + '_obstacles_indices.npy'
-		args.obj_index = np.load(file_index_object)
-		args.obstacles_indices = np.load(file_indices_obstacle)
+		if not doing_inference:
+			file_index_object = 'data/' + args.env + '/' + args.vae_type + '_obj_i.npy'
+			file_indices_obstacle = 'data/' + args.env + '/' + args.vae_type + '_obstacles_indices.npy'
+			args.obj_index = np.load(file_index_object)
+			args.obstacles_indices = np.load(file_indices_obstacle)
 
 		return
 	elif args.vae_type == 'faster_rcnn':
