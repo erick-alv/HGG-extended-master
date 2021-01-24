@@ -42,16 +42,6 @@ if __name__ == "__main__":
     load_field_parameters(args)
     env = gym.make(args.env)
 
-    '''field_names = ['ppair', 'bbox', 'distance']
-    csv_file_path = env_data_dir + 'distances.csv'
-    csv_file_path_val = env_data_dir + 'distances_val.csv'
-    csv_file_path_test = env_data_dir + 'distances_test.csv'
-    for csv_path in [csv_file_path, csv_file_path_val, csv_file_path_test]:
-        if os.path.exists(csv_path):
-            os.remove(csv_path)
-        with open(csv_path, 'w') as csv_file:
-            writer = csv.DictWriter(csv_file, fieldnames=field_names)
-            writer.writeheader()'''
     pres = []
     scale = []
     pos = []

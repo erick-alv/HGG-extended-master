@@ -19,12 +19,12 @@ class FetchPushMovingComEnv3(fetch_env.FetchEnv, utils.EzPickle):
         self.object_center = np.array([1.1, 0.65, 0.425])
 
         #for moving
-        self.vel_lims = [0.6, 0.8]
-        self.current_obstacle_vel = 2.1
+        self.vel_lims = [0.48, 0.485]#625
+        self.current_obstacle_vel = 0.48
         self.obstacle_direction = 1
         #the object must be in the middle from both limits in the xml
         self.obstacle_upper_limit = 1.46
-        self.obstacle_lower_limit = 1.14
+        self.obstacle_lower_limit = 1.33
         self.pos_dif = (self.obstacle_upper_limit - self.obstacle_lower_limit) / 2.
 
 
@@ -38,7 +38,8 @@ class FetchPushMovingComEnv3(fetch_env.FetchEnv, utils.EzPickle):
         fetch_env.FetchEnv.__init__(
             self, MODEL_XML_PATH, has_object=True, block_gripper=True, n_substeps=20,
             gripper_extra_height=0.0, target_in_the_air=False, target_offset=0.0,
-            obj_range=0.02, target_range=0.03, distance_threshold=0.05,
+            obj_range=0.02,
+            target_range=0.03, distance_threshold=0.05,
             initial_qpos=initial_qpos, reward_type=reward_type)
         utils.EzPickle.__init__(self)
         self.obstacle_slider_idx = self.sim.model.joint_names.index('obstacle:joint')
@@ -133,7 +134,7 @@ class FetchPushMovingComEnv3(fetch_env.FetchEnv, utils.EzPickle):
         self.sim.set_state(self.initial_state)
         self.obstacle_direction = np.random.choice([1, -1])
 
-        possible_vels = np.linspace(start=self.vel_lims[0], stop=self.vel_lims[1], num=10, endpoint=True)
+        possible_vels = np.linspace(start=self.vel_lims[0], stop=self.vel_lims[1], num=20, endpoint=True)
         self.current_obstacle_vel = np.random.choice(possible_vels)
 
 

@@ -188,7 +188,7 @@ if __name__ == "__main__":
         labels[i] = number
     #mappings = {'2575':"minDist",'2275':"Pos,Vel,Angle", '2276':"Pos,Vel,Angle. Imaginary"}
 
-    mappings = {}
+    mappings = {'30279':"Imaginary, v2",'30281':"Imaginary(Bbox)", '30278':"Imaginary, v1", '9930000':"HGG"}
     for i in range(len(labels)):
         if labels[i] in mappings.keys():
             labels[i] = mappings[labels[i]]

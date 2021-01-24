@@ -316,9 +316,11 @@ def load_vaes(args, doing_inference=False):
 #This loads the field in 2D since methods used extract information in this way
 def load_field_parameters(args):
 	def load_real_field_params():
-		if args.env in ['FetchPushLabyrinth-v1', 'FetchPushObstacleFetchEnv-v1','FetchPushMovingObstacleEnv-v1',
-						'FetchPushMovingObstacleEnv-v2', 'FetchPushMovingComEnv-v1','FetchPushMovingComEnv-v2',
-						'FetchPushMovingObstacleEnv-v3', 'FetchPushMovingComEnv-v3',
+		if args.env in ['FetchPushLabyrinth-v1', 'FetchPushObstacleFetchEnv-v1',
+						'FetchPushMovingObstacleEnv-v1','FetchPushMovingObstacleEnv-v2',
+						'FetchPushMovingObstacleEnv-v3',
+						'FetchPushMovingComEnv-v1','FetchPushMovingComEnv-v2','FetchPushMovingComEnv-v3',
+						'FetchPushMovingComEnv-v4',
 						'FetchPushMovingDoubleObstacleEnv-v1','FetchPushMovingDoubleObstacleEnv-v2',
 						'FetchPushMovingDoubleObstacleEnv-v3']:
 			args.real_field_center = [1.3, 0.75]
