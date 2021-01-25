@@ -19,8 +19,8 @@ class FetchPushMovingComEnv3(fetch_env.FetchEnv, utils.EzPickle):
         self.object_center = np.array([1.1, 0.65, 0.425])
 
         #for moving
-        self.vel_lims = [0.48, 0.625]
-        self.current_obstacle_vel = 0.48
+        self.vel_lims = [0.52, 0.725]
+        self.current_obstacle_vel = 0.52
         self.obstacle_direction = 1
         #the object must be in the middle from both limits in the xml
         self.obstacle_upper_limit = 1.46

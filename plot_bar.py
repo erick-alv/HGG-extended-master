@@ -188,7 +188,15 @@ if __name__ == "__main__":
         labels[i] = number
     #mappings = {'2575':"minDist",'2275':"Pos,Vel,Angle", '2276':"Pos,Vel,Angle. Imaginary"}
 
-    mappings = {'30279':"Imaginary, v2",'30281':"Imaginary(Bbox)", '30278':"Imaginary, v1", '9930000':"HGG"}
+    '''mappings = {'30279':"Imaginary, v2",
+                '30281':"Imaginary(Bbox)",
+                '30278':"Imaginary, v1",
+                '9930000':"HGG"}'''
+    mappings = {'10270':"Bbox(real)",
+                '10271':"Bbox(real)+Imag.",
+                '10272':"Bbox(real),subst.",
+                '10273': "Bbox(real)+Imag., subst.",
+                '9910000':"HGG"}
     for i in range(len(labels)):
         if labels[i] in mappings.keys():
             labels[i] = mappings[labels[i]]
@@ -204,7 +212,7 @@ if __name__ == "__main__":
     for g in groups:
         ticks_labels.append('N={}'.format(g))
     ax.set_xticklabels(ticks_labels)
-    ax.legend(prop={'size': 8})
+    ax.legend(loc=4,prop={'size': 8})
 
 
     plt.savefig(os.path.join(args.dir, 'fig_{}.pdf'.format(env_id)), format='pdf')
