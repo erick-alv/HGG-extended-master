@@ -119,4 +119,6 @@ if __name__ == "__main__":
     obstacle_indices = np.setdiff1d(indices, np.array([object_index]))
     np.save(env_data_dir+args.vae_type+'_obj_i', object_index)
     np.save(env_data_dir+args.vae_type+'_obstacles_indices', obstacle_indices)
+    print('obj index is {}'.format(object_index))
+    print('obstacle indices are {}'.format(obstacle_indices))
     print('finish')

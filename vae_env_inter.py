@@ -232,6 +232,11 @@ def latents_from_images(images, args):
     elif args.vae_type == 'bbox':
         with torch.no_grad():
             args.vae_model.eval()
+
+            a = np.random.randint(0, 10)
+            im_current = Image.fromarray(images[0].astype(np.uint8))
+            im_current.save('log/heatmaps/distance_env_at_timestep_{}.png'.format(a))
+
             images = torch.from_numpy(images).float().to(args.device)
             images /= 255.
             images = images.permute([0, 3, 1, 2])
@@ -240,6 +245,9 @@ def latents_from_images(images, args):
 
             goal_index = args.obj_index
             obstacle_idx = args.obstacles_indices
+            print('obj index is {}'.format(goal_index))
+            print('obstacle indices are {}'.format(obstacle_idx))
+
 
 
             #(B, K, D)
@@ -258,6 +266,11 @@ def latents_from_images(images, args):
         #set those goals far away
         goal_pos[indices_goal_not_present] = np.array([100., 100.])
         goal_size[indices_goal_not_present] = np.array([0., 0.])
+
+        print('obj pos is {}'.format(goal_pos))
+        print('obj size is {}'.format(goal_size))
+        print('obstacle pos are {}'.format(obstacles_pos))
+        print('obstacle sizes are are {}'.format(obstacles_size))
 
         return goal_pos, goal_size, obstacles_pos, obstacles_size
         #return np.round(goal_pos, 3), np.round(goal_size, 3), np.round(obstacles_pos, 3), np.round(obstacles_size, 3)
