@@ -235,7 +235,7 @@ def latents_from_images(images, args):
 
             a = np.random.randint(0, 10)
             im_current = Image.fromarray(images[0].astype(np.uint8))
-            im_current.save('log/heatmaps/distance_env_at_timestep_{}.png'.format(a))
+            im_current.save('{}env_image_for_vae_{}.png'.format(args.logger.my_log_dir, a))
 
             images = torch.from_numpy(images).float().to(args.device)
             images /= 255.
@@ -270,7 +270,7 @@ def latents_from_images(images, args):
         print('obj pos is {}'.format(goal_pos))
         print('obj size is {}'.format(goal_size))
         print('obstacle pos are {}'.format(obstacles_pos))
-        print('obstacle sizes are are {}'.format(obstacles_size))
+        print('obstacle sizes are {}'.format(obstacles_size))
 
         return goal_pos, goal_size, obstacles_pos, obstacles_size
         #return np.round(goal_pos, 3), np.round(goal_size, 3), np.round(obstacles_pos, 3), np.round(obstacles_size, 3)
