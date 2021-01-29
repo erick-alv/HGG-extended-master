@@ -264,10 +264,10 @@ def latents_from_images(images, args):
         goal_pos[indices_goal_not_present] = np.array([100., 100.])
         goal_size[indices_goal_not_present] = np.array([0., 0.])
 
-        print('obj pos is {}'.format(goal_pos))
-        print('obj size is {}'.format(goal_size))
-        print('obstacle pos are {}'.format(obstacles_pos))
-        print('obstacle sizes are {}'.format(obstacles_size))
+        #print('obj pos is {}'.format(goal_pos))
+        #print('obj size is {}'.format(goal_size))
+        #print('obstacle pos are {}'.format(obstacles_pos))
+        #print('obstacle sizes are {}'.format(obstacles_size))
 
         return goal_pos, goal_size, obstacles_pos, obstacles_size
         #return np.round(goal_pos, 3), np.round(goal_size, 3), np.round(obstacles_pos, 3), np.round(obstacles_size, 3)
