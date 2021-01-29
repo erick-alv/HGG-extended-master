@@ -767,13 +767,6 @@ if __name__ == '__main__':
     train(model, optimizer, device, log_interval_epoch=10, log_interval_batch=400, batch_size=16, num_epochs=500)#4)'''
 
 
-    '''seed = 1
-    torch.manual_seed(seed)
-    model = load_Model('../data/FetchGenerativeEnv-v1/model_bbox', 64, 8, device, 5)
-    rec_dataset(model, '../data/FetchGenerativeEnv-v1/double_env_with_masks.npy')'''
-
-
-
     '''data_set = np.load('../data/FetchGenerativeEnv-v1/all_set.npy')
     #just take half the data
     data_set = data_set[:19200]

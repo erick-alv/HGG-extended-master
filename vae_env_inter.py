@@ -233,20 +233,18 @@ def latents_from_images(images, args):
         with torch.no_grad():
             args.vae_model.eval()
 
-            a = np.random.randint(0, 10)
-            im_current = Image.fromarray(images[0].astype(np.uint8))
-            im_current.save('{}env_image_for_vae_{}.png'.format(args.logger.my_log_dir, a))
+            #a = np.random.randint(0, 10)
+            #im_current = Image.fromarray(images[0].astype(np.uint8))
+            #im_current.save('{}env_image_for_vae_{}.png'.format(args.logger.my_log_dir, a))
 
             images = torch.from_numpy(images).float().to(args.device)
             images /= 255.
             images = images.permute([0, 3, 1, 2])
-            #todo handle case more than one properly; todo
-            #todo cahnge the index through inference
 
             goal_index = args.obj_index
             obstacle_idx = args.obstacles_indices
-            print('obj index is {}'.format(goal_index))
-            print('obstacle indices are {}'.format(obstacle_idx))
+            #print('obj index is {}'.format(goal_index))
+            #print('obstacle indices are {}'.format(obstacle_idx))
 
 
 
@@ -261,7 +259,6 @@ def latents_from_images(images, args):
         obstacles_pos = z_pos[:, obstacle_idx, :]
         obstacles_size = z_scale[:, obstacle_idx, :]
         indices_goal_present = z_pres[:, goal_index, 0] > 0.8
-        #todo handle case when obstacle not present
         indices_goal_not_present = np.logical_not(indices_goal_present)
         #set those goals far away
         goal_pos[indices_goal_not_present] = np.array([100., 100.])

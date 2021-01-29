@@ -37,7 +37,7 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         fetch_env.FetchEnv.__init__(
             self, MODEL_XML_PATH, has_object=True, block_gripper=True, n_substeps=20,
             gripper_extra_height=-0.02, target_in_the_air=False, target_offset=0.0,
-            obj_range=np.array([0.02, 0.04]),
+            obj_range=np.array([0.02, 0.05]),
             target_range=np.array([0.08, 0.05]), distance_threshold=0.05,
             initial_qpos=initial_qpos, reward_type=reward_type)
         utils.EzPickle.__init__(self)
@@ -118,7 +118,7 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
 
         self.obstacle_direction = np.random.choice([1, -1])
 
-        possible_vels = np.linspace(start=self.vel_lims[0], stop=self.vel_lims[1], num=10, endpoint=True)
+        possible_vels = np.linspace(start=self.vel_lims[0], stop=self.vel_lims[1], num=30, endpoint=True)
         self.current_obstacle_vel = np.random.choice(possible_vels)
 
         self.set_obstacle_slide_vel(self.current_obstacle_vel * self.obstacle_direction)
@@ -138,10 +138,10 @@ class FetchSlideMovingObstacleEnv(fetch_env.FetchEnv, utils.EzPickle):
         obs = super(FetchSlideMovingObstacleEnv, self)._get_obs()
         body_id = self.sim.model.body_name2id('obstacle')
         pos1 = np.array(self.sim.data.body_xpos[body_id].copy())
-        dims = np.array([0.04, 0.18, 0.1])
+        dims = np.array([0.04, 0.17, 0.1])
         ob1 = np.concatenate((pos1, dims.copy()))
         obs['real_obstacle_info'] = np.array([ob1])
-        obs['real_size_goal'] = np.array([0.05, 0.05, 0.02])
+        obs['real_size_goal'] = np.array([0.055, 0.055, 0.02])
         return obs
 
 

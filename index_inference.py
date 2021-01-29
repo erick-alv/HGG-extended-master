@@ -49,6 +49,8 @@ if __name__ == "__main__":
 
         env.reset()
         image = take_image_objects(None, args.img_size, direct_env=env.env)
+        #im_current = Image.fromarray(image.astype(np.uint8))
+        #im_current.save('env_image_for_vae.png')
         z_pres, z_depth, z_scale, z_pos = extract_info(np.array([image]), args)
         pres.append(z_pres[0])
         scale.append(z_scale[0])
@@ -61,6 +63,8 @@ if __name__ == "__main__":
             no_action = np.zeros_like(action)
             obs, _, _, _ = env.step(no_action)
             image = take_image_objects(None, args.img_size, direct_env=env.env)
+            #im_current = Image.fromarray(image.astype(np.uint8))
+            #im_current.save('env_image_for_vae.png')
             z_pres, z_depth, z_scale, z_pos = extract_info(np.array([image]), args)
             pres.append(z_pres[0])
             scale.append(z_scale[0])
@@ -75,7 +79,7 @@ if __name__ == "__main__":
     scale_std = np.std(stacked_scale, axis=0)
 
     indices = np.arange(len(pres_mean))
-    present = pres_mean[:, 0] > 0.8
+    present = pres_mean[:, 0] > 0.7
     indices = indices[present]
     pssss = pos_std[indices]
 
