@@ -11,6 +11,8 @@ import numpy as np
 from vae.SPACE_utils import spatial_transform, linear_annealing, NumericalRelaxedBernoulli, kl_divergence_bern_bern
 from vae.train_monet import load_Vae as load_Monet
 
+mse_loss = nn.MSELoss()
+
 class Flatten(nn.Module):
     def forward(self, x):
         return x.reshape(shape=(x.size(0), -1))
@@ -79,6 +81,7 @@ class Bbox(nn.Module):
         self.register_buffer('tau', torch.tensor(self.tau_start_value))
 
         self.use_bg_mask = False
+        self.use_ind_extra_loss = False
 
     def anneal(self, global_step):
         """
@@ -93,9 +96,16 @@ class Bbox(nn.Module):
         if global_step > 8000:
             if self.use_bg_mask == False:
                 print('!!!!!!!!!!!!!!! \n *** \n using bg mask \n *** \n!!!!!!!!!!!!!')
-            self.use_bg_mask = True
+                self.use_bg_mask = True
         else:
             self.use_bg_mask = False
+
+        if global_step > 8000:
+            if self.use_ind_extra_loss == False:
+                print('!!!!!!!!!!!!!!! \n *** \n using ind extra \n *** \n!!!!!!!!!!!!!')
+                self.use_ind_extra_loss = True
+            else:
+                self.use_ind_extra_loss = False
 
 
 
@@ -146,7 +156,7 @@ class Bbox(nn.Module):
                z_scale.reshape(shape=(B, self.num_slots, 2)), z_pos.reshape(shape=(B, self.num_slots, 2))
 
 
-    def forward(self, x, global_step, ims_with_masks, masks):
+    def forward(self, x, global_step, ims_with_masks, masks, bg_image=None):
         B = x.shape[0]
         CH = x.shape[1]
         H = x.shape[2]
@@ -262,6 +272,61 @@ class Bbox(nn.Module):
             # (B, 3, H, W)
             ims_with_masks_bg_rec = x * bbox_omega
 
+            extra_loss = torch.zeros(size=[]).to(x.device)
+            if self.use_ind_extra_loss and bg_image is not None:
+                with torch.no_grad():
+                    index=np.random.randint(low=0, high=self.num_slots)
+                    index = int(index)
+                    modified_ims = mod_ims(ims=x.clone(), masks=masks_fg.clone().reshape(B, self.num_slots, 1, H, W),
+                                           bg_image=bg_image, index=index)
+                mod_x_repeat = torch.repeat_interleave(
+                    modified_ims, self.num_slots, dim=2
+                ).reshape(shape=(B, CH, H, self.num_slots, W))
+                mod_x_repeat_per_K = mod_x_repeat.permute([3, 0, 1, 2, 4])
+                mod_x_encs = [self.encs[i](mod_x_repeat_per_K[i]) for i in range(self.num_slots)]
+                mod_x_encs = torch.stack(mod_x_encs)
+                mod_x_encs = mod_x_encs.permute([1, 0, 2, 3, 4]).reshape(
+                    shape=(B * self.num_slots, mod_x_encs.shape[2], mod_x_encs.shape[3],
+                           mod_x_encs.shape[4]))
+                mod_x_encs_flattened = self.flatten(mod_x_encs)
+
+                mod_z_pres_logits = 8.8 * torch.tanh(self.z_pres_net(mod_x_encs_flattened))
+                mod_z_pres_post = NumericalRelaxedBernoulli(logits=mod_z_pres_logits, temperature=self.tau)
+                mod_z_pres_y = mod_z_pres_post.rsample()
+                mod_z_pres = torch.sigmoid(mod_z_pres_y)
+
+                scale_std_bias = 1e-15
+                mod_z_scale_mean, mod__z_scale_std = self.z_scale_net(mod_x_encs_flattened).chunk(2, 1)
+                mod_z_scale_std = F.softplus(mod__z_scale_std) + scale_std_bias
+                mod_z_scale_post = Normal(mod_z_scale_mean, mod_z_scale_std)
+                mod_z_scale = mod_z_scale_post.rsample()
+                # to range (0, 1)
+                mod_z_scale = mod_z_scale.sigmoid()
+
+                mod_z_pos_mean, mod_z_pos_std = self.z_pos_net(mod_x_encs_flattened).chunk(2, 1)
+                mod_z_pos_std = F.softplus(mod_z_pos_std)
+                mod_z_pos_post = Normal(mod_z_pos_mean, mod_z_pos_std)
+                mod_z_pos = mod_z_pos_post.rsample()
+                mod_z_pos = mod_z_pos.tanh()
+
+                mod_z_pres = mod_z_pres.reshape(B, self.num_slots, 1)
+                mod_z_scale = mod_z_scale.reshape(B, self.num_slots, 2)
+                mod_z_pos = mod_z_pos.reshape(B, self.num_slots, 2)
+                mod_z = torch.cat([mod_z_pres, mod_z_scale, mod_z_pos], dim=2)
+                idx_0_setter = torch.ones_like(mod_z).to(x.device)
+                idx_0_setter[:, index, :] = 0
+                mod_z *= idx_0_setter
+
+
+                c_z_pres = z_pres.clone().reshape(B, self.num_slots, 1)
+                c_z_scale = z_scale.clone().reshape(B, self.num_slots, 2)
+                c_z_pos = z_pos.clone().reshape(B, self.num_slots, 2)
+                c_z = torch.cat([c_z_pres, c_z_scale, c_z_pos], dim=2)
+                c_z *= idx_0_setter
+                z_extra_loss = mse_loss(mod_z, c_z)
+                extra_loss = z_extra_loss
+                #calculate loss of difference with
+
             if self.use_bg_mask:
                 bg_dist = Normal(bbox_omega.repeat([1, 3, 1, 1]), self.fg_sigma)
                 bg_likelihood = bg_dist.log_prob(masks[:, 0, :, :, :].repeat([1, 3, 1, 1]))
@@ -291,7 +356,7 @@ class Bbox(nn.Module):
         log_like = log_like.flatten(start_dim=1).sum(1)
         elbo = log_like - kl_loss
         #one wants to maximize the elbo, therefore we make it negative. So the optimizer minimizes it
-        loss = (-elbo).mean()
+        loss = (-elbo).mean()+extra_loss
 
         #final_recs = ims_with_masks_recs.reshape(shape=(B, self.num_slots, 3, H, W))
         final_recs = ims_with_masks_recs
@@ -313,6 +378,67 @@ class Bbox(nn.Module):
         return kl
 
 
+def mod_ims(ims, masks, bg_image, index):
+
+    B, S, _, H, W = masks.shape
+    C = 3
+    #save_image(ims, 'im{}.png'.format(1), pad_value=0.2)
+    ims = ims.reshape(B, 1, C, H, W)
+    els = ims * masks
+    #save_image(els.reshape(B*S, C, H, W), 'els{}.png'.format(1), pad_value=0.2)
+    #save_image(masks.reshape(B * S, 1, H, W), 'masks{}.png'.format(1), pad_value=0.2)
+    # pos (B*S, 2) in [-1, 1]#todo better take
+    p = torch.from_numpy(np.random.uniform(low=-1, high=1, size=(B, 2)))
+    p = p.float()
+    # dim (B*S, 2) in [0,1]#todo better put
+    d = torch.from_numpy(np.random.uniform(low=0, high=1, size=(B, 2)))
+    d = d.float()
+    z_where = torch.cat([p, d], dim=-1)
+    p_repos = torch.from_numpy(np.random.uniform(low=-1, high=1, size=(B, 2)))
+    p_repos = p_repos.float()
+    # dim (B*S, 2) in [0,1]
+    '''d_repos = torch.rand(size=(B * S, 2))
+    d_repos = d_repos.sigmoid()'''
+    z_where_repos = torch.cat([p_repos, d], dim=-1)
+
+    els_to_mod = els[:, index, :, :, :]
+    masks_to_mod = masks[:, index, :, :, :]
+
+    els_r1 = spatial_transform(image=els_to_mod, z_where=z_where, out_dims=(B, 3, H, W),
+                               inverse=False)
+    m_r1 = spatial_transform(image=masks_to_mod, z_where=z_where, out_dims=(B, 1, H, W),
+                             inverse=False)
+    els_mod = spatial_transform(image=els_r1, z_where=z_where_repos, out_dims=(B, 3, H, W),
+                                inverse=True)
+    m_mod = spatial_transform(image=m_r1, z_where=z_where_repos, out_dims=(B, 1, H, W),
+                              inverse=True)
+
+    # masks from other elements; user to avoid that modified element is over them
+    o_masks = masks.clone()
+    o_masks[:, index, :, :, :] = 0
+    o_masks_sum = torch.sum(o_masks, dim=1)
+    o_masks_sum = torch.clamp(o_masks_sum, max=1.)
+    m_mod = m_mod - o_masks_sum
+    m_mod = torch.clamp(m_mod, min=0.)
+    masks[:, index, :, :, :] = m_mod
+    # els[:, index, :, :, :] = els_mod
+    # save_image(els.reshape(B * (S - 1), C, H, W), 'els_mod{}.png'.format(1), pad_value=0.2)
+    # save_image(masks.reshape(B * (S - 1), 1, H, W), 'masks_mod{}.png'.format(1), pad_value=0.2)
+    els_remod = m_mod * els_mod
+    els[:, index, :, :, :] = els_remod
+    # save_image(els.reshape(B * (S - 1), C, H, W), 'els_remod{}.png'.format(1), pad_value=0.2)
+    masks_sum = torch.sum(masks, dim=1)
+    masks_sum = torch.clamp(masks_sum, max=1)
+
+    new_im = torch.ones(size=(B, C, H, W)).to(device)
+    new_im *= bg_image
+    new_im -= masks_sum
+    new_im = torch.clamp(new_im, min=0)
+    new_els = torch.sum(els * masks, dim=1)
+    new_im += new_els
+    #save_image(new_im, 'new_im{}.png'.format(1), pad_value=0.2)
+    return new_im
+
 def show_im(np_rgb_array):
     from PIL import Image
     im = Image.fromarray(np_rgb_array.astype(np.uint8))
@@ -328,6 +454,12 @@ def np_data_batch_to_torch(np_data_batch, device):
 def train(model, optimizer, device, log_interval_epoch, log_interval_batch, batch_size, num_epochs):
     model.train()
     train_loss = 0
+
+    bg_im = np.load('../data/FetchGenerativeEnv-v1/bg_im.npy')
+    bg_im = torch.from_numpy(bg_im).float().to(device)
+    bg_im /= 255.
+    bg_im = bg_im.permute([2, 0, 1])
+
     data_set = np.load('../data/FetchGenerativeEnv-v1/all_set_with_masks.npy')
     data_size = len(data_set)
     global_step = 0
@@ -352,7 +484,7 @@ def train(model, optimizer, device, log_interval_epoch, log_interval_batch, batc
             optimizer.zero_grad()
             #save_image(imgs_with_mask[0], 'mask_division.png')
             z_pres, z_depth, z_scale, z_pos, z_where, loss, \
-            ims_with_masks_recs = model(input_ims, global_step, imgs_with_mask, orig_masks)
+            ims_with_masks_recs = model(input_ims, global_step, imgs_with_mask, orig_masks, bg_im)
             loss.backward()
             optimizer.step()
             train_loss += loss.item()
@@ -368,12 +500,12 @@ def train(model, optimizer, device, log_interval_epoch, log_interval_batch, batc
         if epoch % log_interval_epoch == 0 or epoch == num_epochs -1:
             visualize_masks(input_ims, imgs_with_mask, orig_masks, ims_with_masks_recs,
                             'recs_{}_{}.png'.format(epoch, batch_idx), z_pres=z_pres)
-            save_checkpoint(model, optimizer, '../data/FetchGenerativeEnv-v1/model_bbox', epoch=epoch)
+            save_checkpoint(model, optimizer, '../data/FetchGenerativeEnv-v1/model_bboxv2', epoch=epoch)
         print('====> Epoch: {} Average loss: {:.4f}'.format(
             epoch, train_loss / data_size))
     visualize_masks(input_ims, imgs_with_mask, orig_masks, ims_with_masks_recs,
                     'recs_{}_{}.png'.format(epoch, batch_idx), z_pres=z_pres)
-    save_checkpoint(model, optimizer, '../data/FetchGenerativeEnv-v1/model_bbox')
+    save_checkpoint(model, optimizer, '../data/FetchGenerativeEnv-v1/model_bboxv2')
 
 
 def visualize_masks(orig_imgs, imgs_with_mask, orig_masks, rec_imgs_with_mask, file_name, z_pres=None):
@@ -399,9 +531,6 @@ def visualize_masks(orig_imgs, imgs_with_mask, orig_masks, rec_imgs_with_mask, f
     img_show = torch.cat([orig_imgs, img_show, orig_masks_show, rec_imgs_mask_show, rec_masks_show])'''
     img_show = torch.cat([orig_imgs, img_show, orig_masks_show, rec_imgs_mask_show])
     save_image(img_show, file_name, nrow=imgs_with_mask.shape[0], pad_value=0.3)
-
-    if z_pres is not None:
-        print(z_pres)
 
 
 
@@ -463,7 +592,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', help='gym env id', type=str)
     parser.add_argument('--task', help='prepare training data with monet; train or test BboxEncoder', type=str,
-                        choices=['prepare','train', 'test'], required=True)
+                        choices=['prepare','train', 'test', 'try'], required=True)
 
     parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=16)
     parser.add_argument('--lr', help='learninf rate', type=np.float, default=1e-4)
@@ -485,16 +614,35 @@ if __name__ == '__main__':
         model = model.to(device)
         data_size = len(data_set)
         #todo make this configurable
-        new_data_set = np.zeros(shape=(data_size, 6 + 1, args.img_size, args.img_size, args.img_size))
+        new_data_set = np.zeros(shape=(data_size, 6 + 1, args.img_size, args.img_size, 3))
         batch_size = 10
         # creates indexes and shuffles them. So it can acces the data
         idx_set = np.arange(data_size)
         idx_set = np.split(idx_set, len(idx_set) / batch_size)
+        aa = 0
         with torch.no_grad():
             for batch_idx, idx_select in enumerate(idx_set):
                 data_np = data_set[idx_select]
                 data = np_data_batch_to_torch(data_np.copy(), device)
                 masks = model.get_masks(data)
+                def create_all_background(ims, masks):
+                    B, S, C, H, W = masks.shape
+                    bg_Im = ims * masks[:, 0, :, :, :]
+                    mean_c0 = bg_Im[:, 0, :, :][bg_Im[:, 0, :, :] > 0.0001].mean()
+                    mean_c1 = bg_Im[:, 1, :, :][bg_Im[:, 1, :, :] > 0.0001].mean()
+                    mean_c2 = bg_Im[:, 2, :, :][bg_Im[:, 2, :, :] > 0.0001].mean()
+                    bg = torch.zeros(size=(3, H, W))
+                    bg[0, :, :] = mean_c0
+                    bg[1, :, :] = mean_c1
+                    bg[2, :, :] = mean_c2
+                    return bg
+                if aa == 0:
+                    aa +=1
+                    bg = create_all_background(data, masks)
+                    bg = bg.permute(dims=[1, 2, 0])
+                    bg *= 255.
+                    bg = bg.cpu().numpy()
+                    np.save('../data/FetchGenerativeEnv-v1/bg_im.npy', bg)
                 # (B, S, 1, H, W)
                 masks = masks.cpu().numpy()
                 masks = np.tile(masks, (1, 1, 3, 1, 1))
@@ -512,9 +660,103 @@ if __name__ == '__main__':
         train(model, optimizer, device, log_interval_epoch=10, log_interval_batch=400,
               batch_size=args.batch_size, num_epochs=args.train_epochs)
     elif args.task == 'test':
-        model = load_Model('../data/FetchGenerativeEnv-v1/model_bbox',
+        model = load_Model('../data/FetchGenerativeEnv-v1/model_bboxv2',
                            img_size=args.img_size, device=device, num_slots=args.num_slots)
         rec_dataset(model, dataset_path='../data/FetchGenerativeEnv-v1/all_set_with_masks.npy')
+    elif args.task == 'try':
+        data_set = np.load('../data/FetchGenerativeEnv-v1/all_set_with_masks.npy')
+        bg_im = np.load('../data/FetchGenerativeEnv-v1/bg_im.npy')
+        bg_im = torch.from_numpy(bg_im).float().to(device)
+        bg_im /= 255.
+        bg_im = bg_im.permute([2, 0, 1])
+        #model = load_Monet(path='../data/FetchGenerativeEnv-v1/all_sb_model', img_size=args.img_size, latent_size=6)
+        #model = model.to(device)
+        data_size = len(data_set)
+        # todo make this configurable
+        new_data_set = np.zeros(shape=(data_size, 6 + 1, args.img_size, args.img_size, args.img_size))
+        batch_size = 10
+        # creates indexes and shuffles them. So it can acces the data
+        idx_set = np.arange(data_size)
+        idx_set = np.split(idx_set, len(idx_set) / batch_size)
+        aa = 0
+        with torch.no_grad():
+            for batch_idx, idx_select in enumerate(idx_set):
+                aa += 1
+                data_np = data_set[idx_select]
+                data = torch.from_numpy(data_np).float().to(device)
+                data /= 255.
+                data = data.permute([0, 1, 4, 2, 3])
+                B, S, C, H, W = data.shape
+                data_ims = data[:, 0:1,:,:,:]
+                data_masks = data[:, 1:, :, :, :]
+                data = data.reshape(shape=(B*S, C, H, W))
+                save_image(data_ims.reshape(shape=(B, C, H, W)), 'try{}.png'.format(aa), pad_value=0.2)
+                def mod_ims(ims, masks, bg_image):
+                    #leave just one color channel
+                    masks =  masks[:, :, 0:1, :, :]#todo this might not be necessary
+                    els = ims*masks
+                    #save_image(els.reshape(B*(S-1), C, H, W), 'els{}.png'.format(aa), pad_value=0.2)
+                    #save_image(masks.reshape(B * (S - 1), 1, H, W), 'masks{}.png'.format(aa), pad_value=0.2)
+                    #pos (B*S, 2) in [-1, 1]#todo better take
+                    p = torch.from_numpy(np.random.uniform(low=-1, high=1, size=(B, 2)))
+                    p = p.float()
+                    #dim (B*S, 2) in [0,1]#todo better put
+                    d = torch.from_numpy(np.random.uniform(low=0, high=1, size=(B, 2)))
+                    d = d.float()
+                    z_where = torch.cat([p, d], dim=-1)
+                    p_repos = torch.from_numpy(np.random.uniform(low=-1, high=1, size=(B, 2)))
+                    p_repos = p_repos.float()
+                    # dim (B*S, 2) in [0,1]
+                    '''d_repos = torch.rand(size=(B * S, 2))
+                    d_repos = d_repos.sigmoid()'''
+                    z_where_repos = torch.cat([p_repos, d], dim=-1)
+
+                    index = int(np.random.randint(low=1, high=S - 1))
+                    print(index)
+                    els_to_mod = els[:, index, :, :, :]
+                    masks_to_mod = masks[:, index, :, :, :]
+
+                    els_r1 = spatial_transform(image=els_to_mod, z_where=z_where,out_dims=(B, 3, H, W),
+                                              inverse=False)
+                    m_r1 = spatial_transform(image=masks_to_mod, z_where=z_where,out_dims=(B, 1, H, W),
+                                              inverse=False)
+                    els_mod= spatial_transform(image=els_r1, z_where=z_where_repos, out_dims=(B, 3, H, W),
+                                               inverse=True)
+                    m_mod = spatial_transform(image=m_r1, z_where=z_where_repos, out_dims=(B, 1, H, W),
+                                             inverse=True)
+
+                    #masks from other elements; user to avoid that modified element is over them
+                    o_masks = masks.clone()
+                    o_masks[:, index, :, :, :] = 0
+                    #not background mask TODO see if other has
+                    o_masks = o_masks[:, 1:, :, :,:]
+                    o_masks_sum = torch.sum(o_masks, dim=1)
+                    o_masks_sum = torch.clamp(o_masks_sum, max=1.)
+                    m_mod = m_mod - o_masks_sum
+                    m_mod = torch.clamp(m_mod, min=0.)
+                    #save_image(m_mod, 'm_mod{}.png'.format(aa), pad_value=0.2)
+                    masks[:, index, :, :, :] = m_mod
+                    #els[:, index, :, :, :] = els_mod
+                    #save_image(els.reshape(B * (S - 1), C, H, W), 'els_mod{}.png'.format(aa), pad_value=0.2)
+                    #save_image(masks.reshape(B * (S - 1), 1, H, W), 'masks_mod{}.png'.format(aa), pad_value=0.2)
+                    els_remod = m_mod * els_mod
+                    els[:, index, :, :, :] = els_remod
+                    #save_image(els.reshape(B * (S - 1), C, H, W), 'els_remod{}.png'.format(aa), pad_value=0.2)
+                    masks_sum = torch.sum(masks[:, 1:, :, :, :], dim=1)
+                    masks_sum = torch.clamp(masks_sum, max=1)
+
+                    new_im = torch.ones(size=(B, C, H, W)).to(device)
+                    new_im *= bg_image
+                    new_im -= masks_sum
+                    new_im = torch.clamp(new_im, min=0)
+                    new_els = torch.sum(els[:, 1:, :, :,:]*masks[:, 1:, :, :, :], dim=1)
+                    new_im += new_els
+                    save_image(new_im, 'new_im{}.png'.format(aa), pad_value=0.2)
+                mod_ims(data_ims, data_masks, bg_im)
+
+
+                if aa == 5:
+                    break
     else:
         print("No valid task")
 
