@@ -1,7 +1,6 @@
  # based on https://github.com/stelzner/monet
 # License: MIT
 # Author: Karl Stelzner
-from vae.common_data import train_file_name, vae_sb_weights_file_name
 import argparse
 import torch
 from torch import nn, optim
@@ -9,19 +8,11 @@ import torch.distributions as dists
 import numpy as np
 from PIL import Image
 import os
+from utils.os_utils import make_dir
 this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
 
-'''def double_conv(in_channels, out_channels):
-    return nn.Sequential(
-        nn.Conv2d(in_channels, out_channels, 3, padding=1),
-        nn.BatchNorm2d(out_channels),
-        nn.ReLU(inplace=True),
-        nn.Conv2d(out_channels, out_channels, 3, padding=1),
-        nn.BatchNorm2d(out_channels),
-        nn.ReLU(inplace=True)dists
-    )'''
 
-def double_conv(in_channels, out_channels):
+def single_conv(in_channels, out_channels):
     return nn.Sequential(
         nn.Conv2d(in_channels, out_channels, 3, padding=1),
         nn.BatchNorm2d(out_channels),
@@ -35,7 +26,7 @@ class UNet(nn.Module):
         self.down_convs = nn.ModuleList()
         cur_in_channels = in_channels
         for i in range(num_blocks):
-            self.down_convs.append(double_conv(cur_in_channels,
+            self.down_convs.append(single_conv(cur_in_channels,
                                                channel_base * 2**i))
             cur_in_channels = channel_base * 2**i
 
@@ -47,7 +38,7 @@ class UNet(nn.Module):
 
         self.up_convs = nn.ModuleList()
         for i in range(num_blocks-2, -1, -1):
-            self.up_convs.append(double_conv(channel_base * 2**(i+1), channel_base * 2**i))
+            self.up_convs.append(single_conv(channel_base * 2**(i+1), channel_base * 2**i))
 
         self.final_conv = nn.Conv2d(channel_base, out_channels, 1)
 
@@ -94,20 +85,6 @@ class EncoderNet(nn.Module):
         self.device = device
         self.conv_size1 = conv_size1
         self.conv_size2 = conv_size2
-        '''self.convs = nn.Sequential(
-            nn.Conv2d(in_channels=input_channels, out_channels=conv_size1,
-                      kernel_size=kernel_size, stride=encoder_stride),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=conv_size1, out_channels=conv_size1,
-            kernel_size=kernel_size, stride=encoder_stride),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=conv_size1, out_channels=conv_size2,
-            kernel_size=kernel_size, stride=encoder_stride),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=conv_size2, out_channels=conv_size2,
-            kernel_size=kernel_size, stride=encoder_stride),
-            nn.ReLU(inplace=True)
-        )'''
 
         self.convs = nn.Sequential(
             nn.Conv2d(in_channels=input_channels, out_channels=conv_size1,
@@ -123,8 +100,7 @@ class EncoderNet(nn.Module):
 
         red_width = width
         red_height = height
-        #todo is 4 since for conv layers; if less the have to reduce this as well
-        for i in range(3):#4):
+        for i in range(3):
             red_width = (red_width - 1) // 2
             red_height = (red_height - 1) // 2
 
@@ -153,21 +129,6 @@ class DecoderNet(nn.Module):
         self.height = height
         self.width = width
         self.latent_size = latent_size
-        '''self.convs = nn.Sequential(
-            nn.Conv2d(in_channels=latent_size+2, out_channels=conv_size1,
-                      kernel_size=kernel_size, stride=decoder_stride),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=conv_size1, out_channels=conv_size1,
-                      kernel_size=kernel_size, stride=decoder_stride),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=conv_size1, out_channels=conv_size1,
-                      kernel_size=kernel_size, stride=decoder_stride),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=conv_size1, out_channels=conv_size1,
-                      kernel_size=kernel_size, stride=decoder_stride),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=conv_size1, out_channels=output_channels, kernel_size=1),
-        )'''
 
         self.convs = nn.Sequential(
             nn.Conv2d(in_channels=latent_size + 2, out_channels=conv_size1,
@@ -178,14 +139,14 @@ class DecoderNet(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=conv_size1, out_channels=output_channels, kernel_size=1),
         )
-        ys = torch.linspace(-1, 1, self.height + 4)#4#8
+        ys = torch.linspace(-1, 1, self.height + 4)
         xs = torch.linspace(-1, 1, self.width + 4)
         ys, xs = torch.meshgrid(ys, xs)
         coord_map = torch.stack((ys, xs)).unsqueeze(0)
         self.register_buffer('coord_map_const', coord_map)
 
     def forward(self, z):
-        z_tiled = z.unsqueeze(-1).unsqueeze(-1).repeat(1, 1, self.height + 4, self.width + 4)#todo 8
+        z_tiled = z.unsqueeze(-1).unsqueeze(-1).repeat(1, 1, self.height + 4, self.width + 4)
         coord_map = self.coord_map_const.repeat(z.shape[0], 1, 1, 1)
         inp = torch.cat((z_tiled, coord_map), 1)
         result = self.convs(inp)
@@ -276,17 +237,15 @@ class Monet_VAE(nn.Module):
         return mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s
 
 
-def loss_function(x, x_recon_s, masks, mask_pred_s, mu_s, logvar_s, beta, gamma, bg_sigma, fg_sigma, device, aa=0):
+def loss_function(x, x_recon_s, masks, mask_pred_s, mu_s, logvar_s, beta, gamma, bg_sigma, fg_sigma, device):
     batch_size = x.shape[0]
     p_xs = torch.zeros(batch_size).to(device)
     kl_z = torch.zeros(batch_size).to(device)
-    p_xs_t = torch.empty(batch_size, 3,
-                           x.shape[2], x.shape[3]).to(x.device)
     for i in range(len(masks)):
         kld = -0.5 * torch.sum(1 + logvar_s[i] - mu_s[i].pow(2) - logvar_s[i].exp(), dim=1)
-        for t in kld:
+        '''for t in kld:
             assert not torch.isnan(t)
-            assert not torch.isinf(t)
+            assert not torch.isinf(t)'''
         kl_z += kld
         if i == 0:
             sigma = bg_sigma
@@ -297,18 +256,11 @@ def loss_function(x, x_recon_s, masks, mask_pred_s, mu_s, logvar_s, beta, gamma,
         p_x = dist.log_prob(x)
         p_x *= masks[i]
         p_x = torch.sum(p_x, [1, 2, 3])
-        for t in p_x:
+        '''for t in p_x:
             assert not torch.isnan(t)
-            assert not torch.isinf(t)
+            assert not torch.isinf(t)'''
         p_xs += -p_x#this iterartive sum might not be correct since log(x*y) = log(x)+log(y)
-        '''# log(p_theta(x|z_k))
-        p_x = dist.log_prob(x)
-        p_x = torch.exp(p_x)
-        p_x *= masks[i]
-        #p_x = torch.sum(p_x, [1, 2, 3])
-        p_xs_t += p_x  # this iterartive sum might not be correct since log(x*y) = log(x)+log(y)'''
-    #p_xs_t = torch.log(p_xs_t)
-    #p_xs_t = torch.sum(p_xs_t, [1, 2, 3])
+
 
     masks = torch.cat(masks, 1)
     tr_masks = torch.transpose(masks, 1, 3)
@@ -321,15 +273,10 @@ def loss_function(x, x_recon_s, masks, mask_pred_s, mu_s, logvar_s, beta, gamma,
 
     kl_masks = dists.kl_divergence(q_masks, q_masks_recon)
     kl_masks = torch.sum(kl_masks, [1, 2])
-    '''if aa % 100 == 0:
-        print('kl Mask is: {}'.format(kl_masks))
-        print('kl z is: {}'.format(kl_z))
-        print('px_s is: {}'.format(p_xs))'''
-    for t in kl_masks:
+    '''for t in kl_masks:
         assert not torch.isnan(t)
-        assert not torch.isinf(t)#here
+        assert not torch.isinf(t)'''
     loss = gamma * kl_masks + p_xs + beta* kl_z
-    #loss = gamma * kl_masks + p_xs_t + beta* kl_z
     return loss
 
 def train(epoch, model, optimizer, device, log_interval, train_file, batch_size, beta, gamma, bg_sigma, fg_sigma):
@@ -351,7 +298,7 @@ def train(epoch, model, optimizer, device, log_interval, train_file, batch_size,
         optimizer.zero_grad()
         mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
         loss_batch = loss_function(data, x_recon_s, masks, mask_pred_s, mu_s, logvar_s,
-                                   beta, gamma, bg_sigma, fg_sigma, device=device, aa=batch_idx)
+                                   beta, gamma, bg_sigma, fg_sigma, device=device)
         loss = torch.mean(loss_batch)
         loss.backward()
         optimizer.step()
@@ -402,7 +349,7 @@ def visualize_masks(imgs, masks, recons, file_name):
 def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, beta, gamma, bg_sigma, fg_sigma,
               epochs=100, no_cuda=False, seed=1, log_interval=100, load=False,
               num_blocks=5, channel_base=64, num_slots=6,
-              full_connected_size=256, color_channels=3,kernel_size=3, encoder_stride=2,decoder_stride=1,
+              full_connected_size=256, color_channels=3, kernel_size=3, encoder_stride=2,decoder_stride=1,
               conv_size1=32, conv_size2=64):
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
@@ -414,8 +361,6 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
                           channel_base=channel_base, num_slots=num_slots, full_connected_size=full_connected_size,
                           color_channels=color_channels, kernel_size=kernel_size, encoder_stride=encoder_stride,
                           decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2).to(device)
-
-        #todo check which optimizer is better
         optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
         checkpoint = torch.load(vae_weights_path)
         model.load_state_dict(checkpoint['model_state_dict'])
@@ -428,13 +373,8 @@ def train_Vae(batch_size, img_size, latent_size, train_file, vae_weights_path, b
                           channel_base=channel_base, num_slots=num_slots, full_connected_size=full_connected_size,
                           color_channels=color_channels, kernel_size=kernel_size, encoder_stride=encoder_stride,
                           decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2).to(device)
-        #for w in model.parameters():
-        #    std_init = 0.01
-        #    nn.init.normal_(w, mean=0., std=std_init)
-        #print('Initialized parameters')
-        # todo check which optimizer is better
+
         optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
-        # optimizer = optim.Adam(model.parameters(), lr=1e-4)
         start_epoch = 1
 
     for epoch in range(start_epoch, epochs + start_epoch):
@@ -473,7 +413,6 @@ def compare_with_data_set(model, device, filename_suffix, latent_size, train_fil
         data /= 255
         data = data.permute([0, 3, 1, 2])
         mu_s, logvar_s, masks, full_reconstruction, x_recon_s, mask_pred_s = model(data)
-
         visualize_masks(imgs=numpify(data),masks=numpify(torch.cat(masks, dim=1)), recons=numpify(full_reconstruction),
                         file_name=this_file_dir+'results/reconstruction_{}.png'.format(filename_suffix))
 
@@ -484,14 +423,10 @@ def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1, num_blocks=5, c
     cuda = not no_cuda and torch.cuda.is_available()
     torch.manual_seed(seed)
     device = torch.device("cuda" if cuda else "cpu")
-    kwargs = {'num_workers': 1, 'pin_memory': True} if cuda else {}
-
     model = Monet_VAE(height=img_size, width=img_size, device=device, latent_size=latent_size, num_blocks=num_blocks,
                       channel_base=channel_base, num_slots=num_slots,full_connected_size=full_connected_size,
                       color_channels=color_channels,kernel_size=kernel_size, encoder_stride=encoder_stride,
                       decoder_stride=decoder_stride, conv_size1=conv_size1, conv_size2=conv_size2).to(device)
-    #todo see with which optimizer is better
-    #optimizer = optim.Adam(model.parameters(), lr=1e-3)
     checkpoint = torch.load(path)
     model.load_state_dict(checkpoint['model_state_dict'])
 
@@ -500,9 +435,9 @@ def load_Vae(path, img_size, latent_size, no_cuda=False, seed=1, num_blocks=5, c
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', help='gym env id', type=str)
+    parser.add_argument('--task', help='use monet for training or testing', type=str,
+                        choices=['train', 'test'], required=True)
 
-    parser.add_argument('--enc_type', help='the type of attribute that we want to generate/encode', type=str,
-                        default='all', choices=['all', 'goal', 'obstacle', 'obstacle_sizes', 'goal_sizes'])
     parser.add_argument('--batch_size', help='number of batch to train', type=np.float, default=32)
     parser.add_argument('--train_epochs', help='number of epochs to train vae', type=np.int32, default=40)
     parser.add_argument('--img_size', help='size image in pixels', type=np.int32, default=64)
@@ -513,26 +448,72 @@ if __name__ == '__main__':
     parser.add_argument('--bg_sigma', help='', type=np.float, default=0.09)
     parser.add_argument('--fg_sigma', help='', type=np.float, default=0.11)
 
+
     args = parser.parse_args()
 
     # get names corresponding folders, and files where to store data
-    #make_dir(this_file_dir+'results/', clear=False)
+    make_dir(this_file_dir+'results/', clear=False)
     base_data_dir = this_file_dir + '../data/'
     data_dir = base_data_dir + args.env + '/'
 
-    train_file = data_dir + train_file_name[args.enc_type]
-    weights_path = data_dir + vae_sb_weights_file_name[args.enc_type]
+    train_file = data_dir + 'all_set.npy'
+    weights_path = data_dir + 'all_sb_model'
 
-    '''train_Vae(epochs=args.train_epochs, batch_size=args.batch_size,img_size=args.img_size,latent_size=args.latent_size,
-              train_file=train_file,
-              vae_weights_path=weights_path, beta=args.beta, gamma=args.gamma, bg_sigma=args.bg_sigma,
-              fg_sigma=args.fg_sigma, load=False, num_slots=args.num_slots)'''
+    if args.task == 'train':
+        train_Vae(epochs=args.train_epochs, batch_size=args.batch_size,img_size=args.img_size,
+                  latent_size=args.latent_size, train_file=train_file,
+                  vae_weights_path=weights_path, beta=args.beta, gamma=args.gamma, bg_sigma=args.bg_sigma,
+                  fg_sigma=args.fg_sigma, load=False, num_slots=args.num_slots)
+    else:
+        device = torch.device("cuda")
+        model = load_Vae(path=weights_path, img_size=args.img_size, latent_size=args.latent_size)
+        compare_with_data_set(model=model, device=device, latent_size=args.latent_size,
+                         filename_suffix="test", train_file=train_file)
 
 
-    device = torch.device("cuda")
-
-    model = load_Vae(path=weights_path, img_size=args.img_size, latent_size=args.latent_size)
-
-
-    compare_with_data_set(model=model, device=device, latent_size=args.latent_size,
-                     filename_suffix="test", train_file=train_file )
+    '''
+    For part of hyperparameters:
+    The architecture is based on the implementation from https://github.com/stelzner/monet
+    differences:
+    The Down Convolutions and up convolutions are not 2 convolutions after the other, but single one:
+    nn.Conv2d(in_channels, out_channels, 3, padding=1),
+        nn.BatchNorm2d(out_channels),
+        nn.ReLU(inplace=True)
+        
+    UNet(num_blocks=num_blocks,in_channels=4,out_channels=2,channel_base=channel_base)
+    num_blocks=5
+    channel_base=64
+        
+    
+    The Encoder and Decoder use 3 convolutional layers instead just 1
+    
+    encoder:in_channels=input_channels, out_channels=conv_size1,
+            in_channels=conv_size1, out_channels=conv_size2,
+            in_channels=conv_size2, out_channels=conv_size2,
+            
+    decoder:
+        in_channels=latent_size + 2, out_channels=conv_size1
+        in_channels=conv_size1, out_channels=conv_size1,
+        in_channels=conv_size1, out_channels=output_channels, kernel_size=1(just here is different)
+            
+    full_connected_size=256(from linear layer)
+    color_channels=3
+    kernel_size=3
+    encoder_stride=2
+    decoder_stride=1
+    conv_size1=32
+    conv_size2=64
+      
+    latent_size=6
+    num_slots=6
+    beta=8
+    gamma=5
+    bg_sigma=0.09
+    fg_sigma=0.11
+    
+    H=64, W=64  
+    optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
+    batch_size=32
+    epochs=40
+    seed=1  
+    '''

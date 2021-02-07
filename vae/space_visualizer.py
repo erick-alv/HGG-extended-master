@@ -1,7 +1,6 @@
 from PIL import Image
 import numpy as np
 
-from vae.generate_vae_data import random_pos_inside, size_file,random_size_at,generate_points
 from vae.common_data import  min_obstacle_size, max_obstacle_size, range_x, range_y, obstacle_size, \
     puck_size, z_table_height, center_obstacle, train_file_name, vae_sb_weights_file_name, file_corners_name
 import torch
@@ -19,6 +18,21 @@ from vae.latent_space_transformations import create_rotation_matrix, rotate_list
 from vae_env_inter import get_indices_goal_obstacle
 from SPACE.main_space import load_space_model
 
+
+def generate_points(range_x, range_y, z, total, object_x_y_size):
+    rx = copy.deepcopy(range_x)
+    ry = copy.deepcopy(range_y)
+    rx[0] += object_x_y_size[0]
+    rx[1] -= object_x_y_size[0]
+    ry[0] += object_x_y_size[1]
+    ry[1] -= object_x_y_size[1]
+    xs = np.linspace(start=rx[0], stop=rx[1], num=total, endpoint=True)
+    ys = np.linspace(start=ry[0], stop=ry[1], num=total, endpoint=True)
+    points = []
+    for i in range(total):
+        for j in range(total):
+            points.append([xs[i], ys[j], z])
+    return points
 
 def visualization_grid_points(env, model, size_to_use, img_size, n, enc_type, ind_1, ind_2,
                               using_sb=True, use_d=False, fig_file_name=None):

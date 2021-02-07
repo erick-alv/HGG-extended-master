@@ -16,7 +16,7 @@ from vae.common_data import vae_sb_weights_file_name, vae_weights_file_name
 from PIL import Image
 from vae_env_inter import take_env_image, take_image_objects
 from vae.distance_estimation import calculate_distance
-from dist_estimator import DistMovEst, DistMovEstReal, MultipleDist, MultipleDistReal, Estimator_DistNet, Subst, SubstReal
+from dist_estimator import DistMovEst, DistMovEstReal, MultipleDist, MultipleDistReal, Subst, SubstReal
 from SPACE.main_space import load_space_model
 import matplotlib.pyplot as plt
 import os
@@ -27,7 +27,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	parser = get_arg_parser()
 
 	parser.add_argument('--tag', help='terminal tag in logger', type=str, default='')
-	parser.add_argument('--alg', help='backend algorithm', type=str, default='ddpg', choices=['ddpg', 'ddpg2', 'sac'])
+	parser.add_argument('--alg', help='backend algorithm', type=str, default='ddpg', choices=['ddpg', 'ddpg2'])
 	parser.add_argument('--learn', help='type of training method', type=str, default='hgg', choices=learner_collection.keys())
 
 	parser.add_argument('--env', help='gym env id', type=str, default='FetchReach-v1', choices=Robotics_envs_id)
@@ -145,7 +145,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 
 	parser.add_argument('--dist_estimator_type', help='the type if dist estimator to use or None if not using',
 						type=str, default=None,
-						choices=['normal', 'realCoords', 'multiple', 'multipleReal', 'net', 'subst', 'substReal'])
+						choices=['normal', 'realCoords', 'multiple', 'multipleReal', 'subst', 'substReal'])
 
 	#for imaginary obstacle interactions
 	parser.add_argument('--imaginary_obstacle_transitions',
@@ -364,14 +364,6 @@ def load_dist_estimator(args, env):
 		args.dist_estimator = Subst()
 	elif args.dist_estimator_type == 'substReal':
 		args.dist_estimator = SubstReal()
-	elif args.dist_estimator_type == 'net':
-		this_file_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
-		base_data_dir = this_file_dir + 'data/'
-		env_data_dir = base_data_dir + args.env + '/'
-		weights_file_path = env_data_dir + 'dist_model_best'
-		info_csv = env_data_dir + 'dist_info.csv'
-		args.dist_estimator = Estimator_DistNet(net_weights_path=weights_file_path, csv_dist_filepath=info_csv)
-		return
 	else:
 		raise Exception('logic for dist estimator type not implemented yet')
 

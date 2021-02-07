@@ -74,7 +74,7 @@ class VanillaGoalEnv():
 			obs['desired_goal_size_latent'] = self.desired_goal_size_latent.copy()
 			#obs['achieved_goal_image'] = self.achieved_goal_image.copy()
 			obs['obstacle_latent'] = self.obstacle_latent.copy()
-			if self.args.extra_sec:
+			if hasattr(self.args, 'extra_sec') and self.args.extra_sec:
 				obs['obstacle_size_latent'] = self.obstacle_size_latent.copy() + self.args.sec_dist
 			else:
 				obs['obstacle_size_latent'] = self.obstacle_size_latent.copy()
@@ -85,7 +85,7 @@ class VanillaGoalEnv():
 		else:
 			# todo also add security distance to real coordinates
 			obs = self.env.env._get_obs()
-			if self.args.extra_sec:
+			if hasattr(self.args, 'extra_sec') and self.args.extra_sec:
 				to_add = np.zeros_like(obs['real_obstacle_info'])
 				if obs['real_obstacle_info'].ndim == 1:
 					assert obs['real_obstacle_info'].shape[0] == 6

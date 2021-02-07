@@ -118,6 +118,7 @@ vae/*.png
 logsdir/
 logarchive/
 data/
+saved_before_changes_vae_05_02/
 figures/
 env_graph_*.pdf
 comparison.png

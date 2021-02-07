@@ -68,7 +68,7 @@
 		</body-->
 
 		<body name="lookat" pos="1.3 .75 0.2">
-			<geom size="0.005 0.005 0.005" type="sphere" rgba="1 0 1 0"></geom>
+			<site size="0.005 0.005 0.005" type="sphere" rgba="1 0 1 0"></site>
 		</body>
 
 		<body name="camera rig" pos="1.3 .75 2.5">

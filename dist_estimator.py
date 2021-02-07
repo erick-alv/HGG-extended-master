@@ -1,7 +1,6 @@
 import numpy as np
 import copy
 from envs.distance_graph import DistanceGraph2D
-from dist_train import load_DistNet_model, flat_entries, label_str_to_numpy
 from scipy.stats import uniform
 import pandas as pd
 import torch
@@ -367,63 +366,3 @@ class Subst(SubstractArea):
         min_up = np.amin(up_s, axis=1)
         return max_left, min_right, max_down, min_up
 
-
-
-class Estimator_DistNet:
-    def __init__(self, net_weights_path, csv_dist_filepath, device='cuda:0'):
-        data = pd.read_csv(csv_dist_filepath)
-        self.max = data['max'][0]
-        self.min = data['min'][0]
-        self.mean_input = torch.from_numpy(
-            label_str_to_numpy(data['mean_input'][0])
-        ).float().to(device)
-        self.std_input = torch.from_numpy(
-            label_str_to_numpy(data['std_input'][0])
-        ).float().to(device)
-        self.std_input[self.std_input == 0] = 1e-15
-
-        self.mean_output = data['mean_output'][0]
-        self.std_output = data['std_output'][0]
-        self.input_size = data['input_size'][0]
-        self.device=device
-        
-        self.model = load_DistNet_model(net_weights_path, device, input_size=self.input_size, output_size=1,
-                                        val_infinite= self.max + 1.)
-        self.model.eval()
-
-    #Net receives normalized input
-    def _normalize_input(self, x):
-        x = x - self.mean_input
-        x = x / self.std_output
-        return x
-
-    #Net returns normalized output
-    def _denormalize_output(self, x):
-        x = x * self.std_output
-        x = x + self.mean_output
-        return x
-
-
-    #for points unreachable Net returns max + 1; this must be replaced with 9999; first do denormalization
-    def _repos_dist(self, dist):
-        difference = torch.abs(dist - (self.max + 1))
-        dist[difference <= 1e-12] = 9999
-        return dist
-    
-    #todo manually handle cases outside the region
-    def calculate_distance_batch(self, goal_pos, current_pos_batch, bboxes_list_batch):
-        B = len(current_pos_batch)
-        goal_pos_as_batch = np.stack([goal_pos]*B, axis=0)
-        ppairs = np.concatenate([goal_pos_as_batch, current_pos_batch], axis=1)
-        bboxes_list_batch_flat = np.reshape(bboxes_list_batch, (B, -1))
-        net_input = np.concatenate([bboxes_list_batch_flat, ppairs], axis=1)
-
-        with torch.no_grad():
-            net_input = torch.from_numpy(net_input).float().to(self.device)
-            net_input = self._normalize_input(net_input)
-            d_dict = self.model(net_input)
-            d = d_dict['distance']
-            d = self._denormalize_output(d)
-            d = self._repos_dist(d)
-            d = d.cpu().numpy()
-        return d

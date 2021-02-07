@@ -19,7 +19,7 @@ class FetchPushMovingDoubleObstacleEnv3(fetch_env.FetchEnv, utils.EzPickle):
         self.target_goal_center = np.array([1.3, 0.57, 0.425])
         self.object_center = np.array([1.3, 0.93, 0.425])
         #for moving
-        self.vel_lims = [0.6, 0.9]
+        self.vel_lims = [0.6, 1.1]
         self.n_moving_obstacles = 2
         self.current_obstacle_vels = []
         self.obstacle_directions = []
@@ -159,7 +159,7 @@ class FetchPushMovingDoubleObstacleEnv3(fetch_env.FetchEnv, utils.EzPickle):
         velocities = []
 
         for i in range(self.n_moving_obstacles):
-            possible_vels = np.linspace(start=self.vel_lims[0], stop=self.vel_lims[1], num=10, endpoint=True)
+            possible_vels = np.linspace(start=self.vel_lims[0], stop=self.vel_lims[1], num=30, endpoint=True)
             vel = np.random.choice(possible_vels)
             self.current_obstacle_vels[i] = vel
             velocities.append(vel*self.obstacle_directions[i])

@@ -6,7 +6,6 @@ from copy import deepcopy
 import pickle
 import torch
 import tensorflow as tf
-from algorithm.sac import SAC
 
 from gym.envs.registration import register
 
@@ -16,10 +15,7 @@ if __name__=='__main__':
 	# Set up learning environment including, gym env, ddpg agent, hgg/normal learner, tester
 	args = get_args()
 	env, env_test, agent, buffer, learner, tester = experiment_setup(args)
-	if isinstance(agent, SAC):
-		args.logger.summary_init(None, None)
-	else:
-		args.logger.summary_init(agent.graph, agent.sess)
+	args.logger.summary_init(agent.graph, agent.sess)
 
 
 	# Progress info
