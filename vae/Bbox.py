@@ -100,7 +100,7 @@ class Bbox(nn.Module):
         else:
             self.use_bg_mask = False
 
-        if global_step > 1:#todo!!!
+        if global_step > 18000:
             if self.use_ind_extra_loss == False:
                 print('!!!!!!!!!!!!!!! \n *** \n using ind extra \n *** \n!!!!!!!!!!!!!')
                 self.use_ind_extra_loss = True
