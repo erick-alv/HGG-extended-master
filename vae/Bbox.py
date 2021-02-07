@@ -104,8 +104,8 @@ class Bbox(nn.Module):
             if self.use_ind_extra_loss == False:
                 print('!!!!!!!!!!!!!!! \n *** \n using ind extra \n *** \n!!!!!!!!!!!!!')
                 self.use_ind_extra_loss = True
-            else:
-                self.use_ind_extra_loss = False
+        else:
+            self.use_ind_extra_loss = False
 
 
 
