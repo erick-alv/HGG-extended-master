@@ -100,7 +100,7 @@ class Bbox(nn.Module):
         else:
             self.use_bg_mask = False
 
-        if global_step > 8000:
+        if global_step > 1:#todo!!!
             if self.use_ind_extra_loss == False:
                 print('!!!!!!!!!!!!!!! \n *** \n using ind extra \n *** \n!!!!!!!!!!!!!')
                 self.use_ind_extra_loss = True
@@ -278,7 +278,7 @@ class Bbox(nn.Module):
                     index=np.random.randint(low=0, high=self.num_slots)
                     index = int(index)
                     modified_ims = mod_ims(ims=x.clone(), masks=masks_fg.clone().reshape(B, self.num_slots, 1, H, W),
-                                           bg_image=bg_image, index=index)
+                                           bg_image=bg_image, index=index, p_all=z_pos.clone(),d_all=z_scale.clone())
                 mod_x_repeat = torch.repeat_interleave(
                     modified_ims, self.num_slots, dim=2
                 ).reshape(shape=(B, CH, H, self.num_slots, W))
@@ -378,7 +378,7 @@ class Bbox(nn.Module):
         return kl
 
 
-def mod_ims(ims, masks, bg_image, index):
+def mod_ims(ims, masks, bg_image, index, p_all, d_all):
 
     B, S, _, H, W = masks.shape
     C = 3
@@ -387,19 +387,18 @@ def mod_ims(ims, masks, bg_image, index):
     els = ims * masks
     #save_image(els.reshape(B*S, C, H, W), 'els{}.png'.format(1), pad_value=0.2)
     #save_image(masks.reshape(B * S, 1, H, W), 'masks{}.png'.format(1), pad_value=0.2)
-    # pos (B*S, 2) in [-1, 1]#todo better take
-    p = torch.from_numpy(np.random.uniform(low=-1, high=1, size=(B, 2)))
-    p = p.float()
-    # dim (B*S, 2) in [0,1]#todo better put
-    d = torch.from_numpy(np.random.uniform(low=0, high=1, size=(B, 2)))
-    d = d.float()
-    z_where = torch.cat([p, d], dim=-1)
-    p_repos = torch.from_numpy(np.random.uniform(low=-1, high=1, size=(B, 2)))
+    # pos (B*S, 2) in [-1, 1]
+    p_all = p_all.reshape(B, S, 2)
+    d_all = d_all.reshape(B, S, 2)
+    p = p_all[:, index, :]
+    d = d_all[:, index, :]
+    z_where = torch.cat([d, p], dim=-1)
+    p_repos = torch.from_numpy(np.random.uniform(low=-1, high=1, size=(B, 2))).to(ims.device).float()
     p_repos = p_repos.float()
-    # dim (B*S, 2) in [0,1]
-    '''d_repos = torch.rand(size=(B * S, 2))
-    d_repos = d_repos.sigmoid()'''
-    z_where_repos = torch.cat([p_repos, d], dim=-1)
+    dim_change = torch.from_numpy(np.random.uniform(low=-0.02, high=0.02, size=(B, 2))).to(ims.device).float()
+    d_repos = d + dim_change
+    d_repos = torch.clamp(d_repos, min=0, max=1)
+    z_where_repos = torch.cat( [d_repos, p_repos], dim=-1)
 
     els_to_mod = els[:, index, :, :, :]
     masks_to_mod = masks[:, index, :, :, :]
