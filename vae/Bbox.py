@@ -107,8 +107,6 @@ class Bbox(nn.Module):
         else:
             self.use_ind_extra_loss = False
 
-
-
     @property
     def z_depth_prior(self):
         return Normal(0., 1.)
@@ -209,6 +207,9 @@ class Bbox(nn.Module):
         z_pos = z_pos.tanh()
 
         kl_loss = self.calculate_kl_loss(z_pres_logits, z_depth_post, z_scale_post, z_pos_post)
+        for t in kl_loss:
+            assert not torch.isnan(t)
+            assert not torch.isinf(t)
 
         z_where = torch.cat((z_scale, z_pos), dim=-1)
         # z_where has (B*K, ...); therefore x_repeat must have same
@@ -324,7 +325,9 @@ class Bbox(nn.Module):
                 c_z = torch.cat([c_z_pres, c_z_scale, c_z_pos], dim=2)
                 c_z *= idx_0_setter
                 z_extra_loss = mse_loss(mod_z, c_z)
-                extra_loss = z_extra_loss
+                extra_loss = 10*z_extra_loss
+                assert not torch.isnan(extra_loss)
+                assert not torch.isinf(extra_loss)
                 #calculate loss of difference with
 
             if self.use_bg_mask:
@@ -354,9 +357,14 @@ class Bbox(nn.Module):
                        ims_with_masks_bg_rec], dim=1)
 
         log_like = log_like.flatten(start_dim=1).sum(1)
+        for t in log_like:
+            assert not torch.isnan(t)
+            assert not torch.isinf(t)
         elbo = log_like - kl_loss
         #one wants to maximize the elbo, therefore we make it negative. So the optimizer minimizes it
         loss = (-elbo).mean()+extra_loss
+        assert not torch.isnan(loss)
+        assert not torch.isinf(loss)
 
         #final_recs = ims_with_masks_recs.reshape(shape=(B, self.num_slots, 3, H, W))
         final_recs = ims_with_masks_recs
@@ -450,8 +458,7 @@ def np_data_batch_to_torch(np_data_batch, device):
     data_batch = data_batch.permute([0, 3, 1, 2])
     return data_batch
 
-def train(model, optimizer, device, log_interval_epoch, log_interval_batch, batch_size, num_epochs):
-    model.train()
+def train(model, optimizer, device, log_interval_epoch, log_interval_batch, batch_size, num_epochs, resume_path = None, resume_on_epoch=None):
     train_loss = 0
 
     bg_im = np.load('../data/FetchGenerativeEnv-v1/bg_im.npy')
@@ -461,12 +468,23 @@ def train(model, optimizer, device, log_interval_epoch, log_interval_batch, batc
 
     data_set = np.load('../data/FetchGenerativeEnv-v1/all_set_with_masks.npy')
     data_size = len(data_set)
-    global_step = 0
-    for epoch in range(num_epochs):
+
+    if resume_path is not None:
+        checkpoint = torch.load(resume_path)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        start_epoch = resume_on_epoch + 1
+        num_epochs = num_epochs - resume_on_epoch
+        global_step = int(resume_on_epoch * (data_size//batch_size) + 1)
+    else:
+        start_epoch = 0
+        global_step = 0
+
+    model.train()
+    for epoch in range(start_epoch, num_epochs + start_epoch):
         #creates indexes and shuffles them. So it can acces the data
         idx_set = np.arange(data_size)
         np.random.shuffle(idx_set)
-        #idx_set = idx_set[:5120]#todo use all set
         idx_set = np.split(idx_set, len(idx_set) / batch_size)
         for batch_idx, idx_select in enumerate(idx_set):
             data = data_set[idx_select]
@@ -657,7 +675,8 @@ if __name__ == '__main__':
         model = Bbox(args.num_slots, device).to(device)
         optimizer = optim.RMSprop(model.parameters(), lr=args.lr)
         train(model, optimizer, device, log_interval_epoch=10, log_interval_batch=400,
-              batch_size=args.batch_size, num_epochs=args.train_epochs)
+              batch_size=args.batch_size, num_epochs=args.train_epochs,
+              resume_path='../data/FetchGenerativeEnv-v1/model_bboxv2_epoch_160', resume_on_epoch=160)
     elif args.task == 'test':
         model = load_Model('../data/FetchGenerativeEnv-v1/model_bboxv2',
                            img_size=args.img_size, device=device, num_slots=args.num_slots)

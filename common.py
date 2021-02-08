@@ -250,8 +250,10 @@ def load_vaes(args, doing_inference=False):
 							 check_name='data/FetchGenerativeEnv-v1/model_000030001.pth', device='cuda:0')
 		return
 	elif args.vae_type == 'bbox':
-		args.vae_model = load_Bbox(path='data/FetchGenerativeEnv-v1/model_bbox',img_size=args.img_size, latent_size=0,
-								   device='cuda:0', num_slots=5)#latent size is not being used for now
+		#args.vae_model = load_Bbox(path='data/FetchGenerativeEnv-v1/model_bbox',img_size=args.img_size, latent_size=0,
+		#						   device='cuda:0', num_slots=5)#latent size is not being used for now
+		args.vae_model = load_Bbox(path='data/FetchGenerativeEnv-v1/model_bboxv2', img_size=args.img_size, latent_size=0,
+								   device='cuda:0', num_slots=5)  # latent size is not being used for now
 		args.vae_model.eval()
 		if not doing_inference:
 			file_index_object = 'data/' + args.env + '/' + args.vae_type + '_obj_i.npy'
