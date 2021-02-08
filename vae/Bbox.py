@@ -678,7 +678,7 @@ if __name__ == '__main__':
               batch_size=args.batch_size, num_epochs=args.train_epochs,
               resume_path='../data/FetchGenerativeEnv-v1/model_bboxv2_epoch_160', resume_on_epoch=160)
     elif args.task == 'test':
-        model = load_Model('../data/FetchGenerativeEnv-v1/model_bboxv2',
+        model = load_Model('../data/FetchGenerativeEnv-v1/model_bboxv2_epoch_160',
                            img_size=args.img_size, device=device, num_slots=args.num_slots)
         rec_dataset(model, dataset_path='../data/FetchGenerativeEnv-v1/all_set_with_masks.npy')
     elif args.task == 'try':
