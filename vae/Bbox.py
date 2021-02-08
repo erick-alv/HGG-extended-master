@@ -690,8 +690,7 @@ if __name__ == '__main__':
         model = Bbox(args.num_slots, device).to(device)
         optimizer = optim.RMSprop(model.parameters(), lr=args.lr)
         train(model, optimizer, device, log_interval_epoch=10, log_interval_batch=400,
-              batch_size=args.batch_size, num_epochs=args.train_epochs,
-              resume_path='../data/FetchGenerativeEnv-v1/model_bboxv2_epoch_160', resume_on_epoch=160)
+              batch_size=args.batch_size, num_epochs=args.train_epochs)
     elif args.task == 'test':
         model = load_Model('../data/FetchGenerativeEnv-v1/model_bboxv2_epoch_160',
                            img_size=args.img_size, device=device, num_slots=args.num_slots)
