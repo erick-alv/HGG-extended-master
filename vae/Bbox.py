@@ -374,32 +374,30 @@ class Bbox(nn.Module):
 
 
     def calculate_kl_loss(self, z_pres_logits, z_depth_post, z_scale_post, z_pos_post):
-        '''#avoid problem of kl_divergence becoming inf
-        smallest_num = torch.finfo(q_masks_recon.probs.dtype).tiny
-        q_masks_recon.probs[q_masks_recon.probs == 0.] = smallest_num
-        kl_masks = dists.kl_divergence(q_masks, q_masks_recon)'''
 
         kl_z_pres = kl_divergence_bern_bern(z_pres_logits, self.prior_z_pres_prob)
         for t in kl_z_pres:
             assert not torch.isnan(t)
             assert not torch.isinf(t)
-        kl_z_depth = kl_divergence(z_depth_post, self.z_depth_prior)
+        '''kl_z_depth = kl_divergence(z_depth_post, self.z_depth_prior)
         for t in kl_z_depth:
             assert not torch.isnan(t)
-            assert not torch.isinf(t)
+            assert not torch.isinf(t)'''
+        z_scale_post.scale = torch.clamp(z_scale_post.scale, min=1e-16)#avoid kl loss becoming inf
         kl_z_scale = kl_divergence(z_scale_post, self.z_scale_prior)
         for t in kl_z_scale.flatten():
             assert not torch.isnan(t)
             assert not torch.isinf(t)
+        z_pos_post.scale = torch.clamp(z_pos_post.scale, min=1e-16)  # avoid kl loss becoming inf
         kl_z_pos = kl_divergence(z_pos_post, self.z_shift_prior)
         for t in kl_z_pos.flatten():
             assert not torch.isnan(t)
             assert not torch.isinf(t)
         # Reduce (B, G*G, D) -> (B,)
-        kl_z_pres, kl_z_depth, kl_z_scale, kl_z_pos = [
-            x.flatten(start_dim=1).sum(1) for x in [kl_z_pres, kl_z_depth, kl_z_scale, kl_z_pos]
+        kl_z_pres, kl_z_scale, kl_z_pos = [
+            x.flatten(start_dim=1).sum(1) for x in [kl_z_pres, kl_z_scale, kl_z_pos]
         ]
-        kl = kl_z_scale + kl_z_pos + kl_z_pres + kl_z_depth
+        kl = kl_z_scale + kl_z_pos + kl_z_pres
         return kl
 
 
