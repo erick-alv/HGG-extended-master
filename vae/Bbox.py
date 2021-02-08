@@ -388,8 +388,11 @@ class Bbox(nn.Module):
             assert not torch.isnan(t)
             assert not torch.isinf(t)
         kl_z_scale = kl_divergence(z_scale_post, self.z_scale_prior)
+        for t in kl_z_scale.flatten():
+            assert not torch.isnan(t)
+            assert not torch.isinf(t)
         kl_z_pos = kl_divergence(z_pos_post, self.z_shift_prior)
-        for t in kl_z_pos:
+        for t in kl_z_pos.flatten():
             assert not torch.isnan(t)
             assert not torch.isinf(t)
         # Reduce (B, G*G, D) -> (B,)
