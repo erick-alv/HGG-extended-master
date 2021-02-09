@@ -325,7 +325,7 @@ class Bbox(nn.Module):
                 c_z = torch.cat([c_z_pres, c_z_scale, c_z_pos], dim=2)
                 c_z *= idx_0_setter
                 z_extra_loss = mse_loss(mod_z, c_z)
-                extra_loss = 10*z_extra_loss
+                extra_loss = z_extra_loss
                 assert not torch.isnan(extra_loss)
                 assert not torch.isinf(extra_loss)
                 #calculate loss of difference with
