@@ -66,9 +66,11 @@ class Player:
                   [np.array([0., 0., 0., 0.]) for _ in range(rand_steps_wait)] +\
                   [np.array([0., -1., 0., 0.]) for _ in range(15)]+ \
                   [np.array([0., 0., 0., 0.]) for _ in range(110)]'''
-            #acs = [np.array([0., 0., 0., 0.]) for _ in range(100)]
+            acs = [np.array([0., 0., -0.1, 0.]) for _ in range(3)]+\
+                  [np.array([0., -1., 0., 0.]) for _ in range(10)]+ \
+                  [np.array([0., 0., 0., 0.]) for _ in range(100)]
             #env.env.env._move_object(position=[1.13, 0.75, 0.425])
-            acs = [np.array([0., 0., 0., 0.]) for _ in range(100)]
+            #acs = [np.array([0., 0., 0., 0.]) for _ in range(100)]
             ob = env.reset()
             obs.append(goal_based_process(ob))
             trajectory_goals = [ob['achieved_goal'].copy()]
@@ -81,9 +83,9 @@ class Player:
             tr_env_images = [take_env_image(self.env, args.img_vid_size)]
 
             for timestep in range(self.args.timesteps):
-                actions = self.my_step_batch(obs)
+                #actions = self.my_step_batch(obs)
                 #actions = [env.action_space.sample() for _ in range(len(obs))]
-                #actions = [acs[timestep]]
+                actions = [acs[timestep]]
                 obs, infos = [], []
                 ob, _, _, info = env.step(actions[0])
                 obs.append(goal_based_process(ob))

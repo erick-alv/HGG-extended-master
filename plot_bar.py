@@ -192,14 +192,16 @@ if __name__ == "__main__":
                 '30281':"Imaginary(Bbox)",
                 '30278':"Imaginary, v1",
                 '9930000':"HGG"}'''
-    mappings = {'10270':"Bbox(real)",
-                '10271':"Bbox(real)+Imag.",
-                '10272':"Bbox(real),subst.",
-                '10273': "Bbox(real)+Imag., subst.",
-                '9910000':"HGG"}
+    mappings = {'Bbox-imag.':['11111276'],
+                'Bbox': [],
+                'Real-imag.': ['30279','10274'],
+                'Real': [],
+                'HGG': ['9930000','1119910000'],
+                }
     for i in range(len(labels)):
-        if labels[i] in mappings.keys():
-            labels[i] = mappings[labels[i]]
+        for k, n_list in mappings.items():
+            if labels[i] in n_list:
+                labels[i] = k
 
     for i, rect_data in enumerate(rects_data):
         r = ax.bar(ind + i*width, rect_data, width, label=labels[i])

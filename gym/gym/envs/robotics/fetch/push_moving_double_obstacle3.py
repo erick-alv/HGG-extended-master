@@ -19,7 +19,7 @@ class FetchPushMovingDoubleObstacleEnv3(fetch_env.FetchEnv, utils.EzPickle):
         self.target_goal_center = np.array([1.3, 0.57, 0.425])
         self.object_center = np.array([1.3, 0.93, 0.425])
         #for moving
-        self.vel_lims = [0.6, 1.1]
+        self.vel_lims = [0.6, 0.9]
         self.n_moving_obstacles = 2
         self.current_obstacle_vels = []
         self.obstacle_directions = []
@@ -31,10 +31,10 @@ class FetchPushMovingDoubleObstacleEnv3(fetch_env.FetchEnv, utils.EzPickle):
             self.obstacle_directions.append(1)
 
 
-        self.obstacle_upper_limits.append(1.44)
-        self.obstacle_lower_limits.append(1.16)
-        self.obstacle_upper_limits.append(1.44)
-        self.obstacle_lower_limits.append(1.16)
+        self.obstacle_upper_limits.append(1.47)
+        self.obstacle_lower_limits.append(1.13)
+        self.obstacle_upper_limits.append(1.47)
+        self.obstacle_lower_limits.append(1.13)
         for i in range(self.n_moving_obstacles):
             self.pos_difs.append((self.obstacle_upper_limits[i] - self.obstacle_lower_limits[i]) / 2.)
 
@@ -182,7 +182,7 @@ class FetchPushMovingDoubleObstacleEnv3(fetch_env.FetchEnv, utils.EzPickle):
         pos1 = np.array(self.sim.data.body_xpos[body_id].copy())
         body_id2 = self.sim.model.body_name2id('obstacle2')
         pos2 = np.array(self.sim.data.body_xpos[body_id2].copy())
-        dims = np.array([0.11, 0.02, 0.035])
+        dims = np.array([0.08, 0.02, 0.035])
         ob1 = np.concatenate((pos1, dims.copy()))
         ob2 = np.concatenate((pos2, dims.copy()))
         obs['real_obstacle_info'] = np.array([ob1, ob2])
