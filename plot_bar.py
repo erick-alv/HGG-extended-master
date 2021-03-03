@@ -112,7 +112,7 @@ def load_results(file):
     N_success_rate = pd_data[['N', 'Success']]
     success_rate_grouped = N_success_rate.groupby(['N'])
     N_configs = success_rate_grouped.indices.keys()
-    success_rate_mean = success_rate_grouped.mean()['Success']
+    success_rate_mean = success_rate_grouped.mean()['Success']#this calculates the mean
     success_rate_mean = success_rate_mean.base[0]
     return N_configs, success_rate_mean
 
@@ -141,11 +141,10 @@ if __name__ == "__main__":
     env_id = args.env_id
 
     # Load all data.
-    data = {}
     paths = [os.path.abspath(os.path.join(path, '..')) for path in glob2.glob(os.path.join(args.dir, '**', 'progress.csv'))]
-    show_results = 4
-    rects_data = []
-    labels = []
+    paths = [p for p in paths if 'TEST-' in p]
+    data = {}
+    configs = []
     groups_keys = None
 
     for i_path, curr_path in enumerate(paths):
@@ -155,57 +154,43 @@ if __name__ == "__main__":
             continue
         clean_path = curr_path.replace(env_id, '')
         clean_path = os.path.basename(os.path.normpath(clean_path))
-        #clean_path = ''.join([i for i in clean_path if not i.isdigit()])
-        # divide path into run (number in the beginning) and config (information on configuration, included in the path name)
-        if args.naming == 0:
-            config = clean_path
+        name = curr_path.split('/')[-2]
+        config = name
 
         # Test:
-        run = config
-        print('Config / run: {} / {}'.format(config, run))
-
+        print('Config : {}'.format(config))
         results = load_results(os.path.join(curr_path, 'progress.csv'))
         if not results:
             print('skipping {}'.format(curr_path))
             continue
-        N_configs, success_rate_mean = results
-        rects_data.append(success_rate_mean)
-        labels.append(run)
+
+        N_groups, success_rate = results
         if groups_keys is None:
-            groups_keys = N_configs
+            groups_keys = N_groups
             groups = []
             for k in groups_keys:
                 groups.append(k)
         else:
-            assert groups_keys == N_configs
+            assert groups_keys == N_groups
+        if config not in configs:
+            configs.append(config)
+            data[config]=[]
+
+        data[config].append(success_rate)
+    rects_data = []
+    for config in configs:
+        mean = np.mean(data[config], axis=0)
+        std = np.std(data[config], axis=0)
+        rects_data.append({'mean':mean,
+                           'std':std})
 
     width = 0.6 / len(groups)
     fig, ax = plt.subplots()
     ind = np.arange(len(groups))
-    rects_s = []
-    for i in range(len(labels)):
-        number = ''.join([i for i in labels[i][:15] if i.isdigit()])
-        labels[i] = number
-    #mappings = {'2575':"minDist",'2275':"Pos,Vel,Angle", '2276':"Pos,Vel,Angle. Imaginary"}
 
-    '''mappings = {'30279':"Imaginary, v2",
-                '30281':"Imaginary(Bbox)",
-                '30278':"Imaginary, v1",
-                '9930000':"HGG"}'''
-    mappings = {'Bbox-imag.':['11111276'],
-                'Bbox': [],
-                'Real-imag.': ['30279','10274'],
-                'Real': [],
-                'HGG': ['9930000','1119910000'],
-                }
-    for i in range(len(labels)):
-        for k, n_list in mappings.items():
-            if labels[i] in n_list:
-                labels[i] = k
-
-    for i, rect_data in enumerate(rects_data):
-        r = ax.bar(ind + i*width, rect_data, width, label=labels[i])
-        rects_s.append(r)
+    #here make per config
+    for i, config in enumerate(configs):
+        r = ax.bar(ind + i*width, rects_data[i]['mean'], width, label=config, yerr=rects_data[i]['std'])
 
     ax.set_ylabel('Success rate best policy')
     ax.set_title('Rates with tollerance of N collisions')
@@ -216,7 +201,6 @@ if __name__ == "__main__":
     ax.set_xticklabels(ticks_labels)
     ax.legend(loc=4,prop={'size': 8})
 
-
-    plt.savefig(os.path.join(args.dir, 'fig_{}.pdf'.format(env_id)), format='pdf')
+    plt.savefig(os.path.join(args.dir, 'fig_bar{}.pdf'.format(env_id)), format='pdf')
     if args.save_path:
         plt.savefig(args.save_path)

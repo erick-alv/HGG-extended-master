@@ -176,6 +176,10 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 		args.im_norm_freq = copy.copy(args.im_train_freq)
 		args.im_norm_counter = 0
 
+	if do_just_test:
+		args.epoches = 1
+		args.cycles = 5
+
 
 	base_name = args.alg + '-' + args.env + '-' + args.goal + '-' + args.learn
 	if do_just_test:
@@ -195,6 +199,11 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 
 		else:
 			logger_name = 'TEST-' + base_name
+
+		if str.startswith(remaining, 'log/'):
+			rest_path = remaining[4:]
+			if len(rest_path) > 0:
+				logger_name = rest_path + '/' + logger_name
 	else:
 		logger_name = base_name
 		if args.tag!='': logger_name = args.tag+'-'+logger_name
@@ -481,10 +490,10 @@ def experiment_setup_test(args):
 			args.obstacles_indices = np.load(file_indices_obstacle)
 
 	load_field_parameters(args)
-	if args.dist_estimator_type is not None:
-		temp_env = make_temp_env(args)
-		load_dist_estimator(args, temp_env)
-		del temp_env
+	#if args.dist_estimator_type is not None:
+	#	temp_env = make_temp_env(args)
+	#	load_dist_estimator(args, temp_env)
+	#	del temp_env
 	env = make_env(args)
 
 
@@ -496,7 +505,8 @@ def experiment_setup_test(args):
 
 	from play import Player
 	args.agent = agent = Player(args)
-	args.tester = tester = Tester(args)
+	#fix number of test rollouts to 500
+	args.tester = tester = Tester(args, test_rollouts=100, after_train_test=True)
 	args.timesteps = env.env.env.spec.max_episode_steps
 
 

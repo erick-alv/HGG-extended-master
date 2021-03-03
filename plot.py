@@ -13,7 +13,7 @@ import math
 
 
 def smooth_reward_curve(x, y):
-    halfwidth = int(np.ceil(len(x) / 60))  # Halfwidth of our smoothing convolution
+    halfwidth = int(np.ceil(len(x) / 30))#60))  # Halfwidth of our smoothing convolution#todo choose param for smoothing
     k = halfwidth
     xsmoo = x
     ysmoo = np.convolve(y, np.ones(2 * k + 1), mode='same') / np.convolve(np.ones_like(y), np.ones(2 * k + 1),
@@ -73,7 +73,11 @@ if __name__ == "__main__":
     # Load all data.
     data = {}
     paths = [os.path.abspath(os.path.join(path, '..')) for path in glob2.glob(os.path.join(args.dir, '**', 'progress.csv'))]
+    paths = [p for p in paths if not ('TEST-' in p)]
     location = 2
+    #todo use my naming scheme
+    # todo use naming from folders
+    # todo optional verify that the naming is correct with respect to the content
     for curr_path in paths:
         if not os.path.isdir(curr_path):
             continue
@@ -173,7 +177,8 @@ if __name__ == "__main__":
             else:
                 raise Exception("Naming failed!")
         elif args.naming == 8:
-            config = tag_path
+            name = curr_path.split('/')[-2]
+            config = name
 
         # Test:
         run = config

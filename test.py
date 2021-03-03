@@ -9,16 +9,17 @@ import copy
 
 
 class Tester:
-	def __init__(self, args):
+	def __init__(self, args, test_rollouts=100, after_train_test=False):
 		self.args = args
 		self.env = make_env(args)
 		self.env_test = make_env(args)
 
 		self.info = []
 		self.calls = 0
+		self.after_train_test = after_train_test
 		if args.save_acc:
 			make_dir('log/accs', clear=False)
-			self.test_rollouts = 100
+			self.test_rollouts = test_rollouts
 
 			self.env_List = []
 			for _ in range(self.test_rollouts):
@@ -37,9 +38,13 @@ class Tester:
 	def test_acc(self, key, env, agent):
 		if self.args.goal in self.args.colls_test_check_envs:
 			# +1 since when it becomes 0 then not considered as success
+			# coll toll is modified externally for every iteraiton
 			envs_collision = [self.coll_tol + 1 for _ in range(len(self.env_List))]
-		if self.calls % 40 == 0 or self.calls in [0, 1, 2, 5, 8, 10]:
-			eps_idx = [0, 5, 8, 10, 15, 20, self.test_rollouts-1]
+		if self.calls % 40 == 0 or self.calls in [0, 1, 2, 5, 8, 10] or self.after_train_test:
+			if self.after_train_test:
+				eps_idx = [i for i in range(0, self.test_rollouts-1, 20)] + [self.test_rollouts-1]
+			else:
+				eps_idx = [0, 5, 8, 10, 15, 20, self.test_rollouts-1]
 			acc_sum, obs = 0.0, []
 			prev_obs = []
 			env_images = [[] for _ in eps_idx]
