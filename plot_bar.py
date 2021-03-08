@@ -146,6 +146,7 @@ if __name__ == "__main__":
     data = {}
     configs = []
     groups_keys = None
+    groups = [0, 2, 4]
 
     for i_path, curr_path in enumerate(paths):
         if not os.path.isdir(curr_path):
@@ -167,30 +168,42 @@ if __name__ == "__main__":
         N_groups, success_rate = results
         if groups_keys is None:
             groups_keys = N_groups
-            groups = []
-            for k in groups_keys:
-                groups.append(k)
+
+            '''for k in groups_keys:
+                        groups.append(k)'''
+            # instead just using N=0,2,4 since others do not change that much
+            for g in groups:
+                assert g in N_groups
         else:
             assert groups_keys == N_groups
+
+
         if config not in configs:
             configs.append(config)
             data[config]=[]
 
+        # instead just using N=0,2,4 since others do not change that much
+        success_rate = success_rate[:-2]
+
+
+
+
         data[config].append(success_rate)
     rects_data = []
+    configs.sort()
     for config in configs:
         mean = np.mean(data[config], axis=0)
         std = np.std(data[config], axis=0)
         rects_data.append({'mean':mean,
                            'std':std})
 
-    width = 0.6 / len(groups)
+    width = 0.5 / len(groups)
     fig, ax = plt.subplots()
     ind = np.arange(len(groups))
 
     #here make per config
     for i, config in enumerate(configs):
-        r = ax.bar(ind + i*width, rects_data[i]['mean'], width, label=config, yerr=rects_data[i]['std'])
+        r = ax.bar(ind + i*width, rects_data[i]['mean'], width, label=config)#, yerr=rects_data[i]['std'])
 
     ax.set_ylabel('Success rate best policy')
     ax.set_title('Rates with tollerance of N collisions')

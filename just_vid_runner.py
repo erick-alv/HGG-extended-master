@@ -11,6 +11,7 @@ import torch
 import copy
 import matplotlib.pyplot as plt
 import time
+from PIL import Image
 
 '''obs_x_pos = np.array([o['obstacle_latent'][0] for o in obs])
     obs_y_pos = np.array([o['obstacle_latent'][1] for o in obs])
@@ -95,18 +96,37 @@ if __name__ == '__main__':
         o = env.reset()
         obs.append(o)
         prev_obs.append(o)
-        #env_images.append(take_image_objects(env, args.img_size))
-        env_images.append(take_env_image(env, args.img_vid_size))
+
+        image_real = take_env_image(env, 500)
+        img = Image.fromarray(image_real.astype(np.uint8))
+        img.save('{}_task.png'.format(args.env))
+        '''image_real = take_env_image(env, 500)
+        img = Image.fromarray(image_real.astype(np.uint8))
+        img.save('{}_real.png'.format(args.env))'''
+
+        '''image_objects = take_image_objects(env, 500)
+        img = Image.fromarray(image_objects.astype(np.uint8))
+        img.save('{}_objects.png'.format(args.env))
+        img.close()'''
+
+
+
+
+
+
+
+        #env_images.append(take_env_image(env, args.img_vid_size))
         #actions = [[-0.001, 0.77, 0., 0.]]*3 + [[.1, -.1, 0., 0.]]*100
         #actions = [[0., .9, 0., 0.]]*10+ [[1., 0., 0., 0.]]*5 + [[0., -1., 0., 0.]]*8+[[1., 0., 0., 0.]]*5 +[[1., 0., 0., 0.]]*100
-        actions = [[0., 0., 0., 0.]]*100
-        for timestep in range(100):
+        actions = [[0., -0.2, 0., 0.]]*100
+        for timestep in range(10):
 
             #env.env.env._rotate(["cube"], 0., 10. * timestep, 10. * timestep)
             #env.env.env._rotate(["cylinder"], 0., 10. * timestep, 0.)
             #env.env.env._change_color(["cylinder"], 0.1, 0.1 * timestep, 0.1)
 
             action = env.action_space.sample()
+            action = actions[timestep]
             #action = np.array([-1., -1., 0., 0.])
             #action = actions[timestep]
             '''if timestep < 8:
@@ -116,15 +136,20 @@ if __name__ == '__main__':
             elif timestep < 40:
                 o, _, _, info = env.step([1., -0.5, 0., 0.])
             else:'''
+
             o, _, _, info = env.step(action)
+
+
+
             #o, _, _, info = env.step(action)
             #print('pos: {}'.format(o['obstacle_latent']))
             #print('size: {}'.format(o['obstacle_size_latent']))
             obs.append(o)
+
             #env_images.append(take_image_objects(env, args.img_size))
-            env_images.append(take_env_image(env, args.img_vid_size))
-        create_rollout_video(env_images, args=args, filename='vid_{}_env'.format(vid))
-    env_images = np.array(env_images)
+            #env_images.append(take_env_image(env, args.img_vid_size))
+        #create_rollout_video(env_images, args=args, filename='vid_{}_env'.format(vid))
+    #env_images = np.array(env_images)
     '''with torch.no_grad():
         batch_size = 101
         idx_set = np.arange(len(env_images))

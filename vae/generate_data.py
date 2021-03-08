@@ -512,8 +512,10 @@ if __name__ == "__main__":
                     else:
                         a = np.concatenate([a, spacer_y, b], axis=0)
                 img = Image.fromarray(a.astype(np.uint8))
+                img.save('sample_image_generated.png')
                 img.show()
                 img.close()
+
             for _ in range(3):
                 show_some_sampled_images()
         else:

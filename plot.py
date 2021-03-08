@@ -13,7 +13,7 @@ import math
 
 
 def smooth_reward_curve(x, y):
-    halfwidth = int(np.ceil(len(x) / 30))#60))  # Halfwidth of our smoothing convolution#todo choose param for smoothing
+    halfwidth = int(np.ceil(len(x) / 60)) # Halfwidth of our smoothing convolution#todo choose param for smoothing
     k = halfwidth
     xsmoo = x
     ysmoo = np.convolve(y, np.ones(2 * k + 1), mode='same') / np.convolve(np.ones_like(y), np.ones(2 * k + 1),

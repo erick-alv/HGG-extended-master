@@ -149,7 +149,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 
 	#for imaginary obstacle interactions
 	parser.add_argument('--imaginary_obstacle_transitions',
-						help='expand obstacle transition', type=bool, default=False)
+						help='expand obstacle transition', type=str2bool, default=False)
 	args, _ = parser.parse_known_args()
 	if args.imaginary_obstacle_transitions:
 		parser.add_argument('--im_train_freq', help='how often the imaginary transitions are used',
