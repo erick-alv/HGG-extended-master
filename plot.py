@@ -178,6 +178,8 @@ if __name__ == "__main__":
                 raise Exception("Naming failed!")
         elif args.naming == 8:
             name = curr_path.split('/')[-2]
+            if name.startswith('-'):
+                name = '\u03B7 =' + name
             config = name
 
         # Test:
@@ -233,10 +235,13 @@ if __name__ == "__main__":
             plt.plot(xs[0], np.nanmedian(ys, axis=0), label=config)
             plt.fill_between(xs[0], np.nanpercentile(ys, 25, axis=0), np.nanpercentile(ys, 75, axis=0), alpha=0.25)
 
-    plt.title(env_id)
-    plt.xlabel('Iteration')
-    plt.ylabel('Median Success Rate')
-    plt.legend(loc=location)
+    plt.title(env_id,fontsize=18)
+    plt.xlabel('Iteration',fontsize=16)
+    plt.ylabel('Median Success Rate',fontsize=18)
+    plt.legend(prop={'size': 14})
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.tight_layout()
     plt.savefig(os.path.join(args.dir, 'fig_{}.pdf'.format(env_id)), format='pdf')
     if args.save_path:
         plt.savefig(args.save_path)

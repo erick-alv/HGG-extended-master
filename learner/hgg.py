@@ -112,7 +112,7 @@ class MatchSampler:
 
 	def evaluate_distance_start(self, obs):
 		if self.args.dist_estimator_type is not None:
-			if self.args.dist_estimator_type in ['realCoords','multipleReal', 'substReal']:
+			if self.args.dist_estimator_type in ['noneTypeReal','realCoords','multipleReal', 'substReal']:
 				g = obs['desired_goal']
 				current = obs['achieved_goal']
 			else:
@@ -292,7 +292,7 @@ class MatchSampler:
 												 goal_pos=initial_goals_latents[j].copy(),
 										   range_x=[-1., 1.], range_y=[-1., 1.])
 					match_dis = np.min(res) + d_i * self.args.hgg_c
-				elif self.args.dist_estimator_type in ['realCoords','multipleReal','substReal']:
+				elif self.args.dist_estimator_type in ['noneTypeReal','realCoords','multipleReal','substReal']:
 						d_i = self.args.dist_estimator.calculate_distance_batch(
 							goal_pos=desired_goals[j].copy(),
 							current_pos_batch=np.array([achieved_pool[i][0].copy()])

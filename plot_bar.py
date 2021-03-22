@@ -156,6 +156,8 @@ if __name__ == "__main__":
         clean_path = curr_path.replace(env_id, '')
         clean_path = os.path.basename(os.path.normpath(clean_path))
         name = curr_path.split('/')[-2]
+        if name.startswith('-'):
+            name = '\u03B7 =' + name
         config = name
 
         # Test:
@@ -205,15 +207,21 @@ if __name__ == "__main__":
     for i, config in enumerate(configs):
         r = ax.bar(ind + i*width, rects_data[i]['mean'], width, label=config)#, yerr=rects_data[i]['std'])
 
-    ax.set_ylabel('Success rate best policy')
-    ax.set_title('Rates with tollerance of N collisions')
+    ax.set_ylabel('Success rate best policy',fontsize=18)
+    ax.set_title('Rates with tolerance of N collisions', fontsize=18)
+
+
+    ax.legend(loc=4,prop={'size': 14})
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=16)
+
     ax.set_xticks(ind)
     ticks_labels = []
     for g in groups:
         ticks_labels.append('N={}'.format(g))
     ax.set_xticklabels(ticks_labels)
-    ax.legend(loc=4,prop={'size': 8})
 
+    plt.tight_layout()
     plt.savefig(os.path.join(args.dir, 'fig_bar{}.pdf'.format(env_id)), format='pdf')
     if args.save_path:
         plt.savefig(args.save_path)

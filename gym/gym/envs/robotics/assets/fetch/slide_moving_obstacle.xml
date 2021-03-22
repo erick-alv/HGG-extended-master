@@ -40,12 +40,52 @@
 			<site name="object0" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 0 0 0" type="sphere"></site>
 		</body>
 
+		<!--body pos="1.26 0.75 0.5" name="spaceObstacle">
+			<site name="siteObstacle" size="0.04 0.45 0.1" rgba="0 0 1 0.2" type="box"></site>
+			<site name="smark1" pos="-0.04 -0.45  -0.1" size="0.01 0.01 0.01" rgba="0 0 0 1" type="sphere"></site>
+			<site name="smark2" pos="-0.04 0.45  -0.1" size="0.01 0.01 0.01" rgba="0 0 0 1" type="sphere"></site>
+			<site name="smark3" pos="0.04 -0.45  -0.1" size="0.01 0.01 0.01" rgba="0 0 0 1" type="sphere"></site>
+			<site name="smark4" pos="0.04 0.45  -0.1" size="0.01 0.01 0.01" rgba="0 0 0 1" type="sphere"></site>
+		</body>
+
+		<body pos="1.65 1.12 0.41" name="spaceGoal">
+			<site name="siteGoalp" size="0.04 0.04 0.01" rgba="0 1 0 0.4" type="box"></site>
+			<site name="emark1" pos="-0.04 -0.04 -0.01" size="0.01 0.01 0.01" rgba="0 0 0 1" type="sphere"></site>
+			<site name="emark2" pos="-0.04 0.04 -0.01" size="0.01 0.01 0.01" rgba="0 0 0 1" type="sphere"></site>
+			<site name="emark3" pos="0.04 -0.04 -0.01" size="0.01 0.01 0.01" rgba="0 0 0 1" type="sphere"></site>
+			<site name="emark4" pos="0.04 0.04 -0.01" size="0.01 0.01 0.01" rgba="0 0 0 1" type="sphere"></site>
+		</body>
+
+		<body pos="1.65 0.38 0.41" name="spaceGoal2">
+			<site name="siteGoalp2" size="0.04 0.04 0.01" rgba="0 1 0 0.4" type="box"></site>
+			<site name="e2mark1" pos="-0.04 -0.04 -0.01" size="0.01 0.01 0.01" rgba="0 0 0 1" type="sphere"></site>
+			<site name="e2mark2" pos="-0.04 0.04 -0.01" size="0.01 0.01 0.01" rgba="0 0 0 1" type="sphere"></site>
+			<site name="e2mark3" pos="0.04 -0.04 -0.01" size="0.01 0.01 0.01" rgba="0 0 0 1" type="sphere"></site>
+			<site name="e2mark4" pos="0.04 0.04 -0.01" size="0.01 0.01 0.01" rgba="0 0 0 1" type="sphere"></site>
+		</body>
+
+		<body pos="1.11 0.75 0.41" name="spacePuck">
+			<site name="sitePuck" size="0.1 0.07 0.01" rgba="1 0 0 0.2" type="box"></site>
+			<site name="pmark1" pos="-0.1 -0.07 -0.01" size="0.01 0.01 0.01" rgba="0 0 0 1" type="sphere"></site>
+			<site name="pmark2" pos="-0.1 0.07 -0.01" size="0.01 0.01 0.01" rgba="0 0 0 1" type="sphere"></site>
+			<site name="pmark3" pos="0.1 -0.07 -0.01" size="0.01 0.01 0.01" rgba="0 0 0 1" type="sphere"></site>
+			<site name="pmark4" pos="0.1 0.07 -0.01" size="0.01 0.01 0.01" rgba="0 0 0 1" type="sphere"></site>
+		</body-->
+
 		<body name="lookat" pos="1.45 .75 0.1">
 			<site size="0.005 0.005 0.005" type="sphere" rgba="1 0 0 0"></site>
 		</body>
 		<body name="camera rig" pos="1.45 .75 4.">
 			<camera name="cam_top" mode="targetbody" target="lookat" pos="0 0 0" fovy="15"></camera>
 		</body>
+
+		<!--body name="lookat" pos="1.15 .7 0.425">
+			<site size="0.005 0.005 0.005" type="sphere" rgba="1 0 1 0"></site>
+		</body>
+
+		<body name="camera rig" pos="1.15 -0.1 1.8">
+			<camera name="cam_top" mode="targetbody" target="lookat" pos="0 0 0" fovy="60"></camera>
+		</body-->
 
 		<light directional="true" ambient="0.2 0.2 0.2" diffuse="0.8 0.8 0.8" specular="0.3 0.3 0.3" castshadow="false" pos="0 0 4" dir="0 0 -1" name="light0"></light>
 	</worldbody>

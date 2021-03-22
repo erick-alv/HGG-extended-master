@@ -16,7 +16,7 @@ from vae.common_data import vae_sb_weights_file_name, vae_weights_file_name
 from PIL import Image
 from vae_env_inter import take_env_image, take_image_objects
 from vae.distance_estimation import calculate_distance
-from dist_estimator import DistMovEst, DistMovEstReal, MultipleDist, MultipleDistReal, Subst, SubstReal
+from dist_estimator import DistMovEst, DistMovEstReal, MultipleDist, MultipleDistReal, Subst, SubstReal, NoneTypeEst
 from SPACE.main_space import load_space_model
 import matplotlib.pyplot as plt
 import os
@@ -74,6 +74,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	parser.add_argument('--graph', help='g-hgg yes or no', type=str2bool, default=False)
 	parser.add_argument('--show_goals', help='number of goals to show', type=np.int32, default=0)
 	parser.add_argument('--play_path', help='path to meta_file directory for play', type=str, default=None)
+	parser.add_argument('--play_path_im_h', help='path to meta_file directory for play; this one is just used for the heatmap that will be compared', type=str, default=None)
 	parser.add_argument('--play_epoch', help='epoch to play', type=str, default='latest')
 	parser.add_argument('--stop_hgg_threshold', help='threshold of goals inside goalspace, between 0 and 1, deactivated by default value 2!', type=np.float32, default=2)
 	parser.add_argument('--agent_device', help='the device to load the agent', type=str, default='cpu')
@@ -145,7 +146,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 
 	parser.add_argument('--dist_estimator_type', help='the type if dist estimator to use or None if not using',
 						type=str, default=None,
-						choices=['normal', 'realCoords', 'multiple', 'multipleReal', 'subst', 'substReal'])
+						choices=['noneType','noneTypeReal','normal', 'realCoords', 'multiple', 'multipleReal', 'subst', 'substReal'])
 
 	#for imaginary obstacle interactions
 	parser.add_argument('--imaginary_obstacle_transitions',
@@ -363,6 +364,9 @@ def load_field_parameters(args):
 
 
 def load_dist_estimator(args, env):
+	if args.dist_estimator_type == 'noneType' or args.dist_estimator_type == 'noneTypeReal':
+		args.dist_estimator = NoneTypeEst()
+		return
 	if args.dist_estimator_type == 'normal':
 		args.dist_estimator = DistMovEst()
 	elif args.dist_estimator_type == 'realCoords':
@@ -428,7 +432,7 @@ def load_dist_estimator(args, env):
 
 		#since this are just randomly not increase
 		args.dist_estimator.update_calls = 0
-	size_goal_box /= counter
+	#size_goal_box /= counter
 	if args.dist_estimator_type in ['normal', 'realCoords', 'multiple', 'multipleReal', 'subst', 'substReal']:
 		n_ve = 100
 		args.dist_estimator.initialize_internal_distance_graph([args.field_center[0], args.field_center[1],
@@ -438,7 +442,7 @@ def load_dist_estimator(args, env):
 		if args.extra_sec:
 			graph_name = graph_name + '_sec_dist({})'.format(args.sec_dist)
 		args.dist_estimator.graph.plot_graph(
-			save_path=graph_name, elev=90, azim=0)
+			save_path=graph_name, elev=90, azim=0, is_2d=True)
 	plt.clf()
 
 

@@ -219,13 +219,50 @@ class FetchEnv(robot_env.RobotEnv):
         self._set_gripper_during_setup()
 
 
-
         # Extract information for sampling goals.
         self.initial_gripper_xpos = self.sim.data.get_site_xpos('robot0:grip').copy()
         if self.has_object:
             #self.height_offset = self.sim.data.get_site_xpos('object0')[2]
             #todo
             self.height_offset = 0.425
+
+    def _move_gripper_to(self, position):
+        grip_pos = self.sim.data.get_site_xpos('robot0:grip')
+        robot_qpos, robot_qvel = utils.robot_get_obs(self.sim)
+        '''print(grip_pos)
+        print(robot_qpos)
+        print(robot_qvel)
+        print('____________________________________________')'''
+
+        first_over = np.array([grip_pos[0], grip_pos[1], position[2]+1.])
+        to_x_y = np.array([position[0], position[1], position[2]+1.])
+        gripper_target = np.array([position[0], position[1], position[2]]) #+ self.sim.data.get_site_xpos('robot0:grip')
+        gripper_rotation = np.array([1., 0., 1., 0.])
+
+        #move
+        self.sim.data.set_mocap_pos('robot0:mocap', first_over)
+        self.sim.data.set_mocap_quat('robot0:mocap', gripper_rotation)
+        for _ in range(10):
+            self.sim.step()
+        self.sim.forward()
+
+        self.sim.data.set_mocap_pos('robot0:mocap', to_x_y)
+        self.sim.data.set_mocap_quat('robot0:mocap', gripper_rotation)
+        for _ in range(10):
+            self.sim.step()
+        self.sim.forward()
+
+        self.sim.data.set_mocap_pos('robot0:mocap', gripper_target)
+        self.sim.data.set_mocap_quat('robot0:mocap', gripper_rotation)
+        for _ in range(10):
+            self.sim.step()
+        self.sim.forward()
+        '''grip_pos = self.sim.data.get_site_xpos('robot0:grip')
+        robot_qpos, robot_qvel = utils.robot_get_obs(self.sim)
+        print(grip_pos)
+        print(robot_qpos)
+        print(robot_qvel)
+        print('____________________________________________')'''
 
     def render(self, mode='human', width=500, height=500, camera_name=None):
         return super(FetchEnv, self).render(mode, width, height, camera_name)

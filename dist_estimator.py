@@ -5,6 +5,15 @@ from scipy.stats import uniform
 import pandas as pd
 import torch
 
+#It is just simple HGG with euclidean distance. This class is just used to make it work with rest of code.
+class NoneTypeEst:
+    def __init__(self):
+        self.obstacles = []
+
+    def calculate_distance_batch(self, goal_pos, current_pos_batch):
+        distances = np.linalg.norm(goal_pos - current_pos_batch, axis=1)
+        return distances
+
 class DistMovEst:
     def __init__(self):
         self.max_x = None

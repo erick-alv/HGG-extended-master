@@ -20,25 +20,23 @@ def create_heatmap_distances(args, env):
 
     pos_x = np.linspace(1.05, 1.55, num=nx, endpoint=True)
     pos_y = np.linspace(0.5, 1.0, num=ny, endpoint=True)
-
+    env.reset()
     for timestep in range(10):
-        env.reset()
         data = np.zeros(shape=(nx, ny))
-
         #pass some steps so that moving obstacles are in other part
-        do_steps = timestep
+        do_steps = 7
         while do_steps > 0:
             do_steps -= 1
             action = [0., 0., 0., 0.]
             env.step(action)
 
-        env_image = take_env_image(env, args.img_vid_size)
+        env_image = take_env_image(env, 500)
         im_current = Image.fromarray(env_image.astype(np.uint8))
-        im_current.save('log/heatmaps/distance_env_at_timestep_{}.png'.format(timestep))
+        im_current.save('log/{}_distance_env_at_timestep_{}.png'.format(args.env, timestep))
 
         for i, px in enumerate(pos_x):
             for j, py in enumerate(pos_y):
-                env.env.env._move_object(position=[px, py, 0.425])#todo use height of env
+                env.env.env._move_object(position=[px, py, 0.425])
                 o = env.get_obs()
                 if args.vae_dist_help:
                     # have to render here since get obs wont actualize the image position (internally just updated on step)
@@ -53,6 +51,11 @@ def create_heatmap_distances(args, env):
                     #obstacle_size_latent = lo_s[0].copy()
 
 
+                    if achieved_goal_latent[0] == 100:
+                        env_image = take_env_image(env, 500)
+                        im_current = Image.fromarray(env_image.astype(np.uint8))
+                        im_current.save('log/dummy_im.png'.format(args.env, timestep))
+                        dummy_var = 2
                     distance_to_goal = args.dist_estimator.calculate_distance_batch(
                         goal_pos=o['desired_goal_latent'].copy(),
                         current_pos_batch=np.array([achieved_goal_latent]))[0]
@@ -60,25 +63,15 @@ def create_heatmap_distances(args, env):
                     #then heatmap does not represent any important info (these clipping depend of env)
                     distance_to_goal = np.clip(distance_to_goal, a_min=None, a_max=3.2)
                 else:
-                    #uses real coordinates
-                    if args.dist_estimator_type == 'net':
-                        bboxes_list = np.atleast_2d(o['real_obstacle_info'])
-                        bboxes_list = np.concatenate([bboxes_list[:, 0:2], bboxes_list[:, 3:5]], axis=1)
-                        print(bboxes_list)
 
-                        distance_to_goal = args.dist_estimator.calculate_distance_batch(
-                            goal_pos=o['desired_goal'][0:2].copy(),
-                            current_pos_batch=np.array([o['achieved_goal'][0:2]]),
-                            bboxes_list_batch=np.array([bboxes_list])
-                        )
-                    else:
-
-                        distance_to_goal = args.dist_estimator.calculate_distance_batch(
-                            goal_pos=o['desired_goal'].copy(),
-                            current_pos_batch=np.array([o['achieved_goal']]))[0]
+                    distance_to_goal = args.dist_estimator.calculate_distance_batch(
+                        goal_pos=o['desired_goal'].copy(),
+                        current_pos_batch=np.array([o['achieved_goal']]))[0]
                     # clipped to 0.8 since estimator puts regions inside obstacle too far away and
                     # then heatmap does not represent any important info
                     distance_to_goal = np.clip(distance_to_goal, a_min=None, a_max=0.8)
+
+
                 data[i, j] = distance_to_goal
 
         ax = plt.gca()
@@ -89,7 +82,7 @@ def create_heatmap_distances(args, env):
         cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
         cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
         plt.title('heatmap')
-        plt.savefig('log/heatmaps/distance_map_at_timestep_{}.png'.format(timestep))
+        plt.savefig('log/{}_distance_map_at_timestep_{}.png'.format(args.env, timestep))
         plt.clf()
 
 
@@ -111,9 +104,5 @@ if __name__ == '__main__':
     del temp_env
 
     env = make_env(args)
-
-
-    #LoggerMock = namedtuple('Logger', ['my_log_dir'])#todo needed?
-    #args.logger = LoggerMock(my_log_dir='log/space_tests/')
 
     create_heatmap_distances(args=args, env=env)

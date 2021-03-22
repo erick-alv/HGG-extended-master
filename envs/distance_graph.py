@@ -367,46 +367,58 @@ class DistanceGraph:
             plt.show()
         plt.savefig(save_path + ".pdf")
 
-    def plot_graph(self, path=None, graph=False, obstacle_vertices=False, goals=None, save_path='test', show=False, azim=-12, elev=15, extra=None):
+    def plot_graph(self, path=None, graph=False, obstacle_vertices=False, goals=None, save_path='test', show=False, azim=-12, elev=15, extra=None, is_2d=False):
         # Plot graph with different options
         if self.args:
             self.args.logger.info("Plotting ...")
         if self.cs_graph is None:
             raise Exception("No cs_graph available")
         fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
+        if is_2d:
+            ax = fig.add_subplot(111)
+        else:
+            ax = fig.add_subplot(111, projection='3d')
         co_graph = coo_matrix(self.cs_graph)
         # scatter plot boundaries of field
         x_array = [self.x_min, self.x_min, self.x_min, self.x_min, self.x_max, self.x_max, self.x_max, self.x_max]
         y_array = [self.y_min, self.y_min, self.y_max, self.y_max, self.y_min, self.y_min, self.y_max, self.y_max]
         z_array = [self.z_min, self.z_max, self.z_min, self.z_max, self.z_min, self.z_max, self.z_min, self.z_max]
-        ax.scatter(x_array, y_array, z_array, c='b')
+        if is_2d:
+            ax.scatter(x_array, y_array, c='b')
+        else:
+            ax.scatter(x_array, y_array, z_array, c='b')
+
         # plots obstacle
         for [m_x, m_y, m_z, l, w, h] in self.obstacles:
-            # top
-            side1 = Rectangle((m_x-l, m_y-w), 2*l, 2*w, color=[0,0,1,0.1])
-            ax.add_patch(side1)
-            art3d.pathpatch_2d_to_3d(side1, z=m_z+h, zdir="z",)
-            # bottom
-            side1 = Rectangle((m_x-l, m_y-w), 2*l, 2*w, color=[0,0,1,0.1])
-            ax.add_patch(side1)
-            art3d.pathpatch_2d_to_3d(side1, z=m_z-h, zdir="z")
-            # back
-            side1 = Rectangle((m_y-w, m_z-h), 2*w, 2*h, color=[0,0,1,0.1])
-            ax.add_patch(side1)
-            art3d.pathpatch_2d_to_3d(side1, z=m_x+l, zdir="x")
-            # front
-            side1 = Rectangle((m_y-w, m_z-h), 2*w, 2*h, color=[0,0,1,0.1])
-            ax.add_patch(side1)
-            art3d.pathpatch_2d_to_3d(side1, z=m_x-l, zdir="x")
-            # right
-            side1 = Rectangle((m_x-l, m_z-h), 2*l, 2*h, color=[0,0,1,0.1])
-            ax.add_patch(side1)
-            art3d.pathpatch_2d_to_3d(side1, z=m_y+w, zdir="y")
-            # left
-            side1 = Rectangle((m_x-l, m_z-h), 2*l, 2*h, color=[0,0,1,0.1])
-            ax.add_patch(side1)
-            art3d.pathpatch_2d_to_3d(side1, z=m_y-w, zdir="y")
+            if is_2d:
+                #normally is 2 but we are already passing just he hlaf from it
+                rect = Rectangle((m_x-l, m_y-w), 2*l, 2*w, color=[0,0,1,0.5])
+                ax.add_patch(rect)
+            else:
+                # top
+                side1 = Rectangle((m_x-l, m_y-w), 2*l, 2*w, color=[0,0,1,0.5])
+                ax.add_patch(side1)
+                art3d.pathpatch_2d_to_3d(side1, z=m_z+h, zdir="z",)
+                # bottom
+                side1 = Rectangle((m_x-l, m_y-w), 2*l, 2*w, color=[0,0,1,0.1])
+                ax.add_patch(side1)
+                art3d.pathpatch_2d_to_3d(side1, z=m_z-h, zdir="z")
+                # back
+                side1 = Rectangle((m_y-w, m_z-h), 2*w, 2*h, color=[0,0,1,0.1])
+                ax.add_patch(side1)
+                art3d.pathpatch_2d_to_3d(side1, z=m_x+l, zdir="x")
+                # front
+                side1 = Rectangle((m_y-w, m_z-h), 2*w, 2*h, color=[0,0,1,0.1])
+                ax.add_patch(side1)
+                art3d.pathpatch_2d_to_3d(side1, z=m_x-l, zdir="x")
+                # right
+                side1 = Rectangle((m_x-l, m_z-h), 2*l, 2*h, color=[0,0,1,0.1])
+                ax.add_patch(side1)
+                art3d.pathpatch_2d_to_3d(side1, z=m_y+w, zdir="y")
+                # left
+                side1 = Rectangle((m_x-l, m_z-h), 2*l, 2*h, color=[0,0,1,0.1])
+                ax.add_patch(side1)
+                art3d.pathpatch_2d_to_3d(side1, z=m_y-w, zdir="y")
 
         if path:
             for i in range(len(path)-1):
@@ -440,15 +452,18 @@ class DistanceGraph:
 
         ax.set_xlabel('x')
         ax.set_ylabel('y')
-        ax.set_zlabel('z')
+        if not is_2d:
+            ax.set_zlabel('z')
         if extra == 1:
             ax.set_xticks([1.1, 1.3, 1.5])
             ax.set_zticks([0.4, 0.5, 0.6, 0.7, 0.8])
 
-        ax.view_init(elev=elev, azim=azim)
+        if not is_2d:
+            ax.view_init(elev=elev, azim=azim)
         if show:
             plt.show()
         plt.savefig(save_path + ".pdf")
+        plt.savefig(save_path + ".png")
         if self.args:
             self.args.logger.info("\tdone")
 

@@ -7,7 +7,7 @@ import tensorflow as tf
 
 
 class Player:
-    def __init__(self, args):
+    def __init__(self, args, direct_playpath=None):
         # initialize environment
         self.args = args
         self.env = make_env(args)
@@ -17,7 +17,10 @@ class Player:
         self.test_rollouts = 100
 
         # get current policy from path (restore tf session + graph)
-        self.play_dir = args.play_path
+        if direct_playpath is not None:
+            self.play_dir = direct_playpath
+        else:
+            self.play_dir = args.play_path
         self.play_epoch = args.play_epoch
         self.meta_path = "{}saved_policy-{}.meta".format(self.play_dir, self.play_epoch)
         self.sess = tf.Session()
