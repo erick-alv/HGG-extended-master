@@ -1,4 +1,4 @@
-#taken from SPACE otiginal implementation https://github.com/zhixuan-lin/SPACE
+#taken from SPACE original implementation https://github.com/zhixuan-lin/SPACE
 
 import torch
 import torch.nn.functional as F
@@ -8,7 +8,7 @@ from torch.distributions.utils import broadcast_all
 
 def spatial_transform(image, z_where, out_dims, inverse=False):
     """ spatial transformer network used to scale and shift input according to z_where in:
-            1/ x -> x_att   -- shapes (H, W) -> (attn_window, attn_window) -- thus inverse = False
+            1/ x -> x_att   -- shapes (H, W) -> (attn_window, attn_window) -- thus inverse= False
             2/ y_att -> y   -- (attn_window, attn_window) -> (H, W) -- thus inverse = True
     inverting the affine transform as follows: A_inv ( A * image ) = image
     A = [R | T] where R is rotation component of angle alpha, T is [tx, ty] translation component
@@ -90,6 +90,15 @@ class NumericalRelaxedBernoulli(RelaxedBernoulli):
         return out
 
 
+if __name__ == '__main__':
+    im = torch.rand(size=[1, 3, 20, 20],)
+    z_where = torch.zeros(size=[1, 4])
+    z_where[0, 0] = -0.2
+    z_where[0, 1] = 0.1
+    z_where[0, 2] = z_where[0, 3] = 0.5
+    spatial_transform(image=im, z_where=z_where,
+                      out_dims=(1, 3, 20, 20),
+                      inverse=False)
 
 
 

@@ -91,6 +91,10 @@ if __name__ == '__main__':
     env_images = []
     start_time = time.time()
 
+    image_real = take_env_image(env, 500)
+    img = Image.fromarray(image_real.astype(np.uint8))
+    img.save('image_of.png'.format(args.env))
+
 
     for vid in range(5):
         o = env.reset()
