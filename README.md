@@ -8,7 +8,7 @@ It is based on the implementation of the HGG paper [Exploration via Hindsight Go
 ## Requirements
 [TODO]
 
-##Usage
+## Usage
 First perform training of vision module.
 
 Change to directory vae.
