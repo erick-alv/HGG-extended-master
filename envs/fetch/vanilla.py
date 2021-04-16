@@ -1,11 +1,9 @@
 import gym
 import numpy as np
-from envs.utils import goal_distance, goal_distance_obs
+from envs.utils import goal_distance
 import copy
 from utils.os_utils import remove_color
-from vae_env_inter import take_goal_image, take_obstacle_image, take_image_objects, goal_latent_from_images, \
-	obstacle_latent_from_images, latents_from_images
-from PIL import Image
+from vae_env_inter import take_goal_image,  take_image_objects,  latents_from_images
 
 
 class VanillaGoalEnv():
@@ -102,9 +100,9 @@ class VanillaGoalEnv():
 		# imaginary infinity horizon (without done signal)
 		obs, reward, done, info = self.env.step(action)
 		if hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help:
-			if self.args.vae_type == 'monet' or self.args.vae_type == 'space' or self.args.vae_type == 'bbox' or self.args.vae_type=='faster_rcnn':
+			if self.args.vae_type == 'monet' or self.args.vae_type == 'bbox':
 				achieved_image = take_image_objects(self, self.args.img_size)
-				if self.args.vae_type == 'space' or self.args.vae_type == 'bbox' or self.args.vae_type=='faster_rcnn':
+				if self.args.vae_type == 'bbox':
 					lg, lg_s, lo, lo_s = latents_from_images(np.array([achieved_image]), self.args)
 					self.achieved_goal_size_latent = lg_s[0].copy()
 				else:
@@ -113,16 +111,6 @@ class VanillaGoalEnv():
 				self.obstacle_latent = lo[0].copy()
 
 				self.obstacle_size_latent = lo_s[0].copy()
-			else:
-				achieved_goal_image = take_goal_image(self, self.args.img_size)
-				latents_goal = goal_latent_from_images(np.array([achieved_goal_image]), self.args)
-				self.achieved_goal_latent = latents_goal[0].copy()
-
-				obstacle_image = take_obstacle_image(self, self.args.img_size)
-				latents_obstacle, latents_o_size = obstacle_latent_from_images(np.array([obstacle_image]), self.args)
-				self.obstacle_latent = latents_obstacle[0].copy()
-				self.obstacle_size_latent = latents_o_size[0].copy()
-				#self.achieved_goal_image = achieved_goal_image.copy()
 
 		obs = self.get_obs()
 
@@ -137,11 +125,11 @@ class VanillaGoalEnv():
 	def reset_ep(self):
 		if hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help:
 			obs = self.env.env._get_obs()
-			if self.args.vae_type == 'monet' or self.args.vae_type == 'space' or self.args.vae_type == 'bbox' or self.args.vae_type=='faster_rcnn':
+			if self.args.vae_type == 'monet' or self.args.vae_type == 'bbox':
 				self.goals_img_env.env._move_object(position=obs['desired_goal'].copy())
 				desired_goal_image = take_image_objects(self, self.args.img_size, direct_env=self.goals_img_env.env)
 				achieved_goal_image = take_image_objects(self, self.args.img_size)
-				if self.args.vae_type == 'space' or self.args.vae_type == 'bbox' or self.args.vae_type=='faster_rcnn':
+				if self.args.vae_type == 'bbox':
 					lg, lg_s, lo, lo_s = latents_from_images(np.array([desired_goal_image, achieved_goal_image]), self.args)
 					self.desired_goal_latent = lg[0].copy()
 					self.desired_goal_size_latent = lg_s[0].copy()
@@ -155,20 +143,6 @@ class VanillaGoalEnv():
 					self.achieved_goal_latent = lg[1].copy()
 					self.obstacle_latent = lo[1].copy()
 					self.obstacle_size_latent = lo_s[1].copy()
-
-			else:
-				self.goals_img_env.env._move_object(position=obs['desired_goal'].copy())
-				desired_goal_image = take_goal_image(self, self.args.img_size, direct_env=self.goals_img_env.env)
-				achieved_goal_image = take_goal_image(self, self.args.img_size)
-				latents = goal_latent_from_images(np.array([desired_goal_image, achieved_goal_image]), self.args)
-				self.desired_goal_latent = latents[0].copy()
-				self.achieved_goal_latent = latents[1].copy()
-				#self.achieved_goal_image = achieved_goal_image.copy()
-
-				obstacle_image = take_obstacle_image(self, self.args.img_size)
-				latents_obstacle, latents_o_size = obstacle_latent_from_images(np.array([obstacle_image]), self.args)
-				self.obstacle_latent = latents_obstacle[0].copy()
-				self.obstacle_size_latent = latents_o_size[0].copy()
 
 		self.rewards = 0.0
 
@@ -202,29 +176,11 @@ class VanillaGoalEnv():
 		self.env.env.goal = value.copy()
 		if hasattr(self.args, 'vae_dist_help') and self.args.vae_dist_help:
 			obs = self.env.env._get_obs()
-			if self.args.vae_type == 'monet' or self.args.vae_type == 'space' or self.args.vae_type == 'bbox' or self.args.vae_type=='faster_rcnn':
+			if self.args.vae_type == 'monet' or self.args.vae_type == 'bbox':
 				self.goals_img_env.env._move_object(position=value.copy())
 				desired_goal_image = take_goal_image(self, self.args.img_size, direct_env=self.goals_img_env.env)
-				'''obs_during = self.env.env._get_obs()  # just to see if set correctly
-				im = Image.fromarray(desired_goal_image.copy().astype(np.uint8))
-				im.save('it_is_there.png')'''
-				if self.args.vae_type == 'space' or self.args.vae_type == 'bbox' or self.args.vae_type=='faster_rcnn':
+				if self.args.vae_type == 'bbox':
 					lg, lg_s, lo, lo_s = latents_from_images(np.array([desired_goal_image]), self.args)
-					'''try:
-						assert lg[0][0] != 100.
-					except:
-						im = Image.fromarray(desired_goal_image.copy().astype(np.uint8))
-						im.save('failed_on_this.png')
-						print('failed!!!')
-						print("these are the coordinates: {}".format(value))
-						object_qpos = self.env.env.sim.data.get_joint_qpos('object0:joint')
-						assert object_qpos.shape == (7,)
-						print('q_pos: {}'.format(object_qpos))
-						v_rgba = self.env.env._get_visibility_rgba('object0')
-						print('visibility rgba is: {}'.format(v_rgba))
-
-						im = Image.fromarray(take_image_objects(self, self.args.img_size).copy().astype(np.uint8))
-						im.save('failed_on_this_take2.png')'''
 					self.desired_goal_size_latent = lg_s[0].copy()
 				else:
 					lg, lo, lo_s = latents_from_images(np.array([desired_goal_image]), self.args)
@@ -235,12 +191,6 @@ class VanillaGoalEnv():
 				im.save('it_is_back.png')'''
 				#store latent in variable
 				self.desired_goal_latent = lg[0].copy()
-			else:
-				self.goals_img_env.env._move_object(position=value.copy())
-				desired_goal_image = take_goal_image(self, self.args.img_size, direct_env=self.goals_img_env.env)
-				self.env.env._move_object(position=obs['achieved_goal'].copy())
-				latents = goal_latent_from_images(np.array([desired_goal_image]), self.args)
-				self.desired_goal_latent = latents[0].copy()
 
 	@property
 	def target_goal_center(self):

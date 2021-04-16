@@ -3,15 +3,9 @@ import torch
 import os
 import copy
 from utils.os_utils import make_dir
-from vae_env_inter import take_env_image, take_obstacle_image, take_goal_image, take_objects_image_training
-from PIL import Image
-import csv
-import io
-from common import get_args, load_vaes, load_field_parameters, make_temp_env
+from common import get_args, load_vaes, load_field_parameters
 import gym
-from vae_env_inter import take_goal_image, take_obstacle_image, take_image_objects
-from envs.distance_graph import DistanceGraph2D
-import time
+from vae_env_inter import take_image_objects
 
 
 def extract_info(images, args):

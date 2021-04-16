@@ -7,17 +7,9 @@ from learner import create_learner, learner_collection
 from test import Tester
 from algorithm.replay_buffer import ReplayBuffer_Episodic, goal_based_process, ReplayBuffer_Imaginary
 import torch
-from vae.train_vae_sb import load_Vae as load_Vae_SB
-from vae.train_vae import load_Vae
 from vae.train_monet import load_Vae as load_Monet
 from vae.Bbox import load_Model as load_Bbox
-from vae.faster_rcnn import load_faster_rcnn
-from vae.common_data import vae_sb_weights_file_name, vae_weights_file_name
-from PIL import Image
-from vae_env_inter import take_env_image, take_image_objects
-from vae.distance_estimation import calculate_distance
 from dist_estimator import DistMovEst, DistMovEstReal, MultipleDist, MultipleDistReal, Subst, SubstReal, NoneTypeEst
-from SPACE.main_space import load_space_model
 import matplotlib.pyplot as plt
 import os
 
@@ -125,10 +117,10 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 	parser.add_argument('--img_vid_size', help='size image in pixels', type=np.int32, default=500)
 	#type of VAE
 	parser.add_argument('--vae_type', help='', type=str,
-						default=None, choices=['sb', 'mixed', 'monet', 'space', 'bbox','faster_rcnn'])
+						default=None, choices=['monet', 'bbox'])
 	#type VAE for size
 	parser.add_argument('--vae_size_type', help='', type=str,
-						default='all', choices=['normal', 'sb', 'mixed', 'monet'])#if mixed or monet then representation is shared
+						default='all', choices=['monet'])#if mixed or monet then representation is shared
 
 	#parameters for VAE
 	parser.add_argument('--latent_size_obstacle', help='size latent space obstacle', type=np.int32, default=None)
@@ -255,11 +247,7 @@ def load_vaes(args, doing_inference=False):
 	data_dir = base_data_dir + args.env + '/'
 
 	#load VAES for positional data
-	if args.vae_type == 'space':
-		args.vae_model = load_space_model(checkpoint_path='data/FetchGenerativeEnv-v1/',
-							 check_name='data/FetchGenerativeEnv-v1/model_000030001.pth', device='cuda:0')
-		return
-	elif args.vae_type == 'bbox':
+	if args.vae_type == 'bbox':
 		#args.vae_model = load_Bbox(path='data/FetchGenerativeEnv-v1/model_bbox',img_size=args.img_size, latent_size=0,
 		#						   device='cuda:0', num_slots=5)#latent size is not being used for now
 		args.vae_model = load_Bbox(path='data/FetchGenerativeEnv-v1/model_bboxv2', img_size=args.img_size,
@@ -272,54 +260,25 @@ def load_vaes(args, doing_inference=False):
 			args.obstacles_indices = np.load(file_indices_obstacle)
 
 		return
-	elif args.vae_type == 'faster_rcnn':
-		args.vae_model = load_faster_rcnn(path='data/FetchGenerativeEnv-v1/model_rcnn.pth', device='cuda:0')  # latent size is not being used for now
-		args.vae_model.eval()
-		return
 
 
-	if args.vae_type == 'sb':
-		weights_path_goal = data_dir + vae_sb_weights_file_name['goal']
-		args.weights_path_goal = weights_path_goal
-		weights_path_obstacle = data_dir + vae_sb_weights_file_name['obstacle']
-		args.weights_path_obstacle = weights_path_obstacle
-		args.vae_model_obstacle = load_Vae_SB(weights_path_obstacle, args.img_size, args.latent_size_obstacle)
-		args.vae_model_obstacle.eval()
-		args.vae_model_goal = load_Vae_SB(weights_path_goal, args.img_size, args.latent_size_goal)
-		args.vae_model_goal.eval()
-	elif args.vae_type == 'mixed':
-		assert args.goal_ind_1 == args.obstacle_ind_1 and args.goal_ind_2 == args.obstacle_ind_2
-		assert args.latent_size_obstacle == args.latent_size_goal
-		weights_path = data_dir + vae_sb_weights_file_name['mixed']
-		args.weights_path_goal = weights_path
-		args.weights_path_obstacle = weights_path
-		model = load_Vae_SB(weights_path, args.img_size, args.latent_size_obstacle)
-		model.eval()
-		args.vae_model_obstacle = model
-		args.vae_model_goal = model
-	elif args.vae_type == 'monet':
+	if args.vae_type == 'monet':
 		assert args.goal_ind_1 == args.obstacle_ind_1 and args.goal_ind_2 == args.obstacle_ind_2
 		assert args.latent_size_obstacle == args.latent_size_goal
 		assert args.goal_slot is not  None
 		assert args.obstacle_slot is not  None
-		weights_path = data_dir + vae_sb_weights_file_name['all']
+		weights_path = data_dir + 'all_sb_model'
 		args.weights_path_goal = weights_path
 		args.weights_path_obstacle = weights_path
 		model = load_Monet(path=weights_path, img_size=args.img_size, latent_size=args.latent_size_obstacle)
-		#model.eval()TODO with eval it does not work, is there a solution??
 		args.vae_model_obstacle = model
 		args.vae_model_goal = model
 	else:
 		raise Exception("VAE type invalid or not given")
 
-	if args.vae_size_type == 'normal':
-		weights_path_obstacle_sizes = data_dir + vae_weights_file_name['obstacle_sizes']
-		args.weights_path_obstacle_sizes = weights_path_obstacle_sizes
-		args.vae_model_size = load_Vae(path=weights_path_obstacle_sizes, img_size=args.img_size, latent_size=1)
-		args.vae_model_size.eval()
-	elif args.vae_size_type == 'mixed' or args.vae_size_type == 'monet':
+	if args.vae_size_type == 'monet':
 		assert args.size_ind != args.obstacle_ind_1 and args.size_ind != args.obstacle_ind_2
-		args.weights_path_obstacle_sizes = data_dir + vae_sb_weights_file_name['obstacle']
+		args.weights_path_obstacle_sizes = data_dir + 'vae_sb_model_obstacle'
 		args.vae_model_size = args.vae_model_obstacle
 	else:
 		raise Exception("VAE type of size invalid or not given")
@@ -345,15 +304,10 @@ def load_field_parameters(args):
 				'The environment used does not have predefined field dimensions. Assure they are not needed')
 
 	if args.vae_dist_help:
-		if args.vae_type == 'space' or args.vae_type == 'bbox':
+		if args.vae_type == 'bbox':
 			#model space is trained to create measures in range [-1, 1], a bit more space is given for the calculations
 			args.field_center = [0., 0.]
 			args.field_size = [1.0, 1.0]
-			load_real_field_params()
-
-		elif args.vae_type == 'faster_rcnn':
-			args.field_center = [args.img_size / 2., args.img_size / 2.]
-			args.field_size = [args.img_size / 2., args.img_size / 2.]
 			load_real_field_params()
 		else:
 			raise Warning('Using a VAE or model, with own space. Assure that the transformations in this space are correct')

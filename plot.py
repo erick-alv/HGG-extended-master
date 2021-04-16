@@ -167,15 +167,6 @@ if __name__ == "__main__":
                 config = "HGG"
             else:
                 raise Exception("Naming failed!")
-        elif args.naming == 7:#for James' results
-            if "ihgg" in clean_path:
-                config = "I-HGG"
-            elif "hgg" in clean_path:
-                config = "HGG"
-            elif "normal" in clean_path:
-                config = "HER"
-            else:
-                raise Exception("Naming failed!")
         elif args.naming == 8:
             name = curr_path.split('/')[-2]
             if name.startswith('-'):

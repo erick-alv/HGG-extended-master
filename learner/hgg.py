@@ -3,13 +3,10 @@ import numpy as np
 from envs import make_env
 from envs.utils import goal_distance
 from algorithm.replay_buffer import Trajectory, goal_concat
-from utils.gcc_utils import gcc_load_lib, c_double, c_int
-from envs.distance_graph import DistanceGraph, DistanceGraph2D
-from vae_env_inter import take_goal_image, take_obstacle_image, take_env_image, transform_image_to_latent_batch_torch
-from vae.latent_space_transformations import torch_goal_transformation, torch_obstacle_transformation, torch_get_size_in_space
-from vae.distance_estimation import calculate_distance_batch, calculate_distance
-from utils.image_util import create_rollout_video
-from PIL import Image
+from utils.gcc_utils import gcc_load_lib, c_double
+from envs.distance_graph import DistanceGraph
+from vae_env_inter import take_env_image
+#from vae.distance_estimation import calculate_distance_batch, calculate_distance
 
 
 class TrajectoryPool:
@@ -235,32 +232,17 @@ class MatchSampler:
 						latent_distances = \
 						self.args.dist_estimator.calculate_distance_batch(goal_pos=desired_goals_latents[j].copy(),
 																		  current_pos_batch=achieved_latent_goals[i][indices_inside].copy())
-					else:
-						#!!!! For now just one obstacle since obstacles are stationary
+					'''else:
 
 						latent_distances = calculate_distance_batch(obstacle_pos=achieved_latent_obstacles[i][0].copy(),
 												 obstacle_radius=achieved_latent_obstacles_sizes[i][0].copy(),
 												 current_pos_batch=achieved_latent_goals[i][indices_inside].copy(),
 												 goal_pos=desired_goals_latents[j].copy(),
-												 range_x=[-1., 1.], range_y=[-1., 1.])
+												 range_x=[-1., 1.], range_y=[-1., 1.])'''
 
 					distances[indices_inside] = latent_distances.copy()
 					distances[indices_outside] = 9999.
 
-					#real_distances = np.sqrt(np.sum(np.square(achieved_pool[i] - desired_goals[j]), axis=1))
-					'''real_distances = np.sqrt(np.sum(np.square(achieved_pool[i][:, :2] - desired_goals[j][:2]), axis=1))
-					pr_far_points = real_distances > self.args.threshold_a
-					extradists = real_distances[pr_far_points]
-					prc = (extradists - self.args.threshold_a) / (self.args.threshold_b - self.args.threshold_a)
-					prc = np.minimum(prc, 1.0)
-					extradists = 4.*prc * extradists#multiplied with for since the scale from latent space is 4 times bigger
-					distances[pr_far_points] += extradists
-
-					height_dist = np.absolute(achieved_pool[i][:, 2] - desired_goals[j][2])
-					h_p = height_dist > 0.2
-					h_extra = height_dist[h_p]
-					h_extra = h_extra*4
-					distances[h_p] += h_extra'''
 					res = distances - achieved_value[i] / (self.args.hgg_L / self.max_dis / (1 - self.args.gamma))
 				elif self.args.dist_estimator_type in ['realCoords','multipleReal','substReal']:
 					distances = np.zeros(shape=len(achieved_pool[i]))
@@ -285,12 +267,12 @@ class MatchSampler:
 							goal_pos=desired_goals_latents[j].copy(),
 							current_pos_batch=np.array([achieved_latent_goals[i][0].copy()])
 						)[0]
-					else:
+					'''else:
 						d_i = calculate_distance(obstacle_pos=achieved_latent_obstacles[i][0].copy(),
 										   obstacle_radius=achieved_latent_obstacles_sizes[i][0].copy(),
 										   current_pos=achieved_latent_goals[i][0].copy(),
 												 goal_pos=initial_goals_latents[j].copy(),
-										   range_x=[-1., 1.], range_y=[-1., 1.])
+										   range_x=[-1., 1.], range_y=[-1., 1.])'''
 					match_dis = np.min(res) + d_i * self.args.hgg_c
 				elif self.args.dist_estimator_type in ['noneTypeReal','realCoords','multipleReal','substReal']:
 						d_i = self.args.dist_estimator.calculate_distance_batch(
@@ -620,20 +602,6 @@ class NormalLearner:
 				if timestep==args.timesteps-1: done = True#this makes that the last obs is as done
 				current.store_step(action, obs, reward, done)
 				if done: break
-			## just for video
-			'''if (self.learn_calls%100==0 and i == args.episodes-1) or \
-					(info['Success'] == 1.0 and self.success_n%100 == 0):
-				#self.env_List[i].goal = self.env_List[i].goal.copy()
-				self.env_List[i].env.env._move_object(position=self.env_List[i].goal.copy())
-				tr_goal = take_goal_image(self.env_List[i], args.img_size)
-				if info['Success'] == 1.0:
-					create_rollout_video(tr_env_images, goal_image=tr_goal, args=args,
-										 filename='success_rollout_it{}'.format(self.learn_calls))
-					self.success_n +=1
-				else:
-					create_rollout_video(tr_env_images, goal_image=tr_goal, args=args,
-									 filename='last_rollout_it{}'.format(self.learn_calls))'''
-			##
 
 			# Trajectory is stored in replay buffer, replay buffer can be normal or EBP
 			buffer.store_trajectory(current)
