@@ -747,32 +747,3 @@ if __name__ == '__main__':
                     break
     else:
         print("No valid task")
-
-    '''
-    For Hyperparameters
-    img_size=64 
-    fg_sigma=0.15
-    
-    5 slots since 6 els from MONet
-    kernel_size = 3
-    conv_size1 = 64
-    conv_size2 = 32
-    encoder_stride = 2
-    
-    3 layers of conv:
-        in_channels=3, out_channels=conv_size1,
-        in_channels=conv_size1, out_channels=conv_size2,
-        in_channels=conv_size2, out_channels=conv_size2,
-    linear:
-        full_connected_size=256
-        
-        
-    self.z_pres_start_value = 0.1 bernoulli of pres for kl divergence    
-    self.tau_start_value = 2.5 used as temperature when resampling for pres from numerical relaxed
-    All others are N(0, 1)
-        
-    seed=1
-    optimizer = optim.RMSprop(model.parameters(), lr=1e-4)
-    batch_size=16, 
-    num_epochs=160
-    '''

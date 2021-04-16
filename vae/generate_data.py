@@ -6,7 +6,7 @@ from utils.os_utils import make_dir, str2bool
 from vae_env_inter import take_objects_image_training
 from PIL import Image
 from scipy.spatial.transform import Rotation
-from vae.latent_space_transformations import interval_map_function
+from utils.calculation_utils import interval_map_function
 import csv
 import io
 

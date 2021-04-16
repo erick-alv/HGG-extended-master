@@ -1,7 +1,0 @@
-#this is a list from files that must be changed when creating new environment:
--new assets xml
-- new python  file for env, add ids for collision detection
--envs/__init__.py
--gym/gym/envs/robotics/__init__.py
--gym/gym/envs/__init__.py
--common.py

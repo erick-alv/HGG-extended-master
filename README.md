@@ -6,7 +6,11 @@ It is based on the implementation of the HGG paper [Exploration via Hindsight Go
 
 
 ## Requirements
-[TODO]
+- Ubuntu (this code was tested on Ubuntu 18.04)
+- MuJoCO (version 2.0)
+- Pytorch (version 1.5.0)
+- Tensorflow (version 1.14)
+- other dependencies in requirements.txt
 
 ## Usage
 First perform training of vision module.

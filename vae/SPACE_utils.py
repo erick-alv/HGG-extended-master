@@ -1,5 +1,4 @@
 #taken from SPACE original implementation https://github.com/zhixuan-lin/SPACE
-
 import torch
 import torch.nn.functional as F
 from torch.distributions import RelaxedBernoulli
@@ -88,17 +87,6 @@ class NumericalRelaxedBernoulli(RelaxedBernoulli):
         out = self.temperature.log() + diff - 2 * diff.exp().log1p()
 
         return out
-
-
-if __name__ == '__main__':
-    im = torch.rand(size=[1, 3, 20, 20],)
-    z_where = torch.zeros(size=[1, 4])
-    z_where[0, 0] = -0.2
-    z_where[0, 1] = 0.1
-    z_where[0, 2] = z_where[0, 3] = 0.5
-    spatial_transform(image=im, z_where=z_where,
-                      out_dims=(1, 3, 20, 20),
-                      inverse=False)
 
 
 
