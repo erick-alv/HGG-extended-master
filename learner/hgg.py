@@ -6,7 +6,6 @@ from algorithm.replay_buffer import Trajectory, goal_concat
 from utils.gcc_utils import gcc_load_lib, c_double
 from envs.distance_graph import DistanceGraph
 from vae_env_inter import take_env_image
-#from vae.distance_estimation import calculate_distance_batch, calculate_distance
 
 
 class TrajectoryPool:
@@ -232,13 +231,6 @@ class MatchSampler:
 						latent_distances = \
 						self.args.dist_estimator.calculate_distance_batch(goal_pos=desired_goals_latents[j].copy(),
 																		  current_pos_batch=achieved_latent_goals[i][indices_inside].copy())
-					'''else:
-
-						latent_distances = calculate_distance_batch(obstacle_pos=achieved_latent_obstacles[i][0].copy(),
-												 obstacle_radius=achieved_latent_obstacles_sizes[i][0].copy(),
-												 current_pos_batch=achieved_latent_goals[i][indices_inside].copy(),
-												 goal_pos=desired_goals_latents[j].copy(),
-												 range_x=[-1., 1.], range_y=[-1., 1.])'''
 
 					distances[indices_inside] = latent_distances.copy()
 					distances[indices_outside] = 9999.
@@ -267,12 +259,6 @@ class MatchSampler:
 							goal_pos=desired_goals_latents[j].copy(),
 							current_pos_batch=np.array([achieved_latent_goals[i][0].copy()])
 						)[0]
-					'''else:
-						d_i = calculate_distance(obstacle_pos=achieved_latent_obstacles[i][0].copy(),
-										   obstacle_radius=achieved_latent_obstacles_sizes[i][0].copy(),
-										   current_pos=achieved_latent_goals[i][0].copy(),
-												 goal_pos=initial_goals_latents[j].copy(),
-										   range_x=[-1., 1.], range_y=[-1., 1.])'''
 					match_dis = np.min(res) + d_i * self.args.hgg_c
 				elif self.args.dist_estimator_type in ['noneTypeReal','realCoords','multipleReal','substReal']:
 						d_i = self.args.dist_estimator.calculate_distance_batch(
