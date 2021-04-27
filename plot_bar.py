@@ -1,109 +1,10 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-import json
 import seaborn as sns; sns.set()
 import glob2
 import argparse
 import pandas as pd
-
-def plot_already_noted():
-
-    N = 4
-    #hgg_rates = (0., 0.01, 0.2, 0.78)
-    #bbox_rates = (0., 0.08, 0.58, 0.78)
-    #optimal_rates = (0., 0.11, 0.71, 0.96)
-    hgg_rates = (0., 0.02, 0.26, 0.71)
-    bbox_rates = (0., 0.09, 0.49, 0.87)
-    bbox_self_v1_rates = (0.02, 0.11, 0.5, 0.7)
-    bbox_self_v2_rates = (0.03, 0.21, 0.32, 0.41)
-    optimal_rates = (0.02, 0.15, 0.68, 0.96)
-    optimal_self_v1_rates = (0.04, 0.14, 0.72, 0.87)
-    optimal_self_v2_rates = (0.11, 0.85, 0.95, 0.97)
-
-    #these are values used when trained with stopping then env if there exists some collision
-    optimal_self_coll_rates = (0., 0.01, 0.32, 0.94)
-    optimal_env_coll_rates = (0.01, 0.13, 0.68, 0.95)
-    optimal_self_colls_area_extended1 = (0.02, 0.16, 0.79, 0.95)
-    optimal_self_colls_area_extended2 = (0.0, 0.03, 0.65, 0.99)
-
-
-    optimal_rewMod = (0.23, 0.72, 0.96, 0.98)
-    optimal_rewModStop = (0.05, 0.63, 0.98, 0.98)
-    optimal_rewModRegion = (0.88, 0.95, 0.97, 0.92)
-    optimal_rewModRegionStop = (0.91, 0.96, 0.98, 0.99)
-    optimal_regionStop = (0., 0., 0.13, 0.56)
-
-    opt_1180 = (0.15, 0.46, 0.91, 0.98)
-    opt_1182 = (0.63, 0.92, 0.98, 0.99)
-    opt_1186 = (0.94, 0.96, 0.95, 0.97)
-    opt_1280 = (0.1, 0.84, 0.99, 0.99)
-    opt_1282 = (0.74, 0.92, 0.96, 0.98)
-    opt_1286 = (0.94, 0.97, 0.98, 0.96)
-
-    opt_1176 = (0.97, 0.98, 0.99, 0.99)
-    bbox_3180 = (0, 0, 0, 0)
-    bbox_3186 = (0.89, 0.96, 0.93, 0.98)
-
-    ind = np.arange(N)
-    width = 0.1
-    show_results = 4
-    if show_results == 0 :
-        plt.bar(ind, hgg_rates, width, label='HGG')
-        plt.bar(ind + width, bbox_rates, width, label='Bbox')
-        plt.bar(ind + 2 * width, bbox_self_v1_rates, width, label='Bbox multi-obj version1')
-        plt.bar(ind + 3 * width, bbox_self_v2_rates, width, label='Bbox multi-obj version2')
-        plt.bar(ind + 4 * width, optimal_rates, width, label='Optimal')
-        plt.bar(ind + 5 * width, optimal_self_v1_rates, width, label='Opt. multi-obj version1')
-        plt.bar(ind + 6 * width, optimal_self_v2_rates, width, label='Opt. multi-obj version2')
-        figname = 'comparison_all.png'
-    elif show_results == 1:
-        plt.bar(ind, optimal_rates, width, label='Optimal')
-        plt.bar(ind + width, optimal_self_v1_rates, width, label='Opt. multi-obj version1')
-        plt.bar(ind + 2 * width, optimal_self_v2_rates, width, label='Opt. multi-obj version2')
-        plt.bar(ind + 3 * width, optimal_self_coll_rates, width, label='Opt. coll. self')
-        plt.bar(ind + 4 * width, optimal_env_coll_rates, width, label='Opt. coll. env')
-        figname = 'comparison_optimal.png'
-    elif show_results == 2:
-        plt.bar(ind, optimal_rates, width, label='Optimal')
-        plt.bar(ind + width, optimal_self_coll_rates, width, label='Opt. coll. with Bbox')
-        plt.bar(ind + 2 * width, optimal_env_coll_rates, width, label='Opt. coll. env')
-        plt.bar(ind + 3 * width, optimal_self_colls_area_extended1, width,
-                label='Opt. coll. with Bbox incremented 0.022')
-        plt.bar(ind + 4 * width, optimal_self_colls_area_extended2, width,
-                label='Opt. coll. with Bbox incremented 0.045')
-        figname = 'comparison_optimal2.png'
-    elif show_results == 3:
-        plt.bar(ind, optimal_rates, width, label='Optimal')
-        plt.bar(ind + width, optimal_rewMod, width, label='mod reward')
-        plt.bar(ind + 2 * width, optimal_rewModStop, width, label='mod reward stop')
-        plt.bar(ind + 3 * width, optimal_rewModRegion, width,label='mod reward region')
-        plt.bar(ind + 4 * width, optimal_rewModRegionStop, width,label='mod reward region stop')
-        plt.bar(ind + 5 * width, optimal_regionStop, width, label='region stop')
-        figname = 'comparison_optimal_difapr.png'
-    elif show_results == 4:
-        plt.bar(ind, opt_1180, width, label='1) reward -2')
-        plt.bar(ind + width, opt_1182, width, label='1) safe region, reward -2')
-        plt.bar(ind + 2 * width, opt_1186, width, label='1) reward -10')
-        plt.bar(ind + 3 * width, opt_1280, width,label='2) reward -2')
-        plt.bar(ind + 4 * width, opt_1282, width,label='2) safe region, reward -2')
-        plt.bar(ind + 5 * width, opt_1286, width, label='2) reward -10')
-        figname = 'comparison_rewmods_vs_safe.png'
-    elif show_results == 5:
-        plt.bar(ind, bbox_3180, width, label='bbox reward -2')
-        plt.bar(ind + width, bbox_3186, width, label='bbox reward -10')
-        plt.bar(ind + 2 * width, opt_1176, width, label='opt. reward -10 (no stop)')
-        plt.bar(ind + 3 * width, opt_1186, width, label='opt. reward -10')
-        figname = 'comparison_with_bbox.png'
-
-    plt.ylabel('Success rate best policy')
-    plt.title('Rates with tollerance of N collisions')
-    plt.xticks(ind + width / 3, ('N=2', 'N=4', 'N=7', 'N=10'))
-    plt.legend(loc=4, prop={'size': 8})
-    plt.savefig(figname)
-    plt.close()
 
 def load_results(file):
     if not os.path.exists(file):
@@ -114,7 +15,14 @@ def load_results(file):
     N_configs = success_rate_grouped.indices.keys()
     success_rate_mean = success_rate_grouped.mean()['Success']#this calculates the mean
     success_rate_mean = success_rate_mean.base[0]
-    return N_configs, success_rate_mean
+    if len(success_rate_grouped.indices[0]) == 1:#this means it was measured with single run
+        success_rate_std = np.zeros(shape=(len(success_rate_mean)))
+    else:
+        success_rate_std = success_rate_grouped.std()['Success']
+        success_rate_std = success_rate_std.base[:, 0]
+        success_rate_grouped.groups[0]
+
+    return N_configs, success_rate_mean, success_rate_std
 
 def autolabel(rects):
     """Attach a text label above each bar in *rects*, displaying its height."""
@@ -144,6 +52,7 @@ if __name__ == "__main__":
     paths = [os.path.abspath(os.path.join(path, '..')) for path in glob2.glob(os.path.join(args.dir, '**', 'progress.csv'))]
     paths = [p for p in paths if 'TEST-' in p]
     data = {}
+    data_std = {}
     configs = []
     groups_keys = None
     groups = [0, 2, 4]
@@ -167,7 +76,7 @@ if __name__ == "__main__":
             print('skipping {}'.format(curr_path))
             continue
 
-        N_groups, success_rate = results
+        N_groups, success_rate, success_std = results
         if groups_keys is None:
             groups_keys = N_groups
 
@@ -183,19 +92,25 @@ if __name__ == "__main__":
         if config not in configs:
             configs.append(config)
             data[config]=[]
+            data_std[config]=[]
 
         # instead just using N=0,2,4 since others do not change that much
         success_rate = success_rate[:-2]
-
-
+        success_std = success_std[:-2]
 
 
         data[config].append(success_rate)
+        data_std[config].append(success_std)
     rects_data = []
     configs.sort()
     for config in configs:
+        #calculation cumulate mean
         mean = np.mean(data[config], axis=0)
-        std = np.std(data[config], axis=0)
+        #calculation cumulated STD
+        diffs_sq = [np.power(a - mean, 2) for a in data[config]]
+        prev_sum_var = np.mean([np.power(s, 2) for s in data_std[config]], axis=0)
+        var = np.mean(diffs_sq, axis=0) + prev_sum_var
+        std = np.sqrt(var)
         rects_data.append({'mean':mean,
                            'std':std})
 
@@ -205,7 +120,7 @@ if __name__ == "__main__":
 
     #here make per config
     for i, config in enumerate(configs):
-        r = ax.bar(ind + i*width, rects_data[i]['mean'], width, label=config)#, yerr=rects_data[i]['std'])
+        r = ax.bar(ind + i*width, rects_data[i]['mean'], width, label=config, yerr=rects_data[i]['std'])
 
     ax.set_ylabel('Success rate best policy',fontsize=18)
     ax.set_title('Rates with tolerance of N collisions', fontsize=18)
