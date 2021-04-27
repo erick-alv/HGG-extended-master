@@ -79,10 +79,6 @@ if __name__ == "__main__":
         N_groups, success_rate, success_std = results
         if groups_keys is None:
             groups_keys = N_groups
-
-            '''for k in groups_keys:
-                        groups.append(k)'''
-            # instead just using N=0,2,4 since others do not change that much
             for g in groups:
                 assert g in N_groups
         else:
