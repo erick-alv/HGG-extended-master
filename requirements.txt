@@ -27,7 +27,7 @@ glfw==1.8.5
 glob2==0.7
 google-pasta==0.1.8
 grpcio==1.25.0
--e git+git@github.com:erick-alv/HGG-extended-master.git@b4d525673c33760a5ec581d95b2b8fb1dbae62d0#egg=gym&subdirectory=gym
+-e git+https://github.com/erick-alv/HGG-extended-master.git@b4d525673c33760a5ec581d95b2b8fb1dbae62d0#egg=gym&subdirectory=gym
 h5py==2.10.0
 hickle==4.0.0
 idna==2.8
@@ -75,7 +75,7 @@ parso==0.5.1
 pathlib2==2.3.5
 pexpect==4.7.0
 pickleshare==0.7.5
-Pillow==6.2.1
+Pillow==6.2.1-e 
 pluggy==0.13.1
 progressbar2==3.47.0
 prometheus-client==0.8.0
