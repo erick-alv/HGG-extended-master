@@ -46,6 +46,7 @@ def get_args(do_just_test=False):#this parameter is just used for the name
 									 'intervalMinDistRewModStop',
 									 'intervalTestExtendedMinDist',
 									 'intervalCollPAV',
+									 'intervalJustRewMod',
 									 'intervalP', 'intervalPRewMod', 'intervalPRewModStop', 'intervalTestExtendedP',
 									 'intervalPAV', 'intervalPAVRewMod', 'intervalPAVRewModStop',
 									 'intervalTestExtendedPAV', 'intervalPRel', 'intervalPRelRewMod',

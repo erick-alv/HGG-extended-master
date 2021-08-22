@@ -5,7 +5,7 @@ from .custom import CustomGoalEnv
 from .extensions_interval import IntervalExt, IntervalColl, IntervalRewSub, IntervalRewVec, IntervalCollStopRegion,\
 	IntervalCollStop, IntervalRewMod, IntervalRewModStop, IntervalRewModRegion, IntervalRewModRegionStop, \
 	IntervalTestExtendedBbox, IntervalCollMinDist, IntervalMinDistRewMod,IntervalMinDistRewModStop, \
-	IntervalTestExtendedMinDist,IntervalPAV,IntervalPAVRewMod,IntervalPAVRewModStop,IntervalTestExtendedPAV,\
+	IntervalTestExtendedMinDist,IntervalJustRewMod,IntervalPAV,IntervalPAVRewMod,IntervalPAVRewModStop,IntervalTestExtendedPAV,\
 	IntervalPAVRel,IntervalPAVRelRewMod,IntervalPAVRelRewModStop,IntervalTestExtendedPAVRel, IntervalTest
 
 # TODO: change this file for new env handling!
@@ -31,6 +31,7 @@ def make_env(args):
 		'intervalMinDistRewMod':IntervalMinDistRewMod,
 		'intervalMinDistRewModStop':IntervalMinDistRewModStop,
 		'intervalTestExtendedMinDist': IntervalTestExtendedMinDist,
+		'intervalJustRewMod':IntervalJustRewMod,
 		'intervalPAV':IntervalPAV,
 		'intervalPAVRewMod':IntervalPAVRewMod,
 		'intervalPAVRewModStop':IntervalPAVRewModStop,

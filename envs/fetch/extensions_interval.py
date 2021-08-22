@@ -780,7 +780,10 @@ class IntervalCollStopRegion(IntervalWithExtensions):
         IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtenderBboxAndCollRegion(args),
                                         on_coll_extender=OnCollStop(args))
 
-
+class IntervalJustRewMod(IntervalWithExtensions):
+    def __init__(self, args):
+        IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtBboxColl(args),
+                                        on_coll_extender=OnCollRewMod(args))
 class IntervalRewMod(IntervalWithExtensions):
     def __init__(self, args):
         IntervalWithExtensions.__init__(self, args, obs_extender=ObsExtenderBboxAndColl(args),
