@@ -75,7 +75,7 @@ parso==0.5.1
 pathlib2==2.3.5
 pexpect==4.7.0
 pickleshare==0.7.5
-Pillow==6.2.1-e 
+Pillow==9.0.0 
 pluggy==0.13.1
 progressbar2==3.47.0
 prometheus-client==0.8.0
