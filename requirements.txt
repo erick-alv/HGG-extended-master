@@ -61,7 +61,7 @@ monotonic==1.5
 more-itertools==8.0.2
 mpi4py==3.0.3
 -e git+https://github.com/openai/mujoco-py.git@1fe312b09ae7365f0dd9d4d0e453f8da59fae0bf#egg=mujoco_py
-nbconvert==5.6.1
+nbconvert==6.5.1
 nbformat==5.0.7
 networkx==2.4
 notebook==6.0.3
